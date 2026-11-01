@@ -125,8 +125,17 @@ public sealed class ToolManagerTests : IDisposable
         _web.Files[FfmpegSource.Zip] = evil;
         _web.Files[FfmpegSource.Sums] = Encoding.UTF8.GetBytes($"{Web.Hash(evil)}  {FfmpegSource.ZipName}\n");
 
+        // The self-test runs while extracted files sit on disk, so a stray write can't hide by being moved later.
+        bool strayFile = false;
+        _tools.Works = _ =>
+        {
+            strayFile |= Directory.GetFiles(_root, "ffmpeg*").Length > 0 || Directory.GetFiles(Path.Combine(_root, "deep"), "ffmpeg*").Length > 0;
+            return true;
+        };
+
         await new ToolManager(new HttpClient(_web), nested, new ToolOptions(true), _tools).EnsureAsync();
 
+        Assert.False(strayFile, "nothing may land outside the tools folder, even briefly");
         Assert.Empty(Directory.GetFiles(_root, "ffmpeg*"));
         Assert.Empty(Directory.GetFiles(Path.Combine(_root, "deep"), "ffmpeg*"));
         Assert.True(File.Exists(Path.Combine(nested, "ffmpeg.exe")), "it lands in the tools folder under its plain name");

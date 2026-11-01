@@ -10,7 +10,7 @@ STX Downloader is MIT licensed. It does not include any of the tools below. When
 
 ## Why the GPL build of FFmpeg
 
-The GPL build includes libx264, a software H.264 encoder. The LGPL builds leave it out. FFmpeg's license applies to FFmpeg itself. Because FFmpeg is a separate program that you download from its publisher, and it is not part of this repository or linked into this app, this repository's code stays under MIT.
+The GPL build chosen in `src/Stx.Tools/FfmpegSource.cs:9` includes libx264, a software H.264 encoder. The LGPL builds leave it out. FFmpeg's license applies to FFmpeg itself. Because FFmpeg is a separate program that you download from its publisher, and it is not part of this repository or linked into this app, this repository's code stays under MIT.
 
 Each download is checked against the checksum its publisher posts, and a tool with no matching checksum is not installed.
 
