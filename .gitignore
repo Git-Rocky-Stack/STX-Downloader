@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+.superpowers/
+.claude/
+.playwright-mcp/
+docs/analysis/
+tests/Stx.VisualTests/output/
+extension/node_modules/
