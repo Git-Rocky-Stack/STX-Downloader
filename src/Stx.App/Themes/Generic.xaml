@@ -3,6 +3,37 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:p="using:Stx.App.Primitives">
 
+    <Style TargetType="p:Display">
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="p:Display">
+                    <Border CornerRadius="4" Padding="5" BorderThickness="1" BorderBrush="#000000">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0.15,1">
+                                <GradientStop Offset="0" Color="#23262A" />
+                                <GradientStop Offset="0.45" Color="#0A0B0C" />
+                                <GradientStop Offset="1" Color="#131517" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid CornerRadius="2">
+                            <Image x:Name="PART_Screen" Stretch="Fill" IsHitTestVisible="False" />
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding Content}" />
+                            <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="p:Faceplate">
         <Setter Property="Padding" Value="36,28" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
