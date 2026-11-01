@@ -7,6 +7,9 @@ public static class PressTravel
 {
     public const double Pixels = 3;
 
+    /// <summary>How far a push switch stays in once it has latched on.</summary>
+    public const double LatchedPixels = 2;
+
     /// <summary>A cubic bezier for levers and knobs. It overshoots and settles, unless motion is reduced.</summary>
     public static (float X1, float Y1, float X2, float Y2) TurnEasing(bool reduceMotion) =>
         reduceMotion ? (0.2f, 0f, 0.4f, 1f) : (0.3f, 1.5f, 0.5f, 1f);

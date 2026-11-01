@@ -42,6 +42,8 @@ public sealed partial class Display : ContentControl
 
         double scale = XamlRoot?.RasterizationScale ?? 1;
         int w = (int)Math.Ceiling(screenWidth * scale), h = (int)Math.Ceiling(screenHeight * scale);
+        _screen.Width = _glass.Width = screenWidth;
+        _screen.Height = _glass.Height = screenHeight;
         var tone = _tone;
         _screen.Source = ArtCache.Get($"screen:{tone}:{w}x{h}", () => ScreenArt.Render(w, h, tone));
         _glass.Source = ArtCache.Get($"glass:{w}x{h}", () => GlassArt.Render(w, h));

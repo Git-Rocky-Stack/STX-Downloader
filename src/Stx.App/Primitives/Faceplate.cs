@@ -38,6 +38,8 @@ public sealed partial class Faceplate : ContentControl
 
         double scale = XamlRoot?.RasterizationScale ?? 1;
         int w = (int)Math.Ceiling(ActualWidth * scale), h = (int)Math.Ceiling(ActualHeight * scale);
+        _plate.Width = ActualWidth;
+        _plate.Height = ActualHeight;
         var mode = LookState.Mode;
         _plate.Source = ArtCache.Get($"plate:{mode}:{w}x{h}", () => PlateArt.Render(w, h, mode));
 

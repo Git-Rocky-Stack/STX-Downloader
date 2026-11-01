@@ -20,13 +20,17 @@
                             </LinearGradientBrush>
                         </Border.Background>
                         <Grid CornerRadius="2">
-                            <Image x:Name="PART_Screen" Stretch="Fill" IsHitTestVisible="False" />
+                            <Canvas IsHitTestVisible="False">
+                                <Image x:Name="PART_Screen" Stretch="Fill" IsHitTestVisible="False" />
+                            </Canvas>
                             <ContentPresenter
                                 Margin="{TemplateBinding Padding}"
                                 HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                                 VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
                                 Content="{TemplateBinding Content}" />
-                            <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                            <Canvas IsHitTestVisible="False">
+                                <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                            </Canvas>
                         </Grid>
                     </Border>
                 </ControlTemplate>
@@ -147,8 +151,8 @@
         </Setter>
     </Style>
 
-    <Style TargetType="p:Toggle">
-        <Setter Property="MinHeight" Value="62" />
+    <Style TargetType="p:PushSwitch">
+        <Setter Property="MinHeight" Value="72" />
         <Setter Property="MinWidth" Value="72" />
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="FontFamily" Value="Segoe UI" />
@@ -158,9 +162,98 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="p:Toggle">
+                <ControlTemplate TargetType="p:PushSwitch">
                     <StackPanel Background="Transparent" Spacing="6">
-                        <Canvas x:Name="PART_Hardware" Width="40" Height="62" HorizontalAlignment="Center" IsHitTestVisible="False" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="PointerOver">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0.04" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="3" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0.7" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Checked">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="2" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0.45" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="CheckedPointerOver">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="2" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0.04" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0.45" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="CheckedPressed">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="3" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0.7" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="CheckedDisabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CapOffset" Storyboard.TargetProperty="Y" To="2" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Led" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.05" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_Shade" Storyboard.TargetProperty="Opacity" To="0.45" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Hardware" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid x:Name="Hardware" Width="48" Height="48" HorizontalAlignment="Center">
+                            <Image x:Name="PART_Bezel" Stretch="Fill" IsHitTestVisible="False" />
+                            <Grid Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="3">
+                                <Grid x:Name="Cap" Width="38" Height="38" Margin="0,1,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+                                    <Grid.RenderTransform>
+                                        <TranslateTransform x:Name="CapOffset" />
+                                    </Grid.RenderTransform>
+                                    <Image x:Name="PART_Cap" Stretch="Fill" IsHitTestVisible="False" />
+                                    <Border x:Name="HoverGlow" CornerRadius="4" Background="#FFFFFF" Opacity="0" IsHitTestVisible="False" />
+                                    <Image x:Name="PART_Shade" Stretch="Fill" Opacity="0" IsHitTestVisible="False" />
+                                    <Image x:Name="PART_Led" Stretch="Fill" Opacity="0" IsHitTestVisible="False" />
+                                </Grid>
+                            </Grid>
+                        </Grid>
                         <ContentPresenter
                             HorizontalAlignment="Center"
                             Foreground="{TemplateBinding Foreground}"
@@ -197,7 +290,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="p:Faceplate">
                     <Grid>
-                        <Image x:Name="PART_Plate" Stretch="Fill" IsHitTestVisible="False" />
+                        <Canvas IsHitTestVisible="False">
+                            <Image x:Name="PART_Plate" Stretch="Fill" IsHitTestVisible="False" />
+                        </Canvas>
                         <ContentPresenter
                             Margin="{TemplateBinding Padding}"
                             HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"

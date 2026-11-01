@@ -13,9 +13,9 @@ public static class DisplayTones
     public static string Text(DisplayTone tone, bool dimmed) => (tone, dimmed) switch
     {
         (DisplayTone.Amber, false) => "#FFC865",
-        (DisplayTone.Amber, true) => "#B07F2C",
+        (DisplayTone.Amber, true) => "#BA8730",
         (DisplayTone.Cyan, false) => "#8AE8FF",
-        _ => "#3B9DBD",
+        _ => "#40A6C8",
     };
 
     public static string ScreenCenter(DisplayTone tone) => tone == DisplayTone.Amber ? "#3A2506" : "#0F3644";

@@ -124,6 +124,51 @@ public class ControlLogicTests
     }
 
     [Theory]
+    [InlineData("p:Faceplate", "PART_Plate")]
+    [InlineData("p:Display", "PART_Screen")]
+    [InlineData("p:Display", "PART_Glass")]
+    public void Panel_art_sits_on_a_canvas_so_its_pixels_cannot_size_the_panel(string target, string part)
+    {
+        var art = PadStyle(target).Descendants().First(e => e.Attributes().Any(a => a.Value == part));
+        Assert.Equal("Canvas", art.Parent!.Name.LocalName);
+    }
+
+    [Fact]
+    public void A_latched_switch_stays_part_way_in() =>
+        Assert.InRange(PressTravel.LatchedPixels, 1, PressTravel.Pixels - 1);
+
+    static double StateTarget(string state, string target)
+    {
+        var visual = PadStyle("p:PushSwitch").Descendants().First(e => e.Name.LocalName == "VisualState" && e.Attributes().Any(a => a.Value == state));
+        var move = visual.Descendants().First(e => e.Name.LocalName == "DoubleAnimation" && e.Attributes().Any(a => a.Value == target));
+        return double.Parse(move.Attribute("To")!.Value);
+    }
+
+    [Theory]
+    [InlineData("Normal", 0)]
+    [InlineData("PointerOver", 0)]
+    [InlineData("Pressed", PressTravel.Pixels)]
+    [InlineData("Disabled", 0)]
+    [InlineData("Checked", PressTravel.LatchedPixels)]
+    [InlineData("CheckedPointerOver", PressTravel.LatchedPixels)]
+    [InlineData("CheckedPressed", PressTravel.Pixels)]
+    [InlineData("CheckedDisabled", PressTravel.LatchedPixels)]
+    public void Switch_cap_sits_where_its_state_says(string state, double pixels) =>
+        Assert.Equal(pixels, StateTarget(state, "CapOffset"));
+
+    [Theory]
+    [InlineData("Normal", 0)]
+    [InlineData("PointerOver", 0)]
+    [InlineData("Pressed", 0)]
+    [InlineData("Disabled", 0)]
+    [InlineData("Checked", 1)]
+    [InlineData("CheckedPointerOver", 1)]
+    [InlineData("CheckedPressed", 1)]
+    [InlineData("CheckedDisabled", 1)]
+    public void Switch_led_is_lit_only_when_latched(string state, double opacity) =>
+        Assert.Equal(opacity, StateTarget(state, "PART_Led"));
+
+    [Theory]
     [InlineData("Normal")]
     [InlineData("PointerOver")]
     [InlineData("Pressed")]
@@ -133,7 +178,7 @@ public class ControlLogicTests
 
     [Theory]
     [InlineData("p:Pad")]
-    [InlineData("p:Toggle")]
+    [InlineData("p:PushSwitch")]
     public void Hit_targets_are_at_least_44_px(string target)
     {
         var style = PadStyle(target);
@@ -143,7 +188,7 @@ public class ControlLogicTests
 
     [Theory]
     [InlineData("p:Pad")]
-    [InlineData("p:Toggle")]
+    [InlineData("p:PushSwitch")]
     [InlineData("p:Rotary")]
     public void Controls_show_keyboard_focus(string target) =>
         Assert.Contains(PadStyle(target).Elements(), e =>

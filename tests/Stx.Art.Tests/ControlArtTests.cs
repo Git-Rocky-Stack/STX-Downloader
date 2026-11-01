@@ -180,31 +180,82 @@ public class ControlArtTests
         Assert.True(light.Luma(100, 111) > dark.Luma(100, 111));
     }
 
+    const int Bezel = 144, Cap = 114;
+
     [Fact]
-    public void Nut_is_a_hexagon()
+    public void Switch_bezel_catches_light_on_its_top_edge_and_falls_dark_below()
     {
-        var nut = ControlArt.Nut(120);
-        Assert.Equal(0, nut.Alpha(4, 4));
-        Assert.True(nut.Alpha(60, 16) > 200, "flat top");
-        Assert.True(nut.Alpha(8, 60) > 200, "side vertex");
+        var bezel = ControlArt.SwitchBezel(Bezel);
+        Assert.True(bezel.Luma(72, 4) > bezel.Luma(72, 139) + 40);
     }
 
     [Fact]
-    public void Collar_is_threaded()
+    public void Switch_bezel_has_rounded_corners_and_a_dark_opening()
     {
-        var collar = ControlArt.Collar(78);
-        var seen = new HashSet<int>();
-        for (int x = 39; x < 72; x++) seen.Add((int)collar.Luma(x, 39) / 32);
-        Assert.True(seen.Count >= 2);
+        var bezel = ControlArt.SwitchBezel(Bezel);
+        Assert.Equal(0, bezel.Alpha(0, 0));
+        Assert.Equal(255, bezel.Alpha(72, 72));
+        Assert.True(bezel.Luma(72, 72) < 30);
     }
 
     [Fact]
-    public void Lever_hangs_from_its_hinge_with_a_ball_tip()
+    public void Switch_cap_is_lit_from_above()
     {
-        var lever = ControlArt.Lever(48, 96);
-        Assert.True(lever.Alpha(24, 2) > 200, "starts at the hinge");
-        Assert.Equal(0, lever.Alpha(6, 10));
-        Assert.True(lever.Alpha(6, 78) > 200, "ball is wider than the shaft");
+        var cap = ControlArt.SwitchCap(Cap);
+        Assert.True(cap.Luma(57, 50) > cap.Luma(57, 100) + 10);
+    }
+
+    [Fact]
+    public void Switch_cap_has_fine_brushed_grain()
+    {
+        var cap = ControlArt.SwitchCap(Cap);
+        // Open metal only: the slit and the cap's edges are not grain. The gradient itself adds under 0.5 a row.
+        double sum = 0; int n = 0;
+        for (int y = 51; y < 100; y++) for (int x = 20; x < 94; x++) { sum += Math.Abs(cap.Luma(x, y) - cap.Luma(x, y - 1)); n++; }
+        Assert.InRange(sum / n, 0.8, 3);
+    }
+
+    [Fact]
+    public void Switch_cap_has_a_dark_slit_for_its_led()
+    {
+        var cap = ControlArt.SwitchCap(Cap);
+        Assert.True(cap.Luma(57, 24) < 25);
+        Assert.True(cap.Luma(10, 24) > cap.Luma(57, 24) + 25, "the slit does not run edge to edge");
+    }
+
+    [Fact]
+    public void Switch_led_fills_the_slit_and_glows_onto_the_cap()
+    {
+        var led = ControlArt.SwitchLed(Cap, LedColor.Green);
+        Assert.True(led.Luma(57, 24) > 150);
+        Assert.True(led.Alpha(57, 38) > 20, "glow below the slit");
+        Assert.Equal(0, led.Alpha(57, 100));
+    }
+
+    [Fact]
+    public void Switch_led_glow_fades_before_the_cap_edge()
+    {
+        var led = ControlArt.SwitchLed(Cap, LedColor.Green);
+        Assert.True(led.Alpha(57, 0) <= 2);
+        Assert.True(led.Alpha(0, 24) <= 2);
+    }
+
+    [Theory]
+    [InlineData(LedColor.Green)]
+    [InlineData(LedColor.Amber)]
+    public void Switch_led_takes_its_color(LedColor color)
+    {
+        var led = ControlArt.SwitchLed(Cap, color);
+        var glow = Rgb(led, 57, 34);
+        Assert.True(color == LedColor.Green ? glow.G > glow.R : glow.R > glow.B);
+    }
+
+    [Fact]
+    public void Switch_press_shade_darkens_the_top_of_the_cap_only()
+    {
+        var shade = ControlArt.SwitchCapShade(Cap);
+        Assert.True(shade.Alpha(57, 3) > 100);
+        Assert.True(shade.Alpha(57, 90) < 10);
     }
 
     [Fact]

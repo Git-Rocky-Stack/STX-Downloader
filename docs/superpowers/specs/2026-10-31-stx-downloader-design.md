@@ -186,7 +186,7 @@ Fixed lighting matters: when a knob turns, its knurl and indicator rotate but it
 
 ### Primitive set
 
-Faceplate, screw, display, LED, LED bargraph, seven-segment readout, pad in a well, toggle with hex nut, rotary selector with printed scale, engraved label. Both modes use the same primitives with different art and color tokens.
+Faceplate, screw, display, LED, LED bargraph, seven-segment readout, pad in a well, latching push switch with an LED slit, rotary selector with printed scale, engraved label. Both modes use the same primitives with different art and color tokens.
 
 Rocky asked for this look app-wide, so the set grows as needed instead of falling back to standard Windows controls. Expect added primitives for scrolling lists, text entry, dialogs, and first-run setup, such as a list and an editable field inside a display. Every added primitive follows the same art, test and accessibility rules. *(Claude's call)*
 

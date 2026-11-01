@@ -5,7 +5,7 @@ public sealed class LookTokens
 {
     public static readonly IReadOnlyList<string> RequiredKeys =
     [
-        "PlateTop", "PlateMid", "PlateBottom", "Ink", "InkDim", "EdgeHighlight", "EdgeShadow", "Chassis",
+        "PlateTop", "PlateMid", "PlateBottom", "Ink", "InkDim", "EdgeHighlight", "EdgeShadow", "Chassis", "EngraveHigh", "EngraveLow",
     ];
 
     static readonly LookTokens Dark = new(new Dictionary<string, string>
@@ -18,6 +18,8 @@ public sealed class LookTokens
         ["EdgeHighlight"] = "#33FFFFFF",
         ["EdgeShadow"] = "#CC000000",
         ["Chassis"] = "#08090A",
+        ["EngraveHigh"] = "#24FFFFFF",
+        ["EngraveLow"] = "#D9000000",
     });
 
     static readonly LookTokens Light = new(new Dictionary<string, string>
@@ -30,6 +32,8 @@ public sealed class LookTokens
         ["EdgeHighlight"] = "#D9FFFFFF",
         ["EdgeShadow"] = "#8C000000",
         ["Chassis"] = "#26282B",
+        ["EngraveHigh"] = "#47000000",
+        ["EngraveLow"] = "#B3FFFFFF",
     });
 
     readonly IReadOnlyDictionary<string, string> _values;

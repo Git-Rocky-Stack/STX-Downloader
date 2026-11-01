@@ -18,8 +18,9 @@ public static class ControlArt
     /// <summary>How far the pad's body sits above the well floor. Press travel uses up most of it.</summary>
     public const double PadDepth = 4;
 
-    public const double LeverWidth = 16;
-    public const double LeverHeight = 32;
+    public const double SwitchBezelLogical = 48;
+    public const double SwitchOpening = 42;
+    public const double SwitchCapLogical = 38;
 
     static readonly (Segments Segment, (double X, double Y)[] Points)[] DigitShapes =
     [
@@ -35,11 +36,6 @@ public static class ControlArt
     static readonly (double, double)[] CapStops =
     [
         (0, 244), (.13, 129), (.25, 225), (.38, 106), (.5, 244), (.63, 129), (.75, 225), (.88, 106), (1, 244),
-    ];
-
-    static readonly (double, double)[] NutStops =
-    [
-        (0, 242), (.22, 122), (.44, 204), (.64, 92), (.84, 228), (1, 242),
     ];
 
     /// <summary>One seven-segment digit with its dead bars, lit bars and glow. Width and height include the glow margin.</summary>
@@ -302,79 +298,125 @@ public static class ControlArt
         return buffer;
     }
 
-    /// <summary>The hex nut that holds a toggle to the plate.</summary>
-    public static PixelBuffer Nut(int size)
+    /// <summary>The chrome collar of a push switch: light along its top, falling dark below, around a black opening.</summary>
+    public static PixelBuffer SwitchBezel(int size)
     {
         var buffer = new PixelBuffer(size, size);
-        double center = (size - 1) / 2.0, apothem = size * 0.45;
+        double per = SwitchBezelLogical / size, inset = (SwitchBezelLogical - SwitchOpening) / 2;
 
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                double dx = x - center, dy = y - center;
-                double hex = ArtMath.HexDistance(dx, dy, apothem);
-                if (hex >= 0) continue;
-                double turn = Math.Atan2(dx, -dy) / (2 * Math.PI) - 200.0 / 360;
-                double v = ArtMath.Conic(turn, NutStops);
-                buffer.Set(x, y, v, v * 1.005, v * 1.012, Math.Min(1, -hex));
+                double lx = (x + 0.5) * per, ly = (y + 0.5) * per;
+                double outer = RoundRect(lx, ly, SwitchBezelLogical, SwitchBezelLogical, 6);
+                if (outer >= 0) continue;
+
+                double opening = RoundRect(lx - inset, ly - inset, SwitchOpening, SwitchOpening, 3.5);
+                double v;
+                if (opening < 0)
+                {
+                    v = 6;
+                }
+                else
+                {
+                    double t = (lx * 0.35 + ly * 0.93) / (SwitchBezelLogical * 1.28);
+                    v = Mix(238, 70, t);
+                    // A dark line where the collar meets the plate, and another at the lip of the opening.
+                    if (outer > -0.7 || opening < 0.7) v *= 0.45;
+                }
+                buffer.Set(x, y, v, v * 1.005, v * 1.015, Math.Min(1, -outer / per));
             }
         }
         return buffer;
     }
 
-    /// <summary>The threaded collar inside the nut, drawn as fine rings.</summary>
-    public static PixelBuffer Collar(int size)
+    /// <summary>The cap of a push switch: brushed metal lit from above, with a slit that its LED shines through.</summary>
+    public static PixelBuffer SwitchCap(int size)
     {
         var buffer = new PixelBuffer(size, size);
-        double center = (size - 1) / 2.0, radius = size / 2.0, ringWidth = size / 13.0;
+        var random = new Random(23);
+        double per = SwitchCapLogical / size;
+        var rows = new double[size];
+        for (int y = 0; y < size; y++) rows[y] = (random.NextDouble() - 0.5) * 3;
 
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                double dx = x - center, dy = y - center, d = Math.Sqrt(dx * dx + dy * dy);
-                if (d >= radius) continue;
-                bool ridge = d % (ringWidth * 2) < ringWidth;
-                double v = ridge ? 185 : 80;
-                if (d > radius - ringWidth) v = 0;
-                buffer.Set(x, y, v, v * 1.005, v * 1.012, Math.Min(1, radius - d));
+                double lx = (x + 0.5) * per, ly = (y + 0.5) * per;
+                double sd = RoundRect(lx, ly, SwitchCapLogical, SwitchCapLogical, 4);
+                if (sd >= 0) continue;
+
+                double v = Mix(104, 44, ly / SwitchCapLogical) + rows[y];
+                if (ly < 1.4) v += 42;
+                if (ly > SwitchCapLogical - 1.6) v *= 0.55;
+                if (sd > -0.8) v *= 0.6;
+
+                double slit = SlitDistance(lx, ly);
+                if (slit < 0) v = 6;
+                else if (slit < 0.8 && ly > 8) v += 26;
+
+                buffer.Set(x, y, v, v * 1.01, v * 1.03, Math.Min(1, -sd / per));
             }
         }
         return buffer;
     }
 
-    /// <summary>The ball-tipped lever, hanging from its hinge at the top center of the frame.</summary>
-    public static PixelBuffer Lever(int width, int height)
+    /// <summary>The cap's slit lit up, with the glow it throws across the metal. Sits over the cap and moves with it.</summary>
+    public static PixelBuffer SwitchLed(int size, LedColor color)
     {
-        var buffer = new PixelBuffer(width, height);
-        double perX = LeverWidth / width, perY = LeverHeight / height;
-        const double ShaftLeft = 3, ShaftRight = 13, BallX = 8, BallY = 25.5, BallRadius = 6.5;
+        var core = Parse(LedColors.Core(color));
+        var hot = Blend(core, (255, 255, 255), 0.55);
+        var buffer = new PixelBuffer(size, size);
+        double per = SwitchCapLogical / size;
+        const double Reach = 6;
 
-        for (int y = 0; y < height; y++)
+        for (int y = 0; y < size; y++)
         {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < size; x++)
             {
-                double lx = (x + 0.5) * perX, ly = (y + 0.5) * perY;
-                double ball = Math.Sqrt(Sq(lx - BallX) + Sq(ly - BallY));
-                if (ball < BallRadius)
+                double lx = (x + 0.5) * per, ly = (y + 0.5) * per;
+                double slit = SlitDistance(lx, ly);
+                if (slit >= Reach) continue;
+
+                if (slit < 0)
                 {
-                    double u = Math.Sqrt(Sq(lx - (BallX - 1.5)) + Sq(ly - (BallY - 2.6))) / (BallRadius * 1.5);
-                    double v = u < 0.45 ? Mix(255, 183, u / 0.45) : Mix(183, 90, Math.Min(1, (u - 0.45) / 0.55));
-                    buffer.Set(x, y, v, v, v * 1.01, Math.Min(1, (BallRadius - ball) / perX));
+                    var c = Blend(core, hot, Math.Min(1, -slit / 1.6));
+                    buffer.Set(x, y, c.R, c.G, c.B);
                 }
-                else if (lx > ShaftLeft && lx < ShaftRight && ly < BallY)
+                else
                 {
-                    double t = (lx - ShaftLeft) / (ShaftRight - ShaftLeft);
-                    double v = t < 0.42 ? Mix(113, 251, t / 0.42)
-                        : t < 0.6 ? Mix(251, 185, (t - 0.42) / 0.18)
-                        : Mix(185, 85, (t - 0.6) / 0.4);
-                    buffer.Set(x, y, v, v, v * 1.01);
+                    double a = (0.75 * Gauss(slit, 2.2) + 0.35 * Gauss(slit, 6)) * Sq(1 - slit / Reach);
+                    buffer.Set(x, y, core.R, core.G, core.B, a);
                 }
             }
         }
         return buffer;
     }
+
+    /// <summary>The inner shadow along the top of a cap that has been pushed in.</summary>
+    public static PixelBuffer SwitchCapShade(int size)
+    {
+        var buffer = new PixelBuffer(size, size);
+        double per = SwitchCapLogical / size;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                double lx = (x + 0.5) * per, ly = (y + 0.5) * per;
+                double sd = RoundRect(lx, ly, SwitchCapLogical, SwitchCapLogical, 4);
+                if (sd >= 0) continue;
+                double a = 0.72 * Math.Max(0, 1 - ly / 8);
+                if (a > 0) buffer.Set(x, y, 0, 0, 0, a * Math.Min(1, -sd / per));
+            }
+        }
+        return buffer;
+    }
+
+    /// <summary>Distance to the LED slit on a cap, negative inside. The slit is 18 by 4, centered, 6 from the top.</summary>
+    static double SlitDistance(double lx, double ly) => RoundRect(lx - 10, ly - 6, 18, 4, 1.5);
 
     static double Coverage(int x, int y, double perX, double perY, (double X, double Y)[] points)
     {

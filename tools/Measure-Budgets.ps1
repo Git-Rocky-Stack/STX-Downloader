@@ -3,7 +3,9 @@ param(
     [ValidateSet('dark', 'light')] [string] $Mode = 'dark',
     [int] $SettleSeconds = 12,
     [int] $Samples = 10,
-    [switch] $Assert
+    [switch] $Assert,
+    # Held galleries must do no work at all. Live ones animate, as during a job.
+    [switch] $Hold
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -11,7 +13,9 @@ $exe = Join-Path $root 'src\Stx.App\bin\x64\Release\net10.0-windows10.0.22621.0\
 if (-not (Test-Path $exe)) { throw "Build first: $exe not found" }
 
 $cores = [Environment]::ProcessorCount
-$p = Start-Process $exe -ArgumentList "--gallery=$Gallery", "--mode=$Mode" -PassThru
+$launch = @("--gallery=$Gallery", "--mode=$Mode")
+if ($Hold) { $launch += '--hold' }
+$p = Start-Process $exe -ArgumentList $launch -PassThru
 try {
     Start-Sleep -Seconds $SettleSeconds
     $p.Refresh()

@@ -57,8 +57,8 @@ public class DisplayLogicTests
     }
 
     [Theory]
-    [InlineData(DisplayTone.Amber, "#FFC865", "#B07F2C")]
-    [InlineData(DisplayTone.Cyan, "#8AE8FF", "#3B9DBD")]
+    [InlineData(DisplayTone.Amber, "#FFC865", "#BA8730")]
+    [InlineData(DisplayTone.Cyan, "#8AE8FF", "#40A6C8")]
     public void Tones_use_the_approved_colors(DisplayTone tone, string bright, string dim)
     {
         Assert.Equal(bright, DisplayTones.Text(tone, dimmed: false));
