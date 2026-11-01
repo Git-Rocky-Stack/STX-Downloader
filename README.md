@@ -12,7 +12,7 @@ Each line points at the code that does it.
 
 **Saving**
 
-- Paste a link, and yt-dlp handles it, single items and playlists (`src/Stx.ViewModels/SourceViewModel.cs:12`, `src/Stx.Tools/YtDlpArgs.cs:37`).
+- Paste a link, and yt-dlp handles it, single items and playlists (`src/Stx.ViewModels/SourceViewModel.cs:32`, `src/Stx.Tools/YtDlpArgs.cs:37`).
 - Video isn't re-encoded by default. It keeps the original streams, in MP4 or MKV (`src/Stx.Tools/YtDlpArgs.cs:38`).
 - Car USB and Phone presets convert when you ask them to (`src/Stx.Core/Presets/PresetCatalog.cs:30`, `src/Stx.Core/Presets/PresetCatalog.cs:31`).
 - A captured job whose link expired waits for a new capture from its page, and resumes from it (`src/Stx.Core/Queue/QueueEngine.cs:63`, `src/Stx.Bridge/CaptureHandler.cs:85`).
