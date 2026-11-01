@@ -1,3 +1,5 @@
+using Stx.Core.Presets;
+
 namespace Stx.Tools;
 
 public enum DownloadMode { Best, AudioOnly, VideoOnly }
@@ -9,6 +11,7 @@ public sealed record DownloadRequest(string? Url, string OutputFolder, DownloadM
 {
     public ToolPaths? Tools { get; init; }
     public string? ConfigPath { get; init; }
+    public MetadataOptions Metadata { get; init; } = MetadataOptions.None;
 }
 
 /// <summary>Builds yt-dlp's arguments. The default keeps the original streams and never re-encodes.</summary>
@@ -37,6 +40,9 @@ public static class YtDlpArgs
             "--no-quiet",
             "--progress",
         ]);
+        if (request.Metadata.Tags) args.Add("--embed-metadata");
+        if (request.Metadata.CoverArt) args.Add("--embed-thumbnail");
+        if (request.Metadata.Chapters) args.Add("--embed-chapters");
         AddUrl(args, request.Url);
         return args;
     }
