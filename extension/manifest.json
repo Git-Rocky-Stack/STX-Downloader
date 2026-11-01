@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "STX Downloader",
+  "version": "1.0.0",
+  "description": "Finds media on the current tab and hands it to the STX Downloader app.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyvqI06nLj/aM7hVVKX5unOKOUemHiLYJc+FHKdTxA2IcCm36PgqcRvuZDtP9k5fFnjenpX9/7nt1BehT6mmOaGzEtq7VwRneipse4PO0xK3CV67VGvUicNuH3Jnmj2UJLjuMLmfnPyhhZ/Nlu1QB9GMH+ZDygJC4s9YPz4zgbFndCMhA22BHG49GC6YLNwznqNFtY+QFnhDQOkHxreTj5CZjg7/n7A8k1o5NzehvJZRfB2zCBVzgxuuRmODh/aDuysPIPzx1Afic8lcWUHs/fNdo17p2oHFj/iKWivfD1aVOoK6C8R1UGPtZNpshDsiZAkkYPmRL8bMwn70r3afQLwIDAQAB",
+  "permissions": [
+    "webRequest",
+    "tabs",
+    "cookies",
+    "nativeMessaging",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "STX Downloader"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_start"
+    }
+  ]
+}
