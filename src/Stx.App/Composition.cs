@@ -3,7 +3,9 @@ using Microsoft.Data.Sqlite;
 using Microsoft.UI.Dispatching;
 using Stx.App.Primitives;
 using Stx.Audio;
+using Stx.Bridge;
 using Stx.App.Platform;
+using Stx.Core.Files;
 using Stx.Core.Queue;
 using Stx.Core.Settings;
 using Stx.Data;
@@ -25,6 +27,7 @@ public sealed class Composition : IDisposable
     readonly Dictionary<long, long> _lastProgress = new();
     readonly MediaRepo _catalog;
     readonly SemaphoreSlim _measuring = new(1, 1);
+    PipeServer? _bridge;
     LibraryRowViewModel? _selectedRow;
 
     public Composition(DispatcherQueue ui)
@@ -60,7 +63,7 @@ public sealed class Composition : IDisposable
         FirstRun = new FirstRunViewModel(Tools, Status);
         Clipboard = new ClipboardOfferViewModel(() => Settings.Current.ClipboardDetect);
         Source.ToolsReady = false;
-        FirstRun.PropertyChanged += (_, _) => Source.ToolsReady = FirstRun.IsReady;
+        FirstRun.PropertyChanged += (_, _) => Source.ToolsReady = FirstRun.ToolsUsable(ToolsOnDisk());
         Settings.Changed += (_, settings) => Apply(settings);
 
         Queue.FileRecorded += (_, media) => _ = MeasureAsync(media);
@@ -105,13 +108,33 @@ public sealed class Composition : IDisposable
         try
         {
             // Tools already on disk can work at once, even while their update check is still going.
-            Source.ToolsReady = File.Exists(Tools.YtDlpPath) && Tools.Paths.Ffmpeg is not null;
+            Source.ToolsReady = FirstRun.ToolsUsable(ToolsOnDisk());
+            StartBridge();
             await FirstRun.StartAsync(_closing.Token);
             Engine.Tick();
         }
         catch (OperationCanceledException)
         {
             // The app is closing.
+        }
+    }
+
+    bool ToolsOnDisk() => File.Exists(Tools.YtDlpPath) && Tools.Paths.Ffmpeg is not null;
+
+    // Listens for clicks in the browser extension. It's a named pipe only your account can open, so no network port is involved.
+    void StartBridge()
+    {
+        var handler = new CaptureHandler(_catalog, Engine, () => Source.ToolsReady);
+        _bridge = new PipeServer(PipeServer.NameForCurrentUser(), handler.Handle);
+        try
+        {
+            _bridge.Start();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Another copy of the pipe is open, so captures can't arrive here. Everything else still works.
+            _bridge = null;
+            Status.Report(new ToolStatus("browser extension", "can't connect to this copy of the app"));
         }
     }
 
@@ -164,6 +187,7 @@ public sealed class Composition : IDisposable
     public void Dispose()
     {
         _closing.Cancel();
+        _bridge?.Dispose();
         _retryTimer.Stop();
         _http.Dispose();
         _db.Dispose();
@@ -171,12 +195,17 @@ public sealed class Composition : IDisposable
         _closing.Dispose();
     }
 
-    DownloadRequest RequestFor(Job job, IMediaCatalog catalog) =>
-        new(job.Kind == JobKind.Link ? catalog.GetItem(job.MediaId)?.PageUrl : null, Settings.Current.OutputFolder, DownloadMode.Best, null)
+    DownloadRequest RequestFor(Job job, IMediaCatalog catalog)
+    {
+        var item = catalog.GetItem(job.MediaId);
+        return new(job.Kind == JobKind.Link ? item?.PageUrl : null, Settings.Current.OutputFolder, DownloadMode.Best, null)
         {
             Tools = Tools.Paths,
-            OutputTemplate = Settings.Current.FilenameTemplate,
+            OutputTemplate = job.Kind == JobKind.Captured
+                ? FilenameTemplate.ForCaptured(Settings.Current.FilenameTemplate, item?.Title, job.MediaId)
+                : Settings.Current.FilenameTemplate,
         };
+    }
 
     void Apply(AppSettings settings)
     {

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import {
   addResponse, applyPage, canDownload, classify, emptyState, findEmbeds,
-  groupStreams, labelFor, listFor, parseMaster, readTracker,
+  batchMessage, captureMessage, cookieUrls, groupStreams, labelFor, listFor, mayCapture, netscapeCookies, parseMaster, readTracker,
 } from '../detect.js';
 
 const fixtureChevrolet = JSON.parse(readFileSync(new URL('./fixtures/chevrolet.json', import.meta.url)));
@@ -200,3 +200,49 @@ test('label without a title names the file', () =>
   assert.equal(labelFor({ kind: 'file', url: 'https://ferrari-cdn.thron.com/static/2VKLXM_GT-Ferrari_Purosangue.mp4?xseo=' }), '2VKLXM_GT-Ferrari_Purosangue · File'));
 test('a generic master takes its name from a rendition, without the bitrate', () =>
   assert.equal(labelFor({ kind: 'hls', url: 'https://ferrari-view.thron.com/api/getContentDescriptor.m3u8?contentId=a', variants: ['https://ferrari-cdn.thron.com/ios/x.mp4/PUPLGQ_idle_2-4300.m3u8?v=8'] }), 'PUPLGQ_idle_2 · HLS'));
+
+const page = { url: 'https://www.chevrolet.com/performance/corvette/experience', title: 'Corvette', userAgent: 'UA' };
+const cookie = { domain: '.chevrolet.com', hostOnly: false, path: '/', secure: true, httpOnly: false, session: false, expirationDate: 1800000000.5, name: 'a', value: 'b' };
+
+test('cookies become a Netscape file', () => {
+  const session = { domain: 'www.chevrolet.com', hostOnly: true, path: '/x', secure: false, httpOnly: true, session: true, name: 'c', value: 'd' };
+  assert.equal(netscapeCookies([cookie, session]),
+    '.chevrolet.com\tTRUE\t/\tTRUE\t1800000000\ta\tb\n#HttpOnly_www.chevrolet.com\tFALSE\t/x\tFALSE\t0\tc\td\n');
+});
+test('no cookies gives nothing to send', () => assert.equal(netscapeCookies([]), null));
+test('a cookie with a line break is dropped, so it cannot add a line', () =>
+  assert.equal(netscapeCookies([{ ...cookie, value: 'x\ny' }]), null));
+
+test('a stream message carries what the app needs', () => {
+  const m = captureMessage({ kind: 'hls', url: master, title: 'Walkaround', durationSec: 413, width: 1920, height: 1080 }, page, 'COOKIES');
+  assert.deepEqual(m, {
+    Kind: 'hls', PageUrl: page.url, Title: 'Walkaround', StreamUrl: master, VideoId: undefined,
+    DurationSec: 413, Width: 1920, Height: 1080, IsDrm: false, Cookies: 'COOKIES',
+    Headers: { Referer: page.url, Origin: 'https://www.chevrolet.com', 'User-Agent': 'UA' },
+  });
+});
+test('a stream with no title is sent under its label name, so it is not saved as master', () =>
+  assert.equal(captureMessage({ kind: 'hls', url: 'https://v.example/a/talk.m3u8' }, page, null).Title, 'talk'));
+test('a YouTube message carries the id and no stream link', () => {
+  const m = captureMessage({ kind: 'youtube', id: 'QBwwj5p25AM' }, page, null);
+  assert.deepEqual([m.Kind, m.VideoId, m.StreamUrl, m.Cookies], ['youtube', 'QBwwj5p25AM', undefined, null]);
+});
+test('a batch shares one cookie jar across its items and leaves DRM items out', () => {
+  const m = batchMessage([
+    { kind: 'hls', url: master, title: 'One' },
+    { kind: 'file', url: 'https://a.example/b.mp4', isDrm: true },
+    { kind: 'youtube', id: 'QBwwj5p25AM' },
+  ], page, 'COOKIES');
+  assert.equal(m.Kind, 'batch');
+  assert.equal(m.Cookies, 'COOKIES');
+  assert.deepEqual(m.Items.map(i => [i.Kind, i.Title]), [['hls', 'One'], ['youtube', 'YouTube video QBwwj5p25AM']]);
+});
+test('cookies are looked up only for the sites this item touches', () =>
+  assert.deepEqual(cookieUrls([{ kind: 'hls', url: master }, { kind: 'youtube', id: 'QBwwj5p25AM' }], page),
+    ['https://www.chevrolet.com/performance/corvette/experience', master]));
+test('only the extension\'s own pages may ask for a capture', () => {
+  const origin = 'chrome-extension://ahbdmiddabpbfmoijlejkinopgppajfg/';
+  assert.equal(mayCapture({ id: 'x', url: origin + 'popup.html' }, 'x', origin), true);
+  assert.equal(mayCapture({ id: 'x', url: 'https://evil.example/', tab: { id: 1 } }, 'x', origin), false);
+  assert.equal(mayCapture({ id: 'other', url: origin + 'popup.html' }, 'x', origin), false);
+});

@@ -219,3 +219,58 @@ export function labelFor(item) {
   if (item.isDrm) parts.push('DRM, no download');
   return parts.join(' · ');
 }
+
+/** Cookies in the file format yt-dlp reads, or null when there are none. */
+export function netscapeCookies(cookies) {
+  const lines = [];
+  for (const c of cookies) {
+    const fields = [c.domain, c.path, c.name, c.value];
+    if (fields.some(f => /[\r\n\t]/.test(f))) continue;
+    const expires = c.session ? 0 : Math.floor(c.expirationDate);
+    const domain = (c.httpOnly ? '#HttpOnly_' : '') + c.domain;
+    lines.push([domain, c.hostOnly ? 'FALSE' : 'TRUE', c.path, c.secure ? 'TRUE' : 'FALSE', expires, c.name, c.value].join('\t'));
+  }
+  return lines.length ? lines.join('\n') + '\n' : null;
+}
+
+function itemFields(item) {
+  return {
+    Kind: item.kind,
+    Title: item.title || (item.kind === 'youtube' ? labelFor(item) : nameIn(item.url)) || undefined,
+    StreamUrl: item.url,
+    VideoId: item.id,
+    DurationSec: item.durationSec,
+    Width: item.width,
+    Height: item.height,
+    IsDrm: Boolean(item.isDrm),
+  };
+}
+
+function pageFields(page, cookies) {
+  const origin = parse(page.url)?.origin;
+  return {
+    PageUrl: page.url,
+    Cookies: cookies,
+    Headers: { Referer: page.url, Origin: origin, 'User-Agent': page.userAgent },
+  };
+}
+
+/** What's sent to the app for one click on one item. */
+export function captureMessage(item, page, cookies) {
+  return { ...itemFields(item), ...pageFields(page, cookies) };
+}
+
+/** One message for several items, so one cookie jar covers them all. DRM items are never included. */
+export function batchMessage(items, page, cookies) {
+  return { Kind: 'batch', Title: page.title, ...pageFields(page, cookies), Items: items.filter(canDownload).map(itemFields) };
+}
+
+/** The addresses to ask for cookies: the page, and each stream it points at. YouTube ids carry no address of their own. */
+export function cookieUrls(items, page) {
+  return [...new Set([page.url, ...items.map(i => i.url).filter(Boolean)])];
+}
+
+/** A web page must never be able to ask for cookies. Only this extension's own pages can. */
+export function mayCapture(sender, extensionId, extensionOrigin) {
+  return sender.id === extensionId && Boolean(sender.url?.startsWith(extensionOrigin)) && !sender.tab;
+}

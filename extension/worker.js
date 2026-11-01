@@ -1,6 +1,6 @@
 // Watches the tab's traffic. The worker can stop at any time, so state lives in storage.session and
 // listeners are registered at the top level, where Chrome finds them when it wakes the worker.
-import { addResponse, applyPage, classify, emptyState, groupStreams, parseMaster } from './detect.js';
+import { addResponse, applyPage, batchMessage, canDownload, captureMessage, classify, cookieUrls, emptyState, groupStreams, mayCapture, netscapeCookies, parseMaster } from './detect.js';
 
 const keyFor = tabId => `tab:${tabId}`;
 
@@ -62,3 +62,36 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 });
 
 chrome.tabs.onRemoved.addListener(tabId => chrome.storage.session.remove(keyFor(tabId)));
+
+// Cookies are read here and only here, in answer to a click in the popup.
+async function cookiesFor(urls) {
+  const lists = await Promise.all(urls.map(url => chrome.cookies.getAll({ url })));
+  const seen = new Set();
+  return lists.flat().filter(c => {
+    const key = `${c.domain}|${c.path}|${c.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function send({ items, page, withCookies }) {
+  const usable = items.filter(canDownload);
+  if (usable.length === 0) return { ok: false, error: 'DrmDetected', message: 'This stream is DRM-protected, so it can\'t be saved.' };
+  const onlyYouTube = usable.every(i => i.kind === 'youtube');
+  // A YouTube video needs your sign-in only when you say so. Other streams may be tied to the page's session.
+  const urls = onlyYouTube ? ['https://www.youtube.com/'] : cookieUrls(usable.filter(i => i.kind !== 'youtube'), page);
+  const cookies = withCookies ? netscapeCookies(await cookiesFor(urls)) : null;
+  const message = usable.length === 1 ? captureMessage(usable[0], page, cookies) : batchMessage(usable, page, cookies);
+  try {
+    return await chrome.runtime.sendNativeMessage('com.stx.downloader', message);
+  } catch {
+    return { ok: false, error: 'HostMissing', message: 'The STX Downloader app isn\'t connected to this browser. Run its setup, then try again.' };
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, sender, reply) => {
+  if (message?.type !== 'send' || !mayCapture(sender, chrome.runtime.id, chrome.runtime.getURL(''))) return false;
+  send(message).then(reply);
+  return true;
+});

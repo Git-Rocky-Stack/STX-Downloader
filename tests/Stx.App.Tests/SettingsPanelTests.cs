@@ -111,6 +111,29 @@ sealed class FakeSetup(params ToolHealth[] answers) : IToolSetup
 
 public class FirstRunTests
 {
+    [Fact]
+    public void Tools_already_on_disk_are_usable_while_the_update_check_is_still_going()
+    {
+        var panel = new FirstRunViewModel(new FakeSetup(ToolHealth.Current), new EngineStatusViewModel());
+        Assert.False(panel.IsReady);
+        Assert.True(panel.ToolsUsable(onDisk: true));
+    }
+
+    [Fact]
+    public void Tools_not_on_disk_are_not_usable_until_setup_finishes()
+    {
+        var panel = new FirstRunViewModel(new FakeSetup(ToolHealth.Current), new EngineStatusViewModel());
+        Assert.False(panel.ToolsUsable(onDisk: false));
+    }
+
+    [Fact]
+    public async Task Tools_are_usable_once_setup_finishes_even_if_a_path_check_says_otherwise()
+    {
+        var panel = new FirstRunViewModel(new FakeSetup(ToolHealth.Current), new EngineStatusViewModel());
+        await panel.StartAsync();
+        Assert.True(panel.ToolsUsable(onDisk: false));
+    }
+
     static FirstRunViewModel Panel(params ToolHealth[] answers) => new(new FakeSetup(answers), new EngineStatusViewModel());
 
     [Fact]

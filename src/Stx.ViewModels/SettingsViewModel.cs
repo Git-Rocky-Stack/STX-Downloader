@@ -70,6 +70,9 @@ public sealed class FirstRunViewModel : ObservableObject
 
     public IAsyncRelayCommand RetryCommand { get; }
     public bool IsReady { get => _ready; private set => SetProperty(ref _ready, value); }
+
+    /// <summary>Tools already on disk can work while their update check runs, so a first click after launch isn't refused.</summary>
+    public bool ToolsUsable(bool onDisk) => onDisk || IsReady;
     public bool IsVisible { get => _visible; private set => SetProperty(ref _visible, value); }
     public bool CanRetry { get => _canRetry; private set => SetProperty(ref _canRetry, value); }
     public bool IsBusy { get => _busy; private set => SetProperty(ref _busy, value); }

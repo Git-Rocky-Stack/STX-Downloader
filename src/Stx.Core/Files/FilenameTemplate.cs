@@ -44,6 +44,22 @@ public static partial class FilenameTemplate
         return fields + ".%(ext)s";
     }
 
+    /// <summary>
+    /// A captured stream arrives with no name of its own, so yt-dlp would call every one "master". This fills in the
+    /// name the page gave it and uses the library's number as its id. Anything else in your template still works.
+    /// </summary>
+    public static string ForCaptured(string template, string? title, long mediaId)
+    {
+        string source = string.IsNullOrWhiteSpace(template) ? Default : template;
+        string safe = (title ?? "").Replace("{", "").Replace("}", "").Trim();
+        return Token().Replace(source, match => match.Groups[1].Value.ToLowerInvariant() switch
+        {
+            "title" when safe.Length > 0 => safe,
+            "id" => mediaId.ToString(CultureInfo.InvariantCulture),
+            _ => match.Value,
+        });
+    }
+
     [GeneratedRegex(@"\{([A-Za-z]+)\}")]
     private static partial Regex Token();
 }

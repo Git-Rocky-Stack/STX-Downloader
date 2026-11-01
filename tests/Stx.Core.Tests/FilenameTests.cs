@@ -200,4 +200,20 @@ public class FilenameTemplateTests
         string path = Filename.Safe(FilenameTemplate.Render("{artist} {title}", hostile), ".mp4", @"D:\Media", _ => false);
         Assert.Equal(@"D:\Media", Path.GetDirectoryName(path));
     }
+
+    [Fact]
+    public void A_capture_is_named_after_its_title_with_the_library_number_as_id() =>
+        Assert.Equal("Walkaround [12]", FilenameTemplate.ForCaptured("{title} [{id}]", "Walkaround", 12));
+
+    [Fact]
+    public void A_capture_title_cannot_add_template_tokens() =>
+        Assert.Equal("a height b [1]", FilenameTemplate.ForCaptured("{title} [{id}]", "a {height} b", 1));
+
+    [Fact]
+    public void A_capture_with_no_title_keeps_the_token() =>
+        Assert.Equal("{title} [3]", FilenameTemplate.ForCaptured("{title} [{id}]", null, 3));
+
+    [Fact]
+    public void A_percent_in_a_capture_title_stays_literal() =>
+        Assert.Equal("100%% (real).%(ext)s", FilenameTemplate.ToYtDlp(FilenameTemplate.ForCaptured("{title}", "100% (real)", 1)));
 }

@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Stx.Art\Stx.Art.csproj" />
     <ProjectReference Include="..\Stx.ViewModels\Stx.ViewModels.csproj" />
     <ProjectReference Include="..\Stx.Data\Stx.Data.csproj" />
+    <ProjectReference Include="..\Stx.Bridge\Stx.Bridge.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\badge.png" CopyToOutputDirectory="PreserveNewest" />
