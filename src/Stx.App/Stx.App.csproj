@@ -19,5 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Stx.Look\Stx.Look.csproj" />
+    <ProjectReference Include="..\Stx.Art\Stx.Art.csproj" />
   </ItemGroup>
 </Project>

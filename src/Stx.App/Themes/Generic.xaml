@@ -1,0 +1,27 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:p="using:Stx.App.Primitives">
+
+    <Style TargetType="p:Faceplate">
+        <Setter Property="Padding" Value="36,28" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="p:Faceplate">
+                    <Grid>
+                        <Image x:Name="PART_Plate" Stretch="Fill" IsHitTestVisible="False" />
+                        <ContentPresenter
+                            Margin="{TemplateBinding Padding}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                            Content="{TemplateBinding Content}" />
+                        <Canvas x:Name="PART_Screws" IsHitTestVisible="False" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
