@@ -11,9 +11,17 @@ public sealed record JobProgress(long JobId, Progress Progress);
 public sealed record SavedFile(long JobId, string Path);
 
 /// <summary>Runs one job through yt-dlp. Every line of output is scrubbed before anything else sees it.</summary>
-public sealed class YtDlpRunner(IProcessRunner process, string ytDlpPath, Func<Job, DownloadRequest> requestFor, CaptureVault vault, string? credentialRoot = null) : IJobRunner
+public sealed class YtDlpRunner(IProcessRunner process, IYtDlpVersions versions, Func<Job, DownloadRequest> requestFor, CaptureVault vault, string? credentialRoot = null) : IJobRunner
 {
     const int LinesKeptForDiagnosis = 200;
+
+    public YtDlpRunner(IProcessRunner process, string ytDlpPath, Func<Job, DownloadRequest> requestFor, CaptureVault vault, string? credentialRoot = null)
+        : this(process, new SingleVersion(ytDlpPath), requestFor, vault, credentialRoot)
+    {
+    }
+
+    /// <summary>A fresh yt-dlp failed on a site and the previous one worked, so it's been put back. The user gets told.</summary>
+    public event EventHandler? RolledBack;
 
     public event EventHandler<JobLogLine>? LogLine;
     public event EventHandler<JobProgress>? ProgressChanged;
@@ -32,20 +40,46 @@ public sealed class YtDlpRunner(IProcessRunner process, string ytDlpPath, Func<J
             request = request with { ConfigPath = credentials.ConfigPath };
         }
 
-        var recent = new Queue<string>();
         try
         {
-            int exit = await process.RunAsync(ytDlpPath, YtDlpArgs.ForDownload(request), line => OnLine(job.Id, line, recent), cancel).ConfigureAwait(false);
-            if (exit == 0) return JobOutcome.Success;
-            string evidence;
-            lock (recent) evidence = string.Join('\n', recent);
-            return JobOutcome.Failure(ErrorClassifier.Classify(evidence, exit));
+            var outcome = await RunOnce(versions.YtDlpPath, job, request, cancel).ConfigureAwait(false);
+            if (outcome.IsSuccess)
+            {
+                if (versions.UpdateUnproven) versions.MarkUpdateProven();
+                return outcome;
+            }
+
+            if (versions.UpdateUnproven && versions.PreviousYtDlpPath is { } previous && UpdateCouldCause(outcome.Error))
+            {
+                var second = await RunOnce(previous, job, request, cancel).ConfigureAwait(false);
+                if (second.IsSuccess)
+                {
+                    await versions.RollbackAsync().ConfigureAwait(false);
+                    RolledBack?.Invoke(this, EventArgs.Empty);
+                    return second;
+                }
+            }
+            return outcome;
         }
         finally
         {
             credentials?.Dispose();
         }
     }
+
+    async Task<JobOutcome> RunOnce(string path, Job job, DownloadRequest request, CancellationToken cancel)
+    {
+        var recent = new Queue<string>();
+        int exit = await process.RunAsync(path, YtDlpArgs.ForDownload(request), line => OnLine(job.Id, line, recent), cancel).ConfigureAwait(false);
+        if (exit == 0) return JobOutcome.Success;
+        string evidence;
+        lock (recent) evidence = string.Join('\n', recent);
+        return JobOutcome.Failure(ErrorClassifier.Classify(evidence, exit));
+    }
+
+    // Site handling can break with a new version. A dropped connection, a full disk or DRM can't.
+    static bool UpdateCouldCause(ErrorKind? kind) =>
+        kind is not (ErrorKind.Network or ErrorKind.OutputFailure or ErrorKind.DrmDetected or ErrorKind.LinkExpired);
 
     void OnLine(long jobId, string line, Queue<string> recent)
     {
@@ -77,5 +111,14 @@ public sealed class YtDlpRunner(IProcessRunner process, string ytDlpPath, Func<J
         {
             return false;
         }
+    }
+
+    sealed class SingleVersion(string path) : IYtDlpVersions
+    {
+        public string YtDlpPath => path;
+        public string? PreviousYtDlpPath => null;
+        public bool UpdateUnproven => false;
+        public Task RollbackAsync() => Task.CompletedTask;
+        public void MarkUpdateProven() { }
     }
 }
