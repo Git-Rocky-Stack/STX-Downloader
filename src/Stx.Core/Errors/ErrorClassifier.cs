@@ -8,9 +8,10 @@ public static partial class ErrorClassifier
     /// <summary>Checked in order, because some messages hold another kind's words, such as "Private video. Sign in if...".</summary>
     static readonly (ErrorKind Kind, Regex Pattern)[] Rules =
     [
+        (ErrorKind.ToolFailure, Rule(@"requested format is not available")),
         (ErrorKind.DrmDetected, Rule(@"\bDRM\b")),
         (ErrorKind.OutputFailure, Rule(@"no space left|not enough space|errno 28|errno 13|permission denied|access is denied|cannot find the path|unable to open for writing|unable to write data|unable to create directory")),
-        (ErrorKind.PrivateOrUnavailable, Rule(@"private video|video unavailable|not available|has been removed|geo.?restrict|HTTP Error 404")),
+        (ErrorKind.PrivateOrUnavailable, Rule(@"private video|unavailable|not available|does not exist|has been removed|geo.?restrict|HTTP Error 404")),
         (ErrorKind.SignInNeeded, Rule(@"sign in to confirm|use --cookies|registered users|login required|log in|requires authentication|HTTP Error 401")),
         (ErrorKind.LinkExpired, Rule(@"HTTP Error 403|HTTP Error 410|link expired|url has expired")),
         (ErrorKind.UnsupportedSite, Rule(@"unsupported url|no suitable (extractor|info extractor)")),

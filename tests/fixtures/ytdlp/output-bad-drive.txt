@@ -1,0 +1,10 @@
+[youtube] Extracting URL: https://www.youtube.com/watch?v=aqz-KE-bpKQ
+[youtube] aqz-KE-bpKQ: Downloading webpage
+[youtube] aqz-KE-bpKQ: Downloading tv samsung player API JSON
+[youtube] aqz-KE-bpKQ: Downloading visionos player API JSON
+[youtube] aqz-KE-bpKQ: Downloading player 11a45ffb-main
+[youtube] [jsc:deno] Solving JS challenges using deno
+WARNING: Unknown codec iamf.001.001.Opus
+[youtube] aqz-KE-bpKQ: Downloading m3u8 information
+[info] aqz-KE-bpKQ: Downloading 1 format(s): 258
+ERROR: Unable to create directory: [WinError 3] The system cannot find the path specified: 'Z:\\'

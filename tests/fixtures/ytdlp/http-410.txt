@@ -1,0 +1,3 @@
+[generic] Extracting URL: https://httpbin.org/status/410
+[generic] 410: Downloading webpage
+ERROR: [generic] 410: Unable to download webpage: HTTP Error 410: Gone (caused by <HTTPError 410: Gone>)

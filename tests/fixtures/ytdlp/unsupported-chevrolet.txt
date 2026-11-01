@@ -1,0 +1,4 @@
+[generic] Extracting URL: https://www.chevrolet.com/performance/corvette/experience
+[generic] experience: Downloading webpage
+[generic] experience: Extracting information
+ERROR: Unsupported URL: https://www.chevrolet.com/performance/corvette/experience
