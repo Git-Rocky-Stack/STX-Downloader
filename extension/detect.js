@@ -209,10 +209,15 @@ function clock(total) {
   return h > 0 ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
 }
 
+/** The best name known for a stream: the page's, then its file's, then its first rendition's. */
+function nameFor(item) {
+  return item.title || nameIn(item.url) || (item.variants?.[0] && nameIn(item.variants[0])) || null;
+}
+
 /** One line telling this item apart from the others on the page. */
 export function labelFor(item) {
   if (item.kind === 'youtube') return `YouTube video ${item.id}`;
-  const parts = [item.title || nameIn(item.url) || (item.variants?.[0] && nameIn(item.variants[0])) || parse(item.url)?.hostname || 'Unknown source'];
+  const parts = [nameFor(item) || parse(item.url)?.hostname || 'Unknown source'];
   if (item.durationSec > 0) parts.push(clock(item.durationSec));
   if (item.width > 0) parts.push(`${item.width}×${item.height}`);
   parts.push({ hls: 'HLS', dash: 'DASH', file: 'File' }[item.kind]);
@@ -236,7 +241,7 @@ export function netscapeCookies(cookies) {
 function itemFields(item) {
   return {
     Kind: item.kind,
-    Title: item.title || (item.kind === 'youtube' ? labelFor(item) : nameIn(item.url)) || undefined,
+    Title: (item.kind === 'youtube' ? item.title || labelFor(item) : nameFor(item)) || undefined,
     StreamUrl: item.url,
     VideoId: item.id,
     DurationSec: item.durationSec,

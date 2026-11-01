@@ -246,3 +246,14 @@ test('only the extension\'s own pages may ask for a capture', () => {
   assert.equal(mayCapture({ id: 'x', url: 'https://evil.example/', tab: { id: 1 } }, 'x', origin), false);
   assert.equal(mayCapture({ id: 'other', url: origin + 'popup.html' }, 'x', origin), false);
 });
+
+test('a generic master is sent under the same name its label shows, as on Ferrari\'s Thron player', () => {
+  const item = { kind: 'hls', url: 'https://ferrari-view.thron.com/api/getContentDescriptor.m3u8?contentId=a', variants: ['https://ferrari-cdn.thron.com/ios/x.mp4/R9CF0A_aero-4300.m3u8?v=7'] };
+  assert.equal(captureMessage(item, page, null).Title, 'R9CF0A_aero');
+  assert.equal(batchMessage([item, { kind: 'file', url: 'https://a.example/b.mp4' }], page, null).Items[0].Title, 'R9CF0A_aero');
+});
+test('with no name anywhere, a stream is sent untitled and labeled by host', () => {
+  const item = { kind: 'hls', url: 'https://v.example/a/master.m3u8' };
+  assert.equal(captureMessage(item, page, null).Title, undefined);
+  assert.equal(labelFor(item), 'v.example · HLS');
+});
