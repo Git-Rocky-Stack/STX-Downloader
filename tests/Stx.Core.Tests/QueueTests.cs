@@ -507,3 +507,59 @@ public class DedupeTests
     public void Format_comparison_ignores_case() =>
         Assert.Equal(DedupeDecision.Duplicate, Dedupe.Decide("yt:abc", null, "M4A", Existing));
 }
+
+public class QueueShutdownTests
+{
+    [Fact]
+    public async Task Quitting_cancels_running_jobs_leaves_them_for_recovery_and_starts_nothing_new()
+    {
+        var repo = new FakeRepo();
+        var runner = new FakeRunner();
+        var engine = new QueueEngine(repo, runner, new QueuePolicy { MaxParallel = 1 }, new FakeClock(), new CaptureVault());
+        var running = engine.Enqueue(1, JobKind.Link, "x");
+        var waiting = engine.Enqueue(1, JobKind.Link, "x");
+
+        await engine.StopAllAsync(TimeSpan.Zero);
+
+        Assert.True(runner.Tokens[running.Id].IsCancellationRequested);
+        Assert.Equal(JobState.Running, repo.Get(running.Id)!.State);
+        runner.Succeed(running.Id);
+        Assert.Equal(JobState.Running, repo.Get(running.Id)!.State);
+        Assert.Equal(JobState.Queued, repo.Get(waiting.Id)!.State);
+        Assert.DoesNotContain(waiting.Id, runner.Started);
+
+        var late = engine.Enqueue(1, JobKind.Link, "x");
+        engine.Tick();
+        Assert.DoesNotContain(late.Id, runner.Started);
+    }
+
+    [Fact]
+    public async Task Nothing_new_starts_once_quitting_even_with_slots_free()
+    {
+        var runner = new FakeRunner();
+        var engine = new QueueEngine(new FakeRepo(), runner, new QueuePolicy { MaxParallel = 3 }, new FakeClock(), new CaptureVault());
+        await engine.StopAllAsync(TimeSpan.Zero);
+        var late = engine.Enqueue(1, JobKind.Link, "x");
+        Assert.DoesNotContain(late.Id, runner.Started);
+    }
+
+    [Fact]
+    public async Task Quitting_waits_for_a_run_to_clean_up()
+    {
+        var cleaned = false;
+        var engine = new QueueEngine(new FakeRepo(), new CleanupRunner(() => cleaned = true), new QueuePolicy(), new FakeClock(), new CaptureVault());
+        engine.Enqueue(1, JobKind.Link, "x");
+        await engine.StopAllAsync(TimeSpan.FromSeconds(5));
+        Assert.True(cleaned);
+    }
+
+    sealed class CleanupRunner(Action cleanup) : IJobRunner
+    {
+        public async Task<JobOutcome> RunAsync(Job job, CancellationToken cancel)
+        {
+            try { await Task.Delay(Timeout.Infinite, cancel).ConfigureAwait(false); }
+            catch (OperationCanceledException) { await Task.Delay(50, CancellationToken.None).ConfigureAwait(false); cleanup(); }
+            return JobOutcome.Failure(Stx.Core.Errors.ErrorKind.ToolFailure);
+        }
+    }
+}

@@ -1,4 +1,4 @@
-import { canDownload, emptyState, labelFor, listFor } from './detect.js';
+import { canDownload, emptyState, labelFor, listFor, saveAllUsesCookies } from './detect.js';
 
 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 const statusLine = document.getElementById('status');
@@ -58,7 +58,7 @@ async function show() {
   const usable = items.filter(canDownload);
   const all = document.getElementById('all');
   all.hidden = usable.length < 2;
-  all.onclick = () => save(usable, true, all);
+  all.onclick = () => save(usable, saveAllUsesCookies(usable), all);
   document.getElementById('drm').hidden = !state.drm;
 }
 

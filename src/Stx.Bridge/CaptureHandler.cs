@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Stx.Core.Errors;
 using Stx.Core.Jobs;
+using Stx.Core.Logging;
 using Stx.Core.Presets;
 using Stx.Core.Queue;
 
@@ -71,7 +72,9 @@ public sealed partial class CaptureHandler(IMediaCatalog catalog, QueueEngine en
             if (source.VideoId is not { } id || !YouTubeId().IsMatch(id)) return null;
             string watch = $"https://www.youtube.com/watch?v={id}";
             // Cookies make it a captured job, because only those keep their secrets out of the database.
-            var secrets = string.IsNullOrEmpty(message.Cookies) ? null : new CaptureSecrets(watch, headers, message.Cookies);
+            // Save all never sends your YouTube sign-in. Only the button that says so on one video does.
+            bool signedIn = message.Items is null && !string.IsNullOrEmpty(message.Cookies);
+            var secrets = signedIn ? new CaptureSecrets(watch, headers, message.Cookies) : null;
             return new Planned(watch, id, title ?? id, secrets);
         }
 
@@ -84,7 +87,8 @@ public sealed partial class CaptureHandler(IMediaCatalog catalog, QueueEngine en
         foreach (var job in engine.AllJobs().Where(j => j is { State: JobState.NeedsRecapture, Kind: JobKind.Captured }))
         {
             var item = catalog.GetItem(job.MediaId);
-            if (item?.PageUrl == plan.PageUrl && item.Title == plan.Title) return engine.Recapture(job.Id, secrets);
+            // Stored links have their tokens scrubbed, and a new capture's token will differ anyway.
+            if (item?.PageUrl == Redactor.ScrubLink(plan.PageUrl) && item.Title == plan.Title) return engine.Recapture(job.Id, secrets);
         }
         return false;
     }

@@ -5,6 +5,9 @@ using Stx.Look;
 
 namespace Stx.Core.Settings;
 
+/// <summary>What a download keeps: the best of everything, a height limit, or one side of the video.</summary>
+public enum DownloadChoice { Best, Up1080, Up720, VideoOnly, AudioOnly }
+
 public sealed record AppSettings
 {
     public const int MostParallel = 8;
@@ -16,6 +19,10 @@ public sealed record AppSettings
     public bool StartWithWindows { get; init; }
     public bool ToolUpdates { get; init; } = true;
     public bool ReduceMotion { get; init; }
+    public DownloadChoice Download { get; init; } = DownloadChoice.Best;
+    public bool EmbedTags { get; init; }
+    public bool EmbedCoverArt { get; init; }
+    public bool EmbedChapters { get; init; }
     public string OutputFolder { get; init; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "STX Downloader");
     public string FilenameTemplate { get; init; } = Files.FilenameTemplate.Default;
 

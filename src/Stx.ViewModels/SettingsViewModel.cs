@@ -28,6 +28,13 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
     public bool TrayMode { get => _settings.TrayMode; set => Apply(_settings with { TrayMode = value }); }
     public bool ToolUpdates { get => _settings.ToolUpdates; set => Apply(_settings with { ToolUpdates = value }); }
     public bool ReduceMotion { get => _settings.ReduceMotion; set => Apply(_settings with { ReduceMotion = value }); }
+    public DownloadChoice Download { get => _settings.Download; set => Apply(_settings with { Download = value }); }
+    public bool EmbedTags { get => _settings.EmbedTags; set => Apply(_settings with { EmbedTags = value }); }
+    public bool EmbedCoverArt { get => _settings.EmbedCoverArt; set => Apply(_settings with { EmbedCoverArt = value }); }
+    public bool EmbedChapters { get => _settings.EmbedChapters; set => Apply(_settings with { EmbedChapters = value }); }
+
+    /// <summary>In the order of DownloadChoice.</summary>
+    public static IReadOnlyList<string> DownloadLabels { get; } = ["BEST", "1080P", "720P", "VIDEO", "AUDIO"];
     public string OutputFolder { get => _settings.OutputFolder; set => Apply(_settings with { OutputFolder = value }); }
     public string FilenameTemplate { get => _settings.FilenameTemplate; set => Apply(_settings with { FilenameTemplate = value }); }
 
@@ -84,7 +91,7 @@ public sealed class FirstRunViewModel : ObservableObject
         CanRetry = false;
         try
         {
-            var progress = new SyncProgress(_status.Report);
+            var progress = new ThreadSafeProgress(_status.Report);
             var health = await _setup.EnsureAsync(progress, cancel);
             _status.Apply(health);
             IsReady = health != ToolHealth.Missing;
@@ -97,15 +104,31 @@ public sealed class FirstRunViewModel : ObservableObject
                 _ => "",
             };
         }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Setup should report failures itself, but whatever gets out still leaves you a way forward.
+            _status.Apply(ToolHealth.Missing);
+            IsReady = false;
+            IsVisible = true;
+            CanRetry = true;
+            Message = "The tools couldn't be set up. Check your connection and disk space, then retry.";
+        }
         finally
         {
             IsBusy = false;
         }
     }
 
-    sealed class SyncProgress(Action<ToolStatus> report) : IProgress<ToolStatus>
+    /// <summary>Tool setup reports from pool threads, and what it reports drives controls that only accept the UI thread.</summary>
+    sealed class ThreadSafeProgress(Action<ToolStatus> report) : IProgress<ToolStatus>
     {
-        public void Report(ToolStatus value) => report(value);
+        readonly SynchronizationContext? _home = SynchronizationContext.Current;
+
+        public void Report(ToolStatus value)
+        {
+            if (_home is null) report(value);
+            else _home.Post(_ => report(value), null);
+        }
     }
 }
 

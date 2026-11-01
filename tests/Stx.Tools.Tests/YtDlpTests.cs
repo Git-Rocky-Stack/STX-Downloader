@@ -162,7 +162,6 @@ public class YtDlpArgsTests
     {
         Assert.Equal("utf-8", After(YtDlpArgs.ForDownload(Request()), "--encoding"));
         Assert.Equal("utf-8", After(YtDlpArgs.ForEnumerate("https://x/y"), "--encoding"));
-        Assert.Equal("utf-8", After(YtDlpArgs.ForFormats("https://x/y"), "--encoding"));
     }
 
     [Fact]
@@ -204,15 +203,6 @@ public class YtDlpArgsTests
         Assert.Contains("-J", args);
         Assert.Contains("--flat-playlist", args);
         Assert.Equal("--", args[^2]);
-    }
-
-    [Fact]
-    public void Format_listing_reads_one_video()
-    {
-        var args = YtDlpArgs.ForFormats("https://www.youtube.com/watch?v=abc&list=PL1");
-        Assert.Contains("-J", args);
-        Assert.Contains("--no-playlist", args);
-        Assert.DoesNotContain("--flat-playlist", args);
     }
 }
 

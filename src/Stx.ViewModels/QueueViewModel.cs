@@ -125,9 +125,17 @@ public sealed class QueueViewModel
     public bool HasWaitingJobs => Items.Any(i => i.State == JobState.Waiting);
 
     /// <summary>Brings back what was in the queue when the app last closed.</summary>
+    /// <summary>Finished jobs shown at startup. Each row is live, and finished work is in the library anyway.</summary>
+    public const int HistoryShown = 50;
+
     public void Load()
     {
-        foreach (var job in _engine.AllJobs()) Update(job);
+        var jobs = _engine.AllJobs();
+        var recent = jobs.Where(j => j.State is JobState.Completed or JobState.Canceled).OrderByDescending(j => j.Id).Take(HistoryShown).Select(j => j.Id).ToHashSet();
+        foreach (var job in jobs)
+        {
+            if (job.State is not (JobState.Completed or JobState.Canceled) || recent.Contains(job.Id)) Update(job);
+        }
     }
 
     public void Pause(QueueItemViewModel item) => _engine.Pause(item.JobId);

@@ -21,6 +21,7 @@ public sealed partial class SourcePanel : ContentControl
     readonly Grid _offer = new() { Visibility = Visibility.Collapsed, ColumnSpacing = 16 };
     readonly TextBlock _offerText = new() { TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Segoe UI"), FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
     readonly Pad _add = new() { Lit = true, Content = "ADD ALL" };
+    readonly Pad _single = new() { Content = "JUST THIS VIDEO" };
     readonly ClipboardOfferViewModel? _clipboard;
     readonly Grid _clipRow = new() { Visibility = Visibility.Collapsed, ColumnSpacing = 16 };
     readonly TextBlock _clipText = new() { FontFamily = new FontFamily("Segoe UI"), FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
@@ -54,14 +55,18 @@ public sealed partial class SourcePanel : ContentControl
         line.Children.Add(paste);
 
         var decline = new Pad { Content = "CANCEL" };
+        _single.Click += async (_, _) => await source.JustThisVideoCommand.ExecuteAsync(null);
         _add.Click += (_, _) => source.ConfirmPlaylistCommand.Execute(null);
         decline.Click += (_, _) => source.DeclinePlaylistCommand.Execute(null);
         _offer.ColumnDefinitions.Add(new ColumnDefinition());
         _offer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _offer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        Grid.SetColumn(_add, 1);
-        Grid.SetColumn(decline, 2);
+        _offer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(_single, 1);
+        Grid.SetColumn(_add, 2);
+        Grid.SetColumn(decline, 3);
         _offer.Children.Add(_offerText);
+        _offer.Children.Add(_single);
         _offer.Children.Add(_add);
         _offer.Children.Add(decline);
 
@@ -131,6 +136,7 @@ public sealed partial class SourcePanel : ContentControl
         _next.Text = _source.NextStep;
         _next.Visibility = _source.NextStep.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        _single.Visibility = _source.PendingPlaylist?.SingleVideoUrl is null ? Visibility.Collapsed : Visibility.Visible;
         if (_source.PendingPlaylist is { } offer)
         {
             _offerText.Text = offer.Unavailable > 0

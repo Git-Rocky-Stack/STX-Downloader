@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import {
   addResponse, applyPage, canDownload, classify, emptyState, findEmbeds,
-  batchMessage, captureMessage, cookieUrls, groupStreams, labelFor, listFor, mayCapture, netscapeCookies, parseMaster, readTracker,
+  batchMessage, captureMessage, cookieUrls, groupStreams, labelFor, saveAllUsesCookies, listFor, mayCapture, netscapeCookies, parseMaster, readTracker,
 } from '../detect.js';
 
 const fixtureChevrolet = JSON.parse(readFileSync(new URL('./fixtures/chevrolet.json', import.meta.url)));
@@ -256,4 +256,9 @@ test('with no name anywhere, a stream is sent untitled and labeled by host', () 
   const item = { kind: 'hls', url: 'https://v.example/a/master.m3u8' };
   assert.equal(captureMessage(item, page, null).Title, undefined);
   assert.equal(labelFor(item), 'v.example · HLS');
+});
+
+test('Save all sends cookies only when something other than YouTube is in it', () => {
+  assert.equal(saveAllUsesCookies([{ kind: 'youtube', id: 'a' }, { kind: 'youtube', id: 'b' }]), false);
+  assert.equal(saveAllUsesCookies([{ kind: 'youtube', id: 'a' }, { kind: 'hls', url: master }]), true);
 });

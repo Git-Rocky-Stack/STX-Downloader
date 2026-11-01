@@ -64,10 +64,10 @@ public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog, ILib
         lock (connection)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT i.source_id, f.hash, f.format FROM media_files f JOIN media_items i ON i.id = f.media_id;";
+            command.CommandText = "SELECT i.source_id, f.hash, f.format, f.path FROM media_files f JOIN media_items i ON i.id = f.media_id;";
             using var reader = command.ExecuteReader();
             var facts = new List<MediaFact>();
-            while (reader.Read()) facts.Add(new MediaFact(Text(reader, 0), Text(reader, 1), reader.GetString(2)));
+            while (reader.Read()) facts.Add(new MediaFact(Text(reader, 0), Text(reader, 1), reader.GetString(2), Text(reader, 3)));
             return facts;
         }
     }

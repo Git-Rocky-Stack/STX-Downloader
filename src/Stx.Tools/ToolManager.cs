@@ -188,8 +188,9 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
             }
             if (ready) foreach (var (fresh, final) in extracted) File.Move(fresh, final, overwrite: true);
         }
-        catch (InvalidDataException)
+        catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException)
         {
+            // A damaged archive or a full disk: it just isn't ready.
             ready = false;
         }
         finally

@@ -53,7 +53,7 @@ public sealed class Composition : IDisposable
             new FfmpegRunner(process, Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), () => probe.Value.BestH264Async()),
             catalog.FilePath,
             (media, path, format) => catalog.AddFile(media, path, null, format));
-        Engine = new QueueEngine(new JobRepo(_db), new JobRouter(runner, converter), new QueuePolicy { MaxParallel = Settings.Current.MaxParallel }, new SystemClock(), vault);
+        Engine = new QueueEngine(new JobRepo(_db), new OffThreadRunner(new JobRouter(runner, converter)), new QueuePolicy { MaxParallel = Settings.Current.MaxParallel }, new SystemClock(), vault);
         var shell = new SystemShell();
         Queue = new QueueViewModel(Engine, catalog, shell, OnUi);
         SourceTruth = new SourceTruthViewModel(() => LookState.ReduceMotion);
@@ -188,6 +188,8 @@ public sealed class Composition : IDisposable
     {
         _closing.Cancel();
         _bridge?.Dispose();
+        // Tools end and their credential files go now, not at the next launch. Dispose isn't on a thread the jobs need.
+        Engine.StopAllAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         _retryTimer.Stop();
         _http.Dispose();
         _db.Dispose();
@@ -198,9 +200,11 @@ public sealed class Composition : IDisposable
     DownloadRequest RequestFor(Job job, IMediaCatalog catalog)
     {
         var item = catalog.GetItem(job.MediaId);
-        return new(job.Kind == JobKind.Link ? item?.PageUrl : null, Settings.Current.OutputFolder, DownloadMode.Best, null)
+        var (mode, height) = DownloadChoices.Map(Settings.Current.Download);
+        return new(job.Kind == JobKind.Link ? item?.PageUrl : null, Settings.Current.OutputFolder, mode, height)
         {
             Tools = Tools.Paths,
+            Metadata = DownloadChoices.Metadata(Settings.Current),
             OutputTemplate = job.Kind == JobKind.Captured
                 ? FilenameTemplate.ForCaptured(Settings.Current.FilenameTemplate, item?.Title, job.MediaId)
                 : Settings.Current.FilenameTemplate,

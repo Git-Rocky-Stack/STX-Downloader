@@ -24,6 +24,15 @@ public sealed partial class SettingsPanel : ContentControl
         switches.Children.Add(Switch("TOOL UPDATES", settings.ToolUpdates, v => settings.ToolUpdates = v));
         switches.Children.Add(Switch("REDUCE MOTION", settings.ReduceMotion, v => settings.ReduceMotion = v));
 
+        var embed = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center };
+        embed.Children.Add(Switch("TAGS", settings.EmbedTags, v => settings.EmbedTags = v));
+        embed.Children.Add(Switch("COVER ART", settings.EmbedCoverArt, v => settings.EmbedCoverArt = v));
+        embed.Children.Add(Switch("CHAPTERS", settings.EmbedChapters, v => settings.EmbedChapters = v));
+
+        var download = new Rotary { Label = "Download", Items = SettingsViewModel.DownloadLabels };
+        download.SelectedIndex = (int)settings.Download;
+        download.SelectionChanged += (_, index) => settings.Download = (DownloadChoice)index;
+
         var parallel = new Rotary
         {
             Label = "Parallel downloads",
@@ -67,12 +76,16 @@ public sealed partial class SettingsPanel : ContentControl
         var top = new Grid { ColumnSpacing = 32 };
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         top.ColumnDefinitions.Add(new ColumnDefinition());
-        Grid.SetColumn(parallel, 0);
+        var dials = new StackPanel { Spacing = 16 };
+        dials.Children.Add(download);
+        dials.Children.Add(parallel);
+        Grid.SetColumn(dials, 0);
         var rows = new StackPanel { Spacing = 16 };
         rows.Children.Add(switches);
+        rows.Children.Add(embed);
         rows.Children.Add(fields);
         Grid.SetColumn(rows, 1);
-        top.Children.Add(parallel);
+        top.Children.Add(dials);
         top.Children.Add(rows);
 
         var column = new StackPanel { Spacing = 12 };

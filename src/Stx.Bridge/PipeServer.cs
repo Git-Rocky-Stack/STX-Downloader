@@ -5,9 +5,9 @@ using System.Security.Principal;
 namespace Stx.Bridge;
 
 /// <summary>The app's end of the hand-off. Only your own account can connect, it's not reachable over a network, and it opens no port.</summary>
-public sealed class PipeServer(string name, Func<string, string> handle) : IDisposable
+public sealed class PipeServer(string name, Func<string, string> handle, TimeSpan? clientTimeout = null) : IDisposable
 {
-    static readonly TimeSpan ClientTimeout = TimeSpan.FromSeconds(10);
+    readonly TimeSpan _clientTimeout = clientTimeout ?? TimeSpan.FromSeconds(10);
 
     readonly CancellationTokenSource _stop = new();
     Task? _loop;
@@ -41,9 +41,10 @@ public sealed class PipeServer(string name, Func<string, string> handle) : IDisp
                     await pipe.WaitForConnectionAsync(_stop.Token).ConfigureAwait(false);
                     await ServeAsync(pipe).ConfigureAwait(false);
                 }
-                catch (Exception e) when (e is IOException or InvalidDataException or ObjectDisposedException or InvalidOperationException)
+                catch (Exception e) when (e is IOException or InvalidDataException or ObjectDisposedException or InvalidOperationException
+                    || (e is OperationCanceledException && !_stop.IsCancellationRequested))
                 {
-                    // One bad client can't stop the next one.
+                    // One bad or silent client can't stop the next one.
                 }
 
                 // A fresh instance each time, because a pipe left broken by a client can't always be reused.
@@ -70,9 +71,13 @@ public sealed class PipeServer(string name, Func<string, string> handle) : IDisp
 
     async Task ServeAsync(NamedPipeServerStream pipe)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
-        deadline.CancelAfter(ClientTimeout);
-        if (await NativeMessaging.ReadAsync(pipe, deadline.Token).ConfigureAwait(false) is not { } json) return;
+        string? json;
+        using (var reading = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token))
+        {
+            reading.CancelAfter(_clientTimeout);
+            json = await NativeMessaging.ReadAsync(pipe, reading.Token).ConfigureAwait(false);
+        }
+        if (json is null) return;
 
         string reply;
         try
@@ -83,7 +88,11 @@ public sealed class PipeServer(string name, Func<string, string> handle) : IDisp
         {
             reply = BridgeReply.Refused("Internal", "STX Downloader couldn't take that item.");
         }
-        await NativeMessaging.WriteAsync(pipe, reply, deadline.Token).ConfigureAwait(false);
+
+        // The deadline starts here, so time spent handling the message can't lose its answer.
+        using var writing = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
+        writing.CancelAfter(_clientTimeout);
+        await NativeMessaging.WriteAsync(pipe, reply, writing.Token).ConfigureAwait(false);
     }
 
     public void Dispose()

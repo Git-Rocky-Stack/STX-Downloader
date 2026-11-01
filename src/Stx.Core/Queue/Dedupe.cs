@@ -2,7 +2,7 @@ namespace Stx.Core.Queue;
 
 public enum DedupeDecision { New, Duplicate }
 
-public sealed record MediaFact(string? SourceId, string? Hash, string Format);
+public sealed record MediaFact(string? SourceId, string? Hash, string Format, string? Path = null);
 
 /// <summary>A second format of the same source is wanted. The same source in the same format, or the same bytes from anywhere, is not.</summary>
 public static class Dedupe

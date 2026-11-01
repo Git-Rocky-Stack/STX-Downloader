@@ -482,3 +482,65 @@ public class BridgeTests
         Assert.False(Ok(NativeMessaging.Read(output)!));
     }
 }
+
+public class ReviewFixTests
+{
+    const string Page = "https://www.youtube.com/watch?v=QBwwj5p25AM";
+
+    static string Name() => "stx-test-" + Guid.NewGuid().ToString("N");
+
+    [Fact]
+    public async Task A_client_that_goes_silent_does_not_stop_the_next_one()
+    {
+        string name = Name();
+        using var server = new PipeServer(name, _ => "{\"ok\":true}", TimeSpan.FromMilliseconds(200));
+        server.Start();
+        using var silent = new NamedPipeClientStream(".", name, PipeDirection.InOut);
+        await silent.ConnectAsync(5000);
+        await Task.Delay(600);
+        Assert.Equal("{\"ok\":true}", await PipeClient.SendAsync(name, "{}", null, TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
+    public async Task A_slow_handler_still_gets_its_reply_back()
+    {
+        string name = Name();
+        using var server = new PipeServer(name, _ => { Thread.Sleep(500); return "{\"ok\":true}"; }, TimeSpan.FromMilliseconds(100));
+        server.Start();
+        Assert.Equal("{\"ok\":true}", await PipeClient.SendAsync(name, "{}", null, TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
+    public void Save_all_never_sends_sign_in_cookies_with_YouTube_items()
+    {
+        using var rig = new Rig();
+        string batch = JsonSerializer.Serialize(new
+        {
+            Kind = "batch", PageUrl = "https://a.example/page", Cookies = "SECRETCOOKIE",
+            Items = new object[]
+            {
+                new { Kind = "youtube", VideoId = "QBwwj5p25AM" },
+                new { Kind = "hls", Title = "One", StreamUrl = "https://v.example/1.m3u8" },
+            },
+        });
+        rig.Handler.Handle(batch);
+        var jobs = rig.Engine.AllJobs();
+        Assert.Equal(JobKind.Link, jobs.Single(j => rig.Catalog.GetItem(j.MediaId)!.SourceId == "QBwwj5p25AM").Kind);
+        Assert.Equal("SECRETCOOKIE", rig.Vault.Get(jobs.Single(j => j.Kind == JobKind.Captured).Id)!.Cookies);
+    }
+
+    [Fact]
+    public void A_recapture_resumes_even_when_the_page_link_carries_a_token()
+    {
+        using var rig = new Rig();
+        const string page = "https://portal.example/watch?id=1&token=FIRST";
+        string Message(string pageUrl) => JsonSerializer.Serialize(new { Kind = "hls", PageUrl = pageUrl, Title = "T", StreamUrl = "https://v.example/a.m3u8" });
+        rig.Handler.Handle(Message(page));
+        var job = rig.Engine.AllJobs().Single();
+        rig.Runner.Finish(job.Id, JobOutcome.Failure(ErrorKind.LinkExpired));
+        SpinWait.SpinUntil(() => rig.Engine.AllJobs().Single().State == JobState.NeedsRecapture, 5000);
+
+        rig.Handler.Handle(Message("https://portal.example/watch?id=1&token=SECOND"));
+        Assert.Equal(job.Id, Assert.Single(rig.Engine.AllJobs()).Id);
+    }
+}

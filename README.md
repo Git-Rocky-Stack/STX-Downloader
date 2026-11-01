@@ -15,7 +15,7 @@ Each line points at the code that does it.
 - Paste a link, and yt-dlp handles it, single items and playlists (`src/Stx.ViewModels/SourceViewModel.cs:12`, `src/Stx.Tools/YtDlpArgs.cs:37`).
 - Video isn't re-encoded by default. It keeps the original streams, in MP4 or MKV (`src/Stx.Tools/YtDlpArgs.cs:38`).
 - Car USB and Phone presets convert when you ask them to (`src/Stx.Core/Presets/PresetCatalog.cs:30`, `src/Stx.Core/Presets/PresetCatalog.cs:31`).
-- A captured job whose link expired waits for a new capture from its page, and resumes from it (`src/Stx.Core/Queue/QueueEngine.cs:61`, `src/Stx.Bridge/CaptureHandler.cs:11`).
+- A captured job whose link expired waits for a new capture from its page, and resumes from it (`src/Stx.Core/Queue/QueueEngine.cs:63`, `src/Stx.Bridge/CaptureHandler.cs:85`).
 
 **Capturing from a page**
 
@@ -26,7 +26,7 @@ Each line points at the code that does it.
 
 **Your secrets**
 
-- Stream tokens, cookies and headers stay in memory (`src/Stx.Core/Queue/CaptureVault.cs:12`) and reach yt-dlp through a temp file only you can read, deleted when the job ends (`src/Stx.Tools/CredentialFile.cs:73`).
+- Stream tokens, cookies and headers stay in memory (`src/Stx.Core/Queue/CaptureVault.cs:12`) and reach yt-dlp through a temp file only you can read, deleted when the job ends or the app quits (`src/Stx.Tools/CredentialFile.cs:73`, `src/Stx.Core/Queue/QueueEngine.cs:92`).
 - They are scrubbed from the log you can copy (`src/Stx.Core/Logging/Redactor.cs:6`).
 
 **Source Truth**
@@ -37,6 +37,7 @@ Each line points at the code that does it.
 **The console**
 
 - Black anodized by default, brushed aluminum as light mode (`src/Stx.App/Panels/SettingsPanel.cs:20`).
+- Choose best quality, up to 1080p or 720p, video only or audio only, and which metadata to embed (`src/Stx.App/Panels/SettingsPanel.cs:32`, `src/Stx.Tools/DownloadChoices.cs:9`).
 - Tray mode (`src/Stx.App/Platform/Tray.cs:6`), start with Windows (`src/Stx.App/Platform/StartupRegistry.cs:7`) and an optional clipboard offer, off by default (`src/Stx.App/Platform/ClipboardWatcher.cs:7`).
 
 ## Install

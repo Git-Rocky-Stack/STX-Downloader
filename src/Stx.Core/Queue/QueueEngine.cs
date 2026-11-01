@@ -12,6 +12,8 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
     readonly object _gate = new();
     readonly Dictionary<long, CancellationTokenSource> _running = new();
     readonly Dictionary<long, DateTimeOffset> _retryAt = new();
+    readonly Dictionary<long, Task> _drives = new();
+    bool _stopping;
 
     public event EventHandler<Job>? JobChanged;
 
@@ -83,6 +85,23 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
         }
     }
 
+    /// <summary>
+    /// The app is quitting: stops every run, so tools end and their credential files are deleted, and starts nothing
+    /// more. Job states stay as they are, for RecoverAfterRestart to sort out next time.
+    /// </summary>
+    public async Task StopAllAsync(TimeSpan wait)
+    {
+        Task[] drives;
+        lock (_gate)
+        {
+            _stopping = true;
+            foreach (var run in _running.Values) run.Cancel();
+            _running.Clear();
+            drives = _drives.Values.ToArray();
+        }
+        await Task.WhenAny(Task.WhenAll(drives), Task.Delay(wait)).ConfigureAwait(false);
+    }
+
     /// <summary>Call on a timer: releases jobs whose retry wait is over.</summary>
     public void Tick()
     {
@@ -119,6 +138,7 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
 
     void Pump()
     {
+        if (_stopping) return;
         var now = clock.Now;
         foreach (var job in repo.All().Where(j => j.State == JobState.Waiting))
         {
@@ -142,7 +162,10 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
             Move(next, JobState.Running);
             var run = new CancellationTokenSource();
             _running[next.Id] = run;
-            _ = Drive(repo.Get(next.Id) ?? next, run);
+            long id = next.Id;
+            var drive = Drive(repo.Get(id) ?? next, run);
+            _drives[id] = drive;
+            _ = drive.ContinueWith(done => { lock (_gate) { if (_drives.GetValueOrDefault(id) == done) _drives.Remove(id); } }, TaskScheduler.Default);
         }
     }
 

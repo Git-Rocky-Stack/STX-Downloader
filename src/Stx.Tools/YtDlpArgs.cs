@@ -36,6 +36,8 @@ public static class YtDlpArgs
             "-N", "8",
             "-f", Format(request.Mode, request.MaxHeight),
             "--merge-output-format", "mp4/mkv",
+            // Playlists are listed first and queued item by item, so one job is always one item.
+            "--no-playlist",
             "-P", request.OutputFolder,
             "-o", FilenameTemplate.ToYtDlp(request.OutputTemplate),
             "--windows-filenames",
@@ -59,16 +61,6 @@ public static class YtDlpArgs
         var args = new List<string> { "--ignore-config", "--encoding", "utf-8" };
         AddTools(args, tools);
         args.AddRange(["--no-warnings", "-J", "--flat-playlist", "--ignore-errors"]);
-        AddUrl(args, url);
-        return args;
-    }
-
-    /// <summary>Lists the formats of one video, with what's needed to judge its quality.</summary>
-    public static IReadOnlyList<string> ForFormats(string url, ToolPaths? tools = null)
-    {
-        var args = new List<string> { "--ignore-config", "--encoding", "utf-8" };
-        AddTools(args, tools);
-        args.AddRange(["--no-warnings", "-J", "--no-playlist"]);
         AddUrl(args, url);
         return args;
     }

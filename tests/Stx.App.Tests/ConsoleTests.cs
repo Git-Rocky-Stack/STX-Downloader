@@ -39,7 +39,7 @@ sealed class MemoryCatalog : IMediaCatalog
     }
 
     public IReadOnlyList<MediaFact> ExistingFacts() =>
-        Files.Select(f => new MediaFact(GetItem(f.Media)?.SourceId, null, f.Format)).ToList();
+        Files.Select(f => new MediaFact(GetItem(f.Media)?.SourceId, null, f.Format, f.Path)).ToList();
 }
 
 /// <summary>A job runner the test finishes by hand, on a plain context so results are ready at once.</summary>
@@ -102,7 +102,7 @@ public class ConsoleFixture
     internal static LinkAnalysis One(string id = "abc", string title = "My Song") =>
         LinkAnalysis.Found(title, [new PlaylistEntry(id, title, "https://x/" + id, true)]);
 
-    internal SourceViewModel Source(ILinkAnalyzer analyzer) => new(analyzer, Catalog, Engine);
+    internal SourceViewModel Source(ILinkAnalyzer analyzer) => new(analyzer, Catalog, Engine, fileExists: _ => true);
 
     internal static readonly CaptureSecrets Secret = new("https://cdn/x.m3u8", new Dictionary<string, string>(), null);
 }

@@ -65,6 +65,8 @@ internal static class ConsoleSample
     public static UIElement Settings()
     {
         string file = Path.Combine(Path.GetTempPath(), "stx-gallery-settings-" + Environment.ProcessId + ".json");
+        // A fixed sample, so a baseline never holds a real user's folder.
+        File.WriteAllText(file, "{\"OutputFolder\":\"D:\\\\Media\\\\STX Downloader\"}");
         return new SettingsPanel(new SettingsViewModel(new SettingsStore(file), new NoStartup()), null);
     }
 

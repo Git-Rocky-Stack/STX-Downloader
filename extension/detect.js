@@ -279,3 +279,8 @@ export function cookieUrls(items, page) {
 export function mayCapture(sender, extensionId, extensionOrigin) {
   return sender.id === extensionId && Boolean(sender.url?.startsWith(extensionOrigin)) && !sender.tab;
 }
+
+/** Your YouTube sign-in only goes with the button that says so, on one video. */
+export function saveAllUsesCookies(items) {
+  return items.some(i => i.kind !== 'youtube');
+}
