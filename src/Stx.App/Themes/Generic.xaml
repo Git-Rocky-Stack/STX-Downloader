@@ -34,6 +34,26 @@
         </Setter>
     </Style>
 
+    <Style TargetType="p:Bargraph">
+        <Setter Property="Height" Value="26" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="p:Bargraph">
+                    <Grid CornerRadius="2" BorderThickness="1" BorderBrush="#000000">
+                        <Grid.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Offset="0" Color="#020303" />
+                                <GradientStop Offset="1" Color="#090B0C" />
+                            </LinearGradientBrush>
+                        </Grid.Background>
+                        <Canvas x:Name="PART_Segments" Margin="5" IsHitTestVisible="False" />
+                        <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="p:Faceplate">
         <Setter Property="Padding" Value="36,28" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />

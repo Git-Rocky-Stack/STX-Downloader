@@ -12,8 +12,46 @@ internal static class GalleryPages
     {
         "faceplate" => Faceplates(),
         "display" => Displays(),
+        "led" => Leds(options.Hold),
+        "bargraph" => Bargraphs(),
         _ => new Grid(),
     };
+
+    static UIElement Leds(bool hold)
+    {
+        var rows = new StackPanel { Spacing = 44 };
+        foreach (var color in Enum.GetValues<LedColor>())
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 88 };
+            row.Children.Add(new Led { Color = color, State = LedState.Off });
+            row.Children.Add(new Led { Color = color, State = LedState.On });
+            // The frame at the top of a strike flash, and the dim half of the busy blink.
+            row.Children.Add(new Led { Color = color, FrozenBrightness = StrikeTimeline.PeakBrightness });
+            row.Children.Add(hold
+                ? new Led { Color = color, FrozenBrightness = StrikeTimeline.Busy[^1].Brightness }
+                : new Led { Color = color, State = LedState.Strike });
+            rows.Children.Add(row);
+        }
+
+        var page = new Grid { Padding = new Thickness(8) };
+        page.Children.Add(new Faceplate { PanelName = "gallery-led", Padding = new Thickness(72, 56, 72, 56), Content = rows });
+        return page;
+    }
+
+    static UIElement Bargraphs()
+    {
+        var column = new StackPanel { Spacing = 16 };
+        column.Children.Add(new Bargraph { Value = 0 });
+        column.Children.Add(new Bargraph { Value = 50 });
+        column.Children.Add(new Bargraph { Value = 100 });
+        column.Children.Add(new Bargraph { Zones = BargraphZones.Vu, Value = 30 });
+        column.Children.Add(new Bargraph { Zones = BargraphZones.Vu, Value = 70, Peak = 84 });
+        column.Children.Add(new Bargraph { Zones = BargraphZones.Vu, Value = 95, Peak = 98 });
+
+        var page = new Grid { Padding = new Thickness(8) };
+        page.Children.Add(new Faceplate { PanelName = "gallery-bargraph", Content = column });
+        return page;
+    }
 
     static UIElement Faceplates()
     {
