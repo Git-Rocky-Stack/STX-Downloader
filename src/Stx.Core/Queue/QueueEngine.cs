@@ -18,6 +18,11 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
     /// <summary>Takes effect at the next start. Settings can change this while jobs run.</summary>
     public QueuePolicy Policy { get; set; } = policy;
 
+    public IReadOnlyList<Job> AllJobs()
+    {
+        lock (_gate) return repo.All();
+    }
+
     public Job Enqueue(long mediaId, JobKind kind, string preset, CaptureSecrets? secrets = null)
     {
         lock (_gate)

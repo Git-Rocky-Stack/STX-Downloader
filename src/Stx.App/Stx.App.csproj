@@ -20,5 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Stx.Look\Stx.Look.csproj" />
     <ProjectReference Include="..\Stx.Art\Stx.Art.csproj" />
+    <ProjectReference Include="..\Stx.ViewModels\Stx.ViewModels.csproj" />
+    <ProjectReference Include="..\Stx.Data\Stx.Data.csproj" />
   </ItemGroup>
 </Project>

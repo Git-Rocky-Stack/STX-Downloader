@@ -26,6 +26,7 @@ internal static class GalleryPages
         "dialog" => Dialogs(),
         "states" => States(options.Hold),
         "all-primitives" => AllPrimitives(options.Hold),
+        "console" => ConsoleSample.Build(),
         _ => new Grid(),
     };
 

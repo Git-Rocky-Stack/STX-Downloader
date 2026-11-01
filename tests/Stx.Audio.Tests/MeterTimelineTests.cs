@@ -83,6 +83,15 @@ public class MeterTimelineTests
         Assert.Equal(MeterTimeline.Dark, MeterTimeline.Hold(reported));
     }
 
+    // Levels the site merely claims must never move a meter, even if they were somehow filled in.
+    [Fact]
+    public void Facts_not_measured_from_the_file_never_drive_the_meters()
+    {
+        var claimed = Facts() with { MeasuredFromFile = false };
+        Assert.Empty(MeterTimeline.Sweep(claimed));
+        Assert.Equal(MeterTimeline.Dark, MeterTimeline.Hold(claimed));
+    }
+
     [Fact]
     public void Silence_measures_as_empty_meters()
     {

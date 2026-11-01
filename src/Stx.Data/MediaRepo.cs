@@ -4,9 +4,7 @@ using Stx.Core.Queue;
 
 namespace Stx.Data;
 
-public sealed record MediaItem(long Id, string? PageUrl, string? SourceId, string? Title);
-
-public sealed class MediaRepo(SqliteConnection connection)
+public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog
 {
     /// <summary>Tokens are scrubbed from the link here, at the only door into the table.</summary>
     public long AddItem(string? pageUrl, string? sourceId, string? title)
@@ -22,7 +20,7 @@ public sealed class MediaRepo(SqliteConnection connection)
         }
     }
 
-    public MediaItem? GetItem(long id)
+    public MediaRecord? GetItem(long id)
     {
         lock (connection)
         {
@@ -31,7 +29,7 @@ public sealed class MediaRepo(SqliteConnection connection)
             command.Parameters.AddWithValue("$id", id);
             using var reader = command.ExecuteReader();
             if (!reader.Read()) return null;
-            return new MediaItem(reader.GetInt64(0), Text(reader, 1), Text(reader, 2), Text(reader, 3));
+            return new MediaRecord(reader.GetInt64(0), Text(reader, 1), Text(reader, 2), Text(reader, 3));
         }
     }
 

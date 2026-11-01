@@ -17,6 +17,7 @@ public class AccessibilityScanTests
         ("pad", 7), ("pushswitch", 5), ("rotary", 3),
         ("label", 0), ("list", 5), ("textbox", 2), ("dialog", 2), ("states", 1),
         ("all-primitives", 9),
+        ("console", 11),
     ];
 
     public static IEnumerable<object[]> Cases() =>

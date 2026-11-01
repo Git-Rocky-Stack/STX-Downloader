@@ -31,6 +31,20 @@ public static class PlaylistListing
         }
     }
 
+    /// <summary>The list's own title, or the video's, or null.</summary>
+    public static string? ParseTitle(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind == JsonValueKind.Object ? Text(document.RootElement, "title") : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     static PlaylistEntry? Entry(JsonElement item)
     {
         string? id = Text(item, "id");

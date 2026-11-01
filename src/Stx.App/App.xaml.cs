@@ -11,8 +11,10 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        var options = GalleryOptions.Parse(Environment.GetCommandLineArgs());
-        _window = new GalleryWindow(options);
+        string[] commandLine = Environment.GetCommandLineArgs();
+        _window = commandLine.Any(a => a.StartsWith("--gallery=", StringComparison.Ordinal))
+            ? new GalleryWindow(GalleryOptions.Parse(commandLine))
+            : new MainWindow();
         _window.Activate();
     }
 }
