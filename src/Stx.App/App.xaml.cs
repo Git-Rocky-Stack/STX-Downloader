@@ -15,8 +15,10 @@ public partial class App : Application
         string[] commandLine = Environment.GetCommandLineArgs();
         if (commandLine.Any(a => a.StartsWith("--gallery=", StringComparison.Ordinal)))
         {
-            _window = new GalleryWindow(GalleryOptions.Parse(commandLine));
-            _window.Activate();
+            var options = GalleryOptions.Parse(commandLine);
+            _window = new GalleryWindow(options);
+            if (options.Hold) _window.AppWindow.Show(activateWindow: false);
+            else _window.Activate();
             return;
         }
 

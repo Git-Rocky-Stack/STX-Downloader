@@ -1,8 +1,9 @@
 using System.ComponentModel;
-using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Stx.App.Primitives;
 using Stx.Look;
 using Stx.ViewModels;
@@ -12,6 +13,8 @@ namespace Stx.App.Panels;
 /// <summary>The top plate: the name, and whether the tools are ready.</summary>
 public sealed partial class HeaderPanel : ContentControl
 {
+    const double BadgeHeight = 34;
+
     readonly Led _engine = new(), _fault = new() { Color = LedColor.Red };
     readonly EngravedLabel _engineText = new() { Kind = LabelKind.Label };
 
@@ -19,10 +22,15 @@ public sealed partial class HeaderPanel : ContentControl
     {
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
-        var brand = new TextBlock { Text = "STX", FontFamily = new FontFamily("Segoe UI"), FontWeight = FontWeights.Black, FontSize = 26, CharacterSpacing = 200 };
-        LookState.Changed += () => brand.Foreground = LookBrushes.From(LookTokens.For(LookState.Mode)["Ink"]);
-        brand.Foreground = LookBrushes.From(LookTokens.For(LookState.Mode)["Ink"]);
-        var name = new StackPanel { Spacing = 2 };
+        var brand = new Image
+        {
+            Source = new BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "badge.png"))),
+            Height = BadgeHeight,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        AutomationProperties.SetName(brand, "STX");
+        var name = new StackPanel { Spacing = 6 };
         name.Children.Add(brand);
         name.Children.Add(new EngravedLabel { Kind = LabelKind.Sub, Text = "Media capture console" });
 

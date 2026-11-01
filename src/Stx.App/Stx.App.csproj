@@ -12,6 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>STXDownloader</AssemblyName>
     <RootNamespace>Stx.App</RootNamespace>
+    <ApplicationIcon>Assets\stx.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
@@ -22,5 +23,9 @@
     <ProjectReference Include="..\Stx.Art\Stx.Art.csproj" />
     <ProjectReference Include="..\Stx.ViewModels\Stx.ViewModels.csproj" />
     <ProjectReference Include="..\Stx.Data\Stx.Data.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\badge.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\stx.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
