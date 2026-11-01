@@ -7,6 +7,7 @@ using Stx.App.Panels;
 using Stx.App.Platform;
 using Stx.App.Primitives;
 using Stx.Core.Settings;
+using Stx.Look;
 
 namespace Stx.App;
 
@@ -18,7 +19,7 @@ public sealed partial class MainWindow : Window
     readonly ClipboardWatcher _clipboard;
     bool _quitting;
 
-    public MainWindow(bool startHidden = false)
+    public MainWindow(bool startHidden = false, bool pointerLight = false)
     {
         Title = "STX Downloader";
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "stx.ico"));
@@ -51,6 +52,7 @@ public sealed partial class MainWindow : Window
         var root = new Grid { RequestedTheme = ElementTheme.Dark, Background = new SolidColorBrush(ColorHelper.FromArgb(255, 8, 9, 10)) };
         root.Children.Add(new ScrollViewer { Content = rack });
         Content = root;
+        if (pointerLight) AddPointerLight(root);
 
         _app.Activity.Register(() => truth.SweepTimer.IsEnabled || _app.SourceTruth.IsSweeping, truth.SweepTimer.Start, truth.SweepTimer.Stop, keepRunningWhenHidden: false);
 
@@ -68,6 +70,21 @@ public sealed partial class MainWindow : Window
     }
 
     public bool StartsHidden { get; }
+
+    // Prototype, on only with --pointer-light, until Rocky decides whether it stays.
+    static void AddPointerLight(Grid root)
+    {
+        var overlay = new Canvas { IsHitTestVisible = false };
+        root.Children.Add(overlay);
+        var light = new PointerLight(overlay);
+        root.AddHandler(UIElement.PointerMovedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, e) =>
+        {
+            if (LookState.ReduceMotion) { light.Hide(); return; }
+            var at = e.GetCurrentPoint(root).Position;
+            light.Move((float)at.X, (float)at.Y);
+        }), handledEventsToo: true);
+        root.PointerExited += (_, _) => light.Hide();
+    }
 
     /// <summary>Brings the window back, from the tray or from a second launch.</summary>
     public void ShowFromTray()

@@ -27,12 +27,35 @@ internal static class GalleryPages
         "states" => States(options.Hold),
         "all-primitives" => AllPrimitives(options.Hold),
         "console" => ConsoleSample.Build(),
+        "pointerlight" => PointerLightSample(options.Hold),
         "sourcetruth" => ConsoleSample.SourceTruth(),
         "library" => ConsoleSample.LibraryPage(),
         "settings" => ConsoleSample.Settings(),
         "firstrun" => ConsoleSample.FirstRun(),
         _ => new Grid(),
     };
+
+    // The console with the light on it: held still for a picture, or sweeping nonstop as the worst case for the budgets.
+    static UIElement PointerLightSample(bool hold)
+    {
+        var page = new Grid();
+        page.Children.Add(ConsoleSample.Build());
+        var overlay = new Canvas { IsHitTestVisible = false };
+        page.Children.Add(overlay);
+        var light = new PointerLight(overlay);
+        light.Move(300, 250);
+        if (!hold)
+        {
+            var sweep = light.Sprite.Compositor.CreateVector3KeyFrameAnimation();
+            sweep.InsertKeyFrame(0, new System.Numerics.Vector3(-200, 50, 0));
+            sweep.InsertKeyFrame(0.5f, new System.Numerics.Vector3(500, 300, 0));
+            sweep.InsertKeyFrame(1, new System.Numerics.Vector3(-200, 50, 0));
+            sweep.Duration = TimeSpan.FromSeconds(4);
+            sweep.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
+            light.Sprite.StartAnimation("Offset", sweep);
+        }
+        return page;
+    }
 
     static UIElement Labels()
     {

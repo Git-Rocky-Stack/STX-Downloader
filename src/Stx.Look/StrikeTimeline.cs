@@ -30,5 +30,13 @@ public static class StrikeTimeline
     public static (double Lit, double Flare) Split(double brightness) =>
         (Math.Clamp(brightness, 0, 1), Math.Clamp((brightness - 1) / (PeakBrightness - 1), 0, 1));
 
+    /// <summary>The brightness to hold without animating, or null when this state should animate. Reduced motion makes every LED hold still.</summary>
+    public static double? SteadyBrightness(LedState state, bool reduceMotion) => state switch
+    {
+        LedState.Off => 0,
+        LedState.On => 1,
+        _ => reduceMotion ? 1 : null,
+    };
+
     public static LedState After(LedState state) => state == LedState.Strike ? LedState.Busy : state;
 }

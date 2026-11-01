@@ -28,7 +28,7 @@ public partial class App : Application
             Exit();
             return;
         }
-        var main = new MainWindow(startHidden: commandLine.Contains(StartupRegistry.HiddenFlag));
+        var main = new MainWindow(startHidden: commandLine.Contains(StartupRegistry.HiddenFlag), pointerLight: commandLine.Contains("--pointer-light"));
         _window = main;
         SingleInstance.ListenForSecondLaunch(() => main.DispatcherQueue.TryEnqueue(main.ShowFromTray));
         if (!main.StartsHidden) main.Activate();

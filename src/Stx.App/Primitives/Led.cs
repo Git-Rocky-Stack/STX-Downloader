@@ -34,8 +34,8 @@ public sealed partial class Led : Canvas
         _flareVisual = ElementCompositionPreview.GetElementVisual(_flare);
         _housing.Source = ArtCache.Get("led:housing", () => LedArt.Housing(ArtSize));
         ApplyArt();
-        Loaded += (_, _) => Apply();
-        Unloaded += (_, _) => Stop();
+        Loaded += (_, _) => { LookState.MotionChanged += OnMotionChanged; Apply(); };
+        Unloaded += (_, _) => { LookState.MotionChanged -= OnMotionChanged; Stop(); };
     }
 
     public LedColor Color
@@ -82,15 +82,17 @@ public sealed partial class Led : Canvas
     {
         Stop();
         if (_frozen is double held) { Show(held); return; }
+        if (StrikeTimeline.SteadyBrightness(_state, LookState.ReduceMotion) is double steady) { Show(steady); return; }
 
         switch (_state)
         {
-            case LedState.Off: Show(0); break;
-            case LedState.On: Show(1); break;
             case LedState.Strike: Show(StrikeTimeline.Default[0].Brightness); if (IsLoaded) RunStrike(); break;
             case LedState.Busy: Show(StrikeTimeline.Busy[0].Brightness); if (IsLoaded) RunBusy(); break;
         }
     }
+
+    // Windows reports its setting from another thread.
+    void OnMotionChanged() => DispatcherQueue.TryEnqueue(Apply);
 
     void Show(double brightness)
     {
