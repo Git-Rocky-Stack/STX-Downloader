@@ -295,6 +295,7 @@ public sealed class FfmpegRunnerTests : IDisposable
         await Runner(process).ConvertAsync(Flac(Input()));
         Assert.Contains(".partial", process.Target);
         Assert.EndsWith(".flac", process.Target);
+        Assert.True(Path.GetFileName(process.Target)!.Length < 64, "fixed and short, whatever the title");
     }
 
     [Fact]

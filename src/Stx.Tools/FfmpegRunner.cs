@@ -1,5 +1,6 @@
 using System.Globalization;
 using Stx.Core.Errors;
+using Stx.Core.Files;
 
 namespace Stx.Tools;
 
@@ -35,7 +36,8 @@ public sealed class FfmpegRunner(IProcessRunner process, string ffmpegPath, Func
         string extension = FfmpegArgs.Extension(request.Output);
         if (extension.Length == 0) extension = Path.GetExtension(request.InputPath);
         string stem = Path.GetFileNameWithoutExtension(request.InputPath);
-        string partial = Path.Combine(request.OutputFolder, $"{stem}.partial-{Guid.NewGuid():N}{extension}");
+        // A short, fixed name, because a long title plus a suffix could pass the path limit before the real name is chosen.
+        string partial = Path.Combine(request.OutputFolder, $"stx.partial-{Guid.NewGuid():N}{extension}");
         string encoder = request.Reencode && h264Encoder is not null ? await h264Encoder().ConfigureAwait(false) : "libx264";
 
         var recent = new Queue<string>();
@@ -49,7 +51,7 @@ public sealed class FfmpegRunner(IProcessRunner process, string ffmpegPath, Func
                 return ConvertResult.Failed(ErrorClassifier.Classify(evidence, exit));
             }
 
-            string target = FreeName(request.OutputFolder, stem, extension);
+            string target = Filename.Safe(stem, extension, request.OutputFolder, File.Exists);
             File.Move(partial, target);
             return ConvertResult.Saved(target);
         }
@@ -76,12 +78,5 @@ public sealed class FfmpegRunner(IProcessRunner process, string ffmpegPath, Func
         if (duration is > 0 && line.StartsWith(ProgressKey, StringComparison.Ordinal)
             && long.TryParse(line.AsSpan(ProgressKey.Length), NumberStyles.Integer, CultureInfo.InvariantCulture, out long micros))
             onProgress?.Invoke(Math.Clamp(micros / 1_000_000.0 / duration.Value * 100, 0, 100));
-    }
-
-    static string FreeName(string folder, string stem, string extension)
-    {
-        string path = Path.Combine(folder, stem + extension);
-        for (int n = 2; File.Exists(path); n++) path = Path.Combine(folder, $"{stem} ({n}){extension}");
-        return path;
     }
 }

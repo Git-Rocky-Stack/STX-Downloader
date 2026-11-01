@@ -1,3 +1,5 @@
+using System.Globalization;
+using Stx.Core.Files;
 using Stx.Core.Presets;
 
 namespace Stx.Tools;
@@ -20,9 +22,11 @@ public static class YtDlpArgs
     /// <summary>Prefixes the final file's path in the tool's output, so it can't be mistaken for any other line.</summary>
     public const string FileMarker = "STXFILE:";
 
+    const int ExtensionRoom = 16;
+
     public static IReadOnlyList<string> ForDownload(DownloadRequest request)
     {
-        var args = new List<string> { "--ignore-config" };
+        var args = new List<string> { "--ignore-config", "--encoding", "utf-8" };
         if (request.ConfigPath is not null) args.AddRange(["--config-locations", request.ConfigPath]);
         AddTools(args, request.Tools);
         args.AddRange(
@@ -34,6 +38,7 @@ public static class YtDlpArgs
             "-P", request.OutputFolder,
             "-o", "%(title)s [%(id)s].%(ext)s",
             "--windows-filenames",
+            "--trim-filenames", TrimLength(request.OutputFolder).ToString(CultureInfo.InvariantCulture),
             "--no-overwrites",
             "--continue",
             "--print", $"after_move:{FileMarker}%(filepath)s",
@@ -50,7 +55,7 @@ public static class YtDlpArgs
     /// <summary>Lists a playlist's entries without downloading. Entries it can't reach don't stop the listing.</summary>
     public static IReadOnlyList<string> ForEnumerate(string url, ToolPaths? tools = null)
     {
-        var args = new List<string> { "--ignore-config" };
+        var args = new List<string> { "--ignore-config", "--encoding", "utf-8" };
         AddTools(args, tools);
         args.AddRange(["--no-warnings", "-J", "--flat-playlist", "--ignore-errors"]);
         AddUrl(args, url);
@@ -60,12 +65,15 @@ public static class YtDlpArgs
     /// <summary>Lists the formats of one video, with what's needed to judge its quality.</summary>
     public static IReadOnlyList<string> ForFormats(string url, ToolPaths? tools = null)
     {
-        var args = new List<string> { "--ignore-config" };
+        var args = new List<string> { "--ignore-config", "--encoding", "utf-8" };
         AddTools(args, tools);
         args.AddRange(["--no-warnings", "-J", "--no-playlist"]);
         AddUrl(args, url);
         return args;
     }
+
+    // yt-dlp's limit excludes the extension. This leaves room for that and for its .part suffixes.
+    static int TrimLength(string folder) => Math.Max(32, Filename.MaxPathLength - folder.Length - 1 - ExtensionRoom);
 
     static string Format(DownloadMode mode, int? height)
     {

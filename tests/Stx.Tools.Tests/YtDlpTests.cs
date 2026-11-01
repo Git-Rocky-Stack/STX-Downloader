@@ -146,6 +146,26 @@ public class YtDlpArgsTests
     }
 
     [Fact]
+    public void Long_titles_are_trimmed_to_fit_the_output_folder()
+    {
+        int Trim(string folder) => int.Parse(After(YtDlpArgs.ForDownload(new DownloadRequest("https://x/y", folder, DownloadMode.Best, null)), "--trim-filenames"));
+        string shallow = @"D:\Media", deep = @"D:\" + new string('f', 150);
+        Assert.Equal(240 - shallow.Length - 1 - 16, Trim(shallow));
+        Assert.True(Trim(deep) < Trim(shallow));
+        Assert.Equal(32, Trim(@"D:\" + new string('f', 400)));
+    }
+
+    // Without this, a real run saved Unicode names correctly but printed the path with those characters
+    // missing, so the app couldn't find a file it had just saved.
+    [Fact]
+    public void Tool_output_is_utf8_so_unicode_paths_come_back_intact()
+    {
+        Assert.Equal("utf-8", After(YtDlpArgs.ForDownload(Request()), "--encoding"));
+        Assert.Equal("utf-8", After(YtDlpArgs.ForEnumerate("https://x/y"), "--encoding"));
+        Assert.Equal("utf-8", After(YtDlpArgs.ForFormats("https://x/y"), "--encoding"));
+    }
+
+    [Fact]
     public void Tools_are_located_when_given()
     {
         var args = YtDlpArgs.ForDownload(Request() with { Tools = new ToolPaths(@"C:\t\ffmpeg.exe", @"C:\t\deno.exe") });
