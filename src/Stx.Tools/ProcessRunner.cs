@@ -9,7 +9,7 @@ public interface IProcessRunner
 }
 
 /// <summary>Starts a tool with no shell, so nothing in an argument can run as a command. Canceling stops it and anything it started.</summary>
-public sealed class ProcessRunner : IProcessRunner
+public sealed class ProcessRunner(ProcessPriorityClass? priority = null) : IProcessRunner
 {
     public async Task<int> RunAsync(string path, IReadOnlyList<string> args, Action<string> onLine, CancellationToken cancel)
     {
@@ -31,6 +31,11 @@ public sealed class ProcessRunner : IProcessRunner
         process.OutputDataReceived += (_, e) => { if (e.Data is not null) onLine(e.Data); };
         process.ErrorDataReceived += (_, e) => { if (e.Data is not null) onLine(e.Data); };
         process.Start();
+        if (priority is { } level)
+        {
+            try { process.PriorityClass = level; }
+            catch (InvalidOperationException) { }
+        }
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
