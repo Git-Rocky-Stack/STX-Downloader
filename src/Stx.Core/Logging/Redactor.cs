@@ -19,6 +19,14 @@ public static partial class Redactor
         return s;
     }
 
+    /// <summary>For a page link worth keeping: passwords and tokens go, but the query stays, since watch?v=... is what makes it work.</summary>
+    public static string ScrubLink(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return "";
+        string s = UrlPasswords().Replace(url, "://" + Hidden + "@");
+        return TokenValues().Replace(s, m => m.Groups["name"].Value + "=" + Hidden);
+    }
+
     // A value runs to the end of the line, or to the next header on the same line.
     [GeneratedRegex(@"(?<name>\b(?:set-cookie|cookie|proxy-authorization|authorization|x-api-key|x-auth-token))(?<sep>[""']?\s*[:=]\s*)[^\r\n]*?(?=\s+(?:set-cookie|cookie|proxy-authorization|authorization|x-api-key|x-auth-token)\s*[:=]|\r?$)", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex Headers();

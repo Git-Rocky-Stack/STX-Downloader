@@ -5,11 +5,11 @@ public static class JobTransitions
 {
     static readonly IReadOnlyDictionary<JobState, JobState[]> Allowed = new Dictionary<JobState, JobState[]>
     {
-        [JobState.Queued] = [JobState.Running, JobState.Paused, JobState.Canceled],
+        [JobState.Queued] = [JobState.Running, JobState.Paused, JobState.Canceled, JobState.NeedsRecapture],
         [JobState.Running] = [JobState.Queued, JobState.Paused, JobState.Waiting, JobState.Analyzing, JobState.Completed, JobState.Failed, JobState.Canceled, JobState.NeedsRecapture],
-        [JobState.Paused] = [JobState.Queued, JobState.Running, JobState.Canceled],
-        [JobState.Waiting] = [JobState.Queued, JobState.Running, JobState.Failed, JobState.Canceled],
-        [JobState.Analyzing] = [JobState.Queued, JobState.Completed, JobState.Failed, JobState.Canceled],
+        [JobState.Paused] = [JobState.Queued, JobState.Running, JobState.Canceled, JobState.NeedsRecapture],
+        [JobState.Waiting] = [JobState.Queued, JobState.Running, JobState.Paused, JobState.Failed, JobState.Canceled, JobState.NeedsRecapture],
+        [JobState.Analyzing] = [JobState.Queued, JobState.Completed, JobState.Failed, JobState.Canceled, JobState.NeedsRecapture],
         [JobState.Completed] = [],
         [JobState.Failed] = [JobState.Queued, JobState.Canceled],
         [JobState.Canceled] = [JobState.Queued],
