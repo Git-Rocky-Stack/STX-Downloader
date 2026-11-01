@@ -7,7 +7,12 @@ public static class LookState
 {
     static LookMode _mode = LookMode.Dark;
 
+    static readonly Windows.UI.ViewManagement.UISettings Settings = new();
+
     public static event Action? Changed;
+
+    /// <summary>True when Windows is set to show no animations.</summary>
+    public static bool ReduceMotion => !Settings.AnimationsEnabled;
 
     public static LookMode Mode
     {

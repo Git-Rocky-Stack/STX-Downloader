@@ -14,8 +14,73 @@ internal static class GalleryPages
         "display" => Displays(),
         "led" => Leds(options.Hold),
         "bargraph" => Bargraphs(),
+        "sevenseg" => SevenSegments(),
+        "pad" => Pads(),
+        "toggle" => Toggles(),
+        "rotary" => Rotaries(),
         _ => new Grid(),
     };
+
+    static UIElement Panel(string name, UIElement content)
+    {
+        var page = new Grid { Padding = new Thickness(8) };
+        page.Children.Add(new Faceplate { PanelName = name, Padding = new Thickness(56, 48, 56, 48), Content = content });
+        return page;
+    }
+
+    static UIElement SevenSegments()
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 32 };
+        foreach (string text in new[] { "0", "62", "100", "888", "" })
+            row.Children.Add(new SevenSegmentReadout { Text = text });
+        return Panel("gallery-sevenseg", row);
+    }
+
+    static UIElement Pads()
+    {
+        var rows = new StackPanel { Spacing = 40 };
+
+        var normal = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 40 };
+        normal.Children.Add(new Pad { Content = "PAUSE" });
+        normal.Children.Add(new Pad { Content = "RUN", Lit = true });
+        normal.Children.Add(new Pad { Content = "GO", Lit = true, LitTone = PadTone.Blue });
+        rows.Children.Add(normal);
+
+        var other = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 40 };
+        other.Children.Add(HeldDown(new Pad { Content = "HELD" }));
+        other.Children.Add(HeldDown(new Pad { Content = "HELD", Lit = true }));
+        other.Children.Add(new Pad { Content = "OFF", IsEnabled = false });
+        other.Children.Add(new Pad { Content = "OFF", Lit = true, IsEnabled = false });
+        rows.Children.Add(other);
+
+        return Panel("gallery-pad", rows);
+    }
+
+    /// <summary>Shows the pressed state without a pointer, so it can be captured.</summary>
+    static Pad HeldDown(Pad pad)
+    {
+        pad.Loaded += (_, _) => VisualStateManager.GoToState(pad, "Pressed", false);
+        return pad;
+    }
+
+    static UIElement Toggles()
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 40 };
+        row.Children.Add(new Toggle { Content = "ON" , IsChecked = true });
+        row.Children.Add(new Toggle { Content = "OFF", IsChecked = false });
+        row.Children.Add(new Toggle { Content = "LOCKED", IsEnabled = false });
+        return Panel("gallery-toggle", row);
+    }
+
+    static UIElement Rotaries()
+    {
+        string[] formats = ["ORIGINAL", "FLAC", "WAV", "ALAC", "MP3", "AAC", "OPUS"];
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 56 };
+        row.Children.Add(new Rotary { Label = "Output format", Items = formats, SelectedIndex = 0 });
+        row.Children.Add(new Rotary { Label = "Output format", Items = formats, SelectedIndex = 3 });
+        row.Children.Add(new Rotary { Label = "Output format", Items = formats, SelectedIndex = 6 });
+        return Panel("gallery-rotary", row);
+    }
 
     static UIElement Leds(bool hold)
     {
