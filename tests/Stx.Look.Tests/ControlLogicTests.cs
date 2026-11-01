@@ -127,9 +127,15 @@ public class ControlLogicTests
     [InlineData("p:Faceplate", "PART_Plate")]
     [InlineData("p:Display", "PART_Screen")]
     [InlineData("p:Display", "PART_Glass")]
+    [InlineData("p:Pad", "PART_Well")]
+    [InlineData("p:Pad", "PART_Face")]
+    [InlineData("p:Pad", "PART_Shade")]
+    [InlineData("p:Pad", "PART_Bloom")]
+    [InlineData("p:Bargraph", "PART_Glass")]
+    [InlineData("p:SevenSegmentReadout", "PART_Glass")]
     public void Panel_art_sits_on_a_canvas_so_its_pixels_cannot_size_the_panel(string target, string part)
     {
-        var art = PadStyle(target).Descendants().First(e => e.Attributes().Any(a => a.Value == part));
+        var art = PadStyle(target).Descendants().First(e => e.Attributes().Any(a => a.Name.LocalName == "Name" && a.Value == part));
         Assert.Equal("Canvas", art.Parent!.Name.LocalName);
     }
 

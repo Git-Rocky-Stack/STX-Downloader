@@ -16,7 +16,7 @@ public sealed class QueuePolicy
         var queued = jobs.Where(j => j.State == JobState.Queued).OrderBy(j => j.Id).ToList();
         var captured = queued.FirstOrDefault(j => j.Kind == JobKind.Captured);
         if (captured is not null && running <= MaxParallel) return captured;
-        return running < MaxParallel ? queued.FirstOrDefault(j => j.Kind == JobKind.Link) : null;
+        return running < MaxParallel ? queued.FirstOrDefault(j => j.Kind != JobKind.Captured) : null;
     }
 
     public static bool WorthRetrying(ErrorKind kind) => kind is ErrorKind.Network or ErrorKind.ToolFailure or ErrorKind.LinkExpired;

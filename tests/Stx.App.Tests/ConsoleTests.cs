@@ -77,7 +77,10 @@ sealed class ScriptedAnalyzer(Func<string, LinkAnalysis> script) : ILinkAnalyzer
 sealed class ShellSpy : IShell
 {
     public readonly List<string> Opened = new();
+    public readonly List<string> FileActions = new();
     public void OpenPage(string url) => Opened.Add(url);
+    public void OpenFile(string path) => FileActions.Add("open:" + path);
+    public void RevealFile(string path) => FileActions.Add("reveal:" + path);
 }
 
 public class ConsoleFixture
@@ -484,4 +487,165 @@ public class EngineStatusTests
         engine.Report(new ToolStatus("FFmpeg", "Downloading"));
         Assert.Contains("FFMPEG", engine.EngineText);
     }
+}
+
+public class AfterDownloadTests : ConsoleFixture
+{
+    [Fact]
+    public void A_format_chosen_earlier_starts_its_conversion_when_the_download_finishes()
+    {
+        long media = Catalog.AddItem("https://x", "s", "T");
+        var job = Engine.Enqueue(media, JobKind.Link, ConversionPlan.Then(Stx.Core.Audio.OutputChoice.Flac));
+        Queue.RecordFile(job.Id, @"D:\m\t.webm");
+
+        Runner.Finish(job.Id, JobOutcome.Success);
+
+        var conversion = Assert.Single(Jobs.All(), j => j.Kind == JobKind.Convert);
+        var plan = ConversionPlan.Parse(conversion.Preset)!;
+        Assert.Equal(Stx.Core.Audio.OutputChoice.Flac, plan.Output);
+        Assert.Equal(media, conversion.MediaId);
+    }
+
+    [Fact]
+    public void A_failed_download_starts_no_conversion()
+    {
+        long media = Catalog.AddItem("https://x", "s", "T");
+        var job = Engine.Enqueue(media, JobKind.Link, ConversionPlan.Then(Stx.Core.Audio.OutputChoice.Flac));
+        Runner.Finish(job.Id, JobOutcome.Failure(ErrorKind.DrmDetected));
+        Assert.DoesNotContain(Jobs.All(), j => j.Kind == JobKind.Convert);
+    }
+
+    [Fact]
+    public void A_recorded_file_is_announced_for_measuring()
+    {
+        SavedMedia? seen = null;
+        Queue.FileRecorded += (_, media) => seen = media;
+        var job = Engine.Enqueue(Catalog.AddItem("https://x", "s", "My Song"), JobKind.Link, "Keep original");
+        Queue.RecordFile(job.Id, @"D:\m\t.mp4");
+        Assert.Equal(@"D:\m\t.mp4", seen!.Path);
+        Assert.Equal("My Song", seen.Title);
+    }
+}
+
+public sealed class ConversionRunnerTests : IDisposable
+{
+    readonly string _root = Directory.CreateTempSubdirectory("stx-conv").FullName;
+    readonly List<(long Media, string Path, string Format)> _added = new();
+
+    public void Dispose() => Directory.Delete(_root, true);
+
+    sealed class Fake(int exit = 0) : IProcessRunner
+    {
+        public IReadOnlyList<string>? Args;
+        public Task<int> RunAsync(string path, IReadOnlyList<string> args, Action<string> onLine, CancellationToken cancel)
+        {
+            Args = args;
+            File.WriteAllText(args[^1], "converted");
+            return Task.FromResult(exit);
+        }
+    }
+
+    ConversionRunner Runner(IProcessRunner process, string? input) => new(
+        new FfmpegRunner(process, "ffmpeg.exe"),
+        id => input,
+        (media, path, format) => { _added.Add((media, path, format)); return 9; });
+
+    static Job Convert(string plan) => new(1, 5, JobKind.Convert, JobState.Running, 0, null, plan, DateTimeOffset.UnixEpoch);
+
+    string Input()
+    {
+        string path = Path.Combine(_root, "song.webm");
+        File.WriteAllText(path, "original");
+        return path;
+    }
+
+    [Fact]
+    public async Task A_conversion_records_a_new_file_and_keeps_the_original()
+    {
+        string input = Input();
+        var outcome = await Runner(new Fake(), input).RunAsync(Convert("convert:Flac:7"), default);
+        Assert.True(outcome.IsSuccess);
+        var added = Assert.Single(_added);
+        Assert.Equal((5L, Path.Combine(_root, "song.flac"), "Flac"), added);
+        Assert.Equal("original", File.ReadAllText(input));
+    }
+
+    [Fact]
+    public async Task A_device_preset_reencodes_at_its_height_and_keeps_its_name_as_the_format()
+    {
+        var process = new Fake();
+        await Runner(process, Input()).RunAsync(Convert("convert:Mp4:7:Phone"), default);
+        Assert.Contains(process.Args!, a => a.Contains("720"));
+        Assert.Equal("Phone", Assert.Single(_added).Format);
+    }
+
+    [Fact]
+    public async Task A_file_that_has_gone_is_a_failure_not_a_crash()
+    {
+        var outcome = await Runner(new Fake(), Path.Combine(_root, "gone.webm")).RunAsync(Convert("convert:Flac:7"), default);
+        Assert.False(outcome.IsSuccess);
+        Assert.Empty(_added);
+    }
+
+    [Fact]
+    public async Task An_unknown_file_id_is_a_failure()
+    {
+        var outcome = await Runner(new Fake(), null).RunAsync(Convert("convert:Flac:7"), default);
+        Assert.Equal(ErrorKind.ToolFailure, outcome.Error);
+    }
+
+    [Fact]
+    public async Task A_job_with_an_unreadable_plan_is_a_failure()
+    {
+        var outcome = await Runner(new Fake(), Input()).RunAsync(Convert("nonsense"), default);
+        Assert.Equal(ErrorKind.ToolFailure, outcome.Error);
+    }
+
+    [Fact]
+    public async Task Jobs_go_to_the_runner_for_their_kind()
+    {
+        var seen = new List<string>();
+        var router = new JobRouter(new Named("download", seen), new Named("convert", seen));
+        await router.RunAsync(Convert("x") with { Kind = JobKind.Link }, default);
+        await router.RunAsync(Convert("x") with { Kind = JobKind.Captured }, default);
+        await router.RunAsync(Convert("x"), default);
+        Assert.Equal(["download", "download", "convert"], seen);
+    }
+
+    sealed class Named(string name, List<string> seen) : IJobRunner
+    {
+        public Task<JobOutcome> RunAsync(Job job, CancellationToken cancel)
+        {
+            seen.Add(name);
+            return Task.FromResult(JobOutcome.Success);
+        }
+    }
+}
+
+public class FactsJsonTests
+{
+    [Fact]
+    public void Measured_facts_round_trip_including_silence()
+    {
+        var facts = new Stx.Audio.AudioFacts("aac", 192, 48000, 2, 16000, -14.2, -1.5, double.NegativeInfinity, -12,
+            [new Stx.Audio.SpectrumBand(1000, -30)], [new Stx.Audio.EnvelopePoint(double.NegativeInfinity, -6)], true);
+        var back = FactsJson.Read(FactsJson.Write(facts))!;
+        Assert.Equal(facts.Codec, back.Codec);
+        Assert.Equal(double.NegativeInfinity, back.PeakLeftDb);
+        Assert.Equal(facts.Spectrum, back.Spectrum);
+        Assert.Equal(facts.Envelope, back.Envelope);
+        Assert.True(back.MeasuredFromFile);
+    }
+
+    [Fact]
+    public void A_file_with_no_audio_is_remembered_as_such()
+    {
+        Assert.True(FactsJson.IsNoAudio(FactsJson.NoAudio));
+        Assert.Null(FactsJson.Read(FactsJson.NoAudio));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("nonsense")]
+    public void Damaged_facts_read_as_nothing(string json) => Assert.Null(FactsJson.Read(json));
 }

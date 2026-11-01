@@ -66,6 +66,16 @@ public sealed partial class Pad : Button
         int faceW = Px(faceWidth, scale), faceH = Px(faceHeight, scale);
         int bloomW = Px(faceWidth + ControlArt.PadBloomOverhang * 2, scale), bloomH = Px(faceHeight + ControlArt.PadBloomOverhang * 2, scale);
 
+        // The art sits on canvases, so its pixels can't size the pad. Each layer is sized from the pad instead.
+        _well.Width = ActualWidth;
+        _well.Height = ActualHeight;
+        _face.Width = _shade.Width = faceWidth;
+        _face.Height = _shade.Height = faceHeight;
+        _bloom.Width = faceWidth + ControlArt.PadBloomOverhang * 2;
+        _bloom.Height = faceHeight + ControlArt.PadBloomOverhang * 2;
+        Canvas.SetLeft(_bloom, ControlArt.WellInset - ControlArt.PadBloomOverhang);
+        Canvas.SetTop(_bloom, ControlArt.WellInset - ControlArt.PadBloomOverhang);
+
         _well.Source = ArtCache.Get($"pad:well:{mode}:{wellW}x{wellH}", () => ControlArt.PadWell(wellW, wellH, scale, mode));
         _face.Source = ArtCache.Get($"pad:face:{tone}:{faceW}x{faceH}", () => ControlArt.PadFace(faceW, faceH, scale, tone));
         _shade.Source = ArtCache.Get($"pad:shade:{faceW}x{faceH}", () => ControlArt.PadPressShade(faceW, faceH, scale));

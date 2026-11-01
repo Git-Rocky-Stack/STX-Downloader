@@ -262,3 +262,52 @@ public class ControlArtTests
     public void Control_art_is_deterministic_so_baselines_hold() =>
         Assert.Equal(ControlArt.Knurl(Knob).Hash(), ControlArt.Knurl(Knob).Hash());
 }
+
+public class SpectrumArtTests
+{
+    static readonly double[] Hz = Enumerable.Range(0, 48).Select(i => 20 * Math.Pow(1200, i / 47.0)).ToArray();
+    static readonly double[] Db = Enumerable.Range(0, 48).Select(i => i < 40 ? -20.0 - i * 0.5 : -120.0).ToArray();
+
+    [Fact]
+    public void No_data_draws_nothing()
+    {
+        var art = SpectrumArt.Render(480, 120, [], [], null, DisplayTone.Cyan);
+        Assert.Equal(0, art.MeanLuma());
+    }
+
+    [Fact]
+    public void Louder_bands_stand_taller()
+    {
+        var art = SpectrumArt.Render(480, 120, Hz, Db, null, DisplayTone.Cyan);
+        int Height(int x) => Enumerable.Range(0, 120).Count(y => art.Alpha(x, y) > 40);
+        Assert.True(Height(20) > Height(300));
+        Assert.Equal(0, Height(470));
+    }
+
+    [Fact]
+    public void The_roll_off_is_marked_where_it_was_measured()
+    {
+        var art = SpectrumArt.Render(480, 120, Hz, Db, 2000, DisplayTone.Cyan);
+        int x = SpectrumArt.XFor(2000, Hz, 480);
+        Assert.True(art.Alpha(x, 2) > 200, "marker runs the full height");
+        Assert.True(art.Alpha(x, 117) > 200);
+    }
+
+    [Fact]
+    public void Without_a_roll_off_there_is_no_marker()
+    {
+        var art = SpectrumArt.Render(480, 120, Hz, Db, null, DisplayTone.Cyan);
+        Assert.Equal(0, art.Alpha(SpectrumArt.XFor(2000, Hz, 480), 2));
+    }
+
+    [Fact]
+    public void A_full_band_file_gets_no_marker_at_the_edge()
+    {
+        var art = SpectrumArt.Render(480, 120, Hz, Db, Hz[^1] * 2, DisplayTone.Cyan);
+        Assert.Equal(0, art.Alpha(479, 2));
+    }
+
+    [Fact]
+    public void Same_data_draws_the_same_picture() =>
+        Assert.Equal(SpectrumArt.Render(240, 60, Hz, Db, 2000, DisplayTone.Amber).Hash(), SpectrumArt.Render(240, 60, Hz, Db, 2000, DisplayTone.Amber).Hash());
+}

@@ -4,7 +4,7 @@ using Stx.Core.Queue;
 
 namespace Stx.Data;
 
-public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog
+public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog, ILibraryCatalog, IFactsStore
 {
     /// <summary>Tokens are scrubbed from the link here, at the only door into the table.</summary>
     public long AddItem(string? pageUrl, string? sourceId, string? title)
@@ -69,6 +69,84 @@ public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog
             var facts = new List<MediaFact>();
             while (reader.Read()) facts.Add(new MediaFact(Text(reader, 0), Text(reader, 1), reader.GetString(2)));
             return facts;
+        }
+    }
+
+    public IReadOnlyList<LibraryItem> Library()
+    {
+        lock (connection)
+        {
+            var files = new Dictionary<long, List<LibraryFile>>();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT id, media_id, path, format FROM media_files ORDER BY id;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    long media = reader.GetInt64(1);
+                    if (!files.TryGetValue(media, out var list)) files[media] = list = [];
+                    list.Add(new LibraryFile(reader.GetInt64(0), reader.GetString(2), reader.GetString(3)));
+                }
+            }
+
+            var items = new List<LibraryItem>();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT id, title, page_url FROM media_items ORDER BY id DESC;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    long id = reader.GetInt64(0);
+                    if (files.TryGetValue(id, out var list)) items.Add(new LibraryItem(id, Text(reader, 1), Text(reader, 2), list));
+                }
+            }
+            return items;
+        }
+    }
+
+    public string? FilePath(long fileId)
+    {
+        lock (connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT path FROM media_files WHERE id = $id;";
+            command.Parameters.AddWithValue("$id", fileId);
+            return command.ExecuteScalar() as string;
+        }
+    }
+
+    public void SaveFacts(long fileId, string json)
+    {
+        lock (connection)
+        {
+            using var transaction = connection.BeginTransaction();
+            using (var clear = connection.CreateCommand())
+            {
+                clear.Transaction = transaction;
+                clear.CommandText = "DELETE FROM audio_facts WHERE media_file_id = $id;";
+                clear.Parameters.AddWithValue("$id", fileId);
+                clear.ExecuteNonQuery();
+            }
+            using (var add = connection.CreateCommand())
+            {
+                add.Transaction = transaction;
+                add.CommandText = "INSERT INTO audio_facts (media_file_id, facts_json) VALUES ($id, $json);";
+                add.Parameters.AddWithValue("$id", fileId);
+                add.Parameters.AddWithValue("$json", json);
+                add.ExecuteNonQuery();
+            }
+            transaction.Commit();
+        }
+    }
+
+    public string? LoadFacts(long fileId)
+    {
+        lock (connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT facts_json FROM audio_facts WHERE media_file_id = $id;";
+            command.Parameters.AddWithValue("$id", fileId);
+            return command.ExecuteScalar() as string;
         }
     }
 

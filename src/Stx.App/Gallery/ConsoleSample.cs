@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Stx.App.Panels;
+using Stx.Audio;
 using Stx.Core.Errors;
 using Stx.Core.Jobs;
 using Stx.Core.Queue;
@@ -40,6 +41,35 @@ internal static class ConsoleSample
         return new ScrollViewer { Content = rack };
     }
 
+    /// <summary>The panel on a sample measurement. The product only ever shows values measured from a real file.</summary>
+    public static UIElement SourceTruth()
+    {
+        var bands = Enumerable.Range(0, 96).Select(i => 20 * Math.Pow(1200, i / 95.0)).Select((hz, i) => new SpectrumBand(hz, hz < 17800 ? -18.0 - i * 0.45 : -115.0)).ToList();
+        var facts = new AudioFacts("aac", 386, 48000, 6, 17800, -14.2, -1.5, -3.4, -5.1, bands, [], MeasuredFromFile: true);
+        var truth = new SourceTruthViewModel(() => true);
+        truth.Show("Sample", facts);
+        truth.SelectedOutputIndex = 1;
+        return new SourceTruthPanel(truth);
+    }
+
+    public static UIElement LibraryPage()
+    {
+        var catalog = new Catalog();
+        var jobs = new QueueEngine(new Memory(), new NeverRuns(), new QueuePolicy { MaxParallel = 0 }, new SystemClock(), new CaptureVault());
+        var library = new LibraryViewModel(new SampleLibrary(), jobs, new NoShell(), path => !path.Contains("moved"));
+        library.Refresh();
+        return new LibraryPanel(library, _ => { });
+    }
+
+    sealed class SampleLibrary : ILibraryCatalog
+    {
+        public IReadOnlyList<LibraryItem> Library() =>
+        [
+            new(1, "Sample music video", "https://example.com/1", [new LibraryFile(1, @"D:\Media\Sample.mp4", "Original"), new LibraryFile(2, @"D:\Media\Sample.flac", "Flac")]),
+            new(2, "Sample moved file", "https://example.com/2", [new LibraryFile(3, @"D:\moved\Webinar.mkv", "Original")]),
+        ];
+    }
+
     sealed class Memory : IJobRepo
     {
         readonly Dictionary<long, Job> _jobs = new();
@@ -67,6 +97,8 @@ internal static class ConsoleSample
     sealed class NoShell : IShell
     {
         public void OpenPage(string url) { }
+        public void OpenFile(string path) { }
+        public void RevealFile(string path) { }
     }
 
     sealed class NoAnalyzer : ILinkAnalyzer

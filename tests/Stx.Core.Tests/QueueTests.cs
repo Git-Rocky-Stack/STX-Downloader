@@ -160,6 +160,21 @@ public class QueueEngineTests
     }
 
     [Fact]
+    public void A_conversion_takes_its_turn_like_a_download()
+    {
+        var job = Engine().Enqueue(1, JobKind.Convert, "convert:Flac:1");
+        Assert.Equal(JobState.Running, State(job.Id));
+    }
+
+    [Fact]
+    public void A_conversion_survives_a_restart_because_it_needs_no_secrets()
+    {
+        var job = _repo.Seed(JobKind.Convert, JobState.Running);
+        new QueueEngine(_repo, _runner, new QueuePolicy { MaxParallel = 0 }, _clock, _vault).RecoverAfterRestart();
+        Assert.Equal(JobState.Queued, State(job.Id));
+    }
+
+    [Fact]
     public void Next_to_start_only_considers_queued_jobs()
     {
         var paused = new Job(1, 1, JobKind.Link, JobState.Paused, 0, null, "original", DateTimeOffset.UnixEpoch);

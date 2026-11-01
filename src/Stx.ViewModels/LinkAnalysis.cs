@@ -1,4 +1,5 @@
 using System.Text;
+using Stx.Audio;
 using Stx.Core.Errors;
 using Stx.Core.Logging;
 using Stx.Tools;
@@ -7,6 +8,9 @@ namespace Stx.ViewModels;
 
 public sealed record LinkAnalysis(string? Title, IReadOnlyList<PlaylistEntry> Entries, ErrorKind? Error)
 {
+    /// <summary>The best audio the site says it has, for showing before a download. Only ever labeled as reported.</summary>
+    public YtDlpFormat? BestAudio { get; init; }
+
     public static LinkAnalysis Found(string? title, IReadOnlyList<PlaylistEntry> entries) => new(title, entries, null);
     public static LinkAnalysis Failed(ErrorKind kind) => new(null, [], kind);
 }
@@ -41,11 +45,15 @@ public sealed class YtDlpLinkAnalyzer(IProcessRunner process, Func<string> ytDlp
         }
         var entries = PlaylistListing.Parse(json);
         // A list can still come back when some of its entries failed, so entries win over the exit code.
-        return entries.Count > 0 ? LinkAnalysis.Found(PlaylistListing.ParseTitle(json), entries) : LinkAnalysis.Failed(ErrorClassifier.Classify(text, exit));
+        return entries.Count > 0
+            ? LinkAnalysis.Found(PlaylistListing.ParseTitle(json), entries) with { BestAudio = YtDlpFormat.Best(YtDlpFormat.ParseAll(json)) }
+            : LinkAnalysis.Failed(ErrorClassifier.Classify(text, exit));
     }
 }
 
 public interface IShell
 {
     void OpenPage(string url);
+    void OpenFile(string path);
+    void RevealFile(string path);
 }

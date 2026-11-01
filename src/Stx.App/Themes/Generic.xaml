@@ -51,7 +51,9 @@
                             </LinearGradientBrush>
                         </Grid.Background>
                         <Canvas x:Name="PART_Segments" Margin="5" IsHitTestVisible="False" />
-                        <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                        <Canvas IsHitTestVisible="False">
+                            <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                        </Canvas>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -71,7 +73,9 @@
                                 </RadialGradientBrush>
                             </Grid.Background>
                             <Canvas x:Name="PART_Digits" Margin="8,6" IsHitTestVisible="False" />
-                            <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                            <Canvas IsHitTestVisible="False">
+                                <Image x:Name="PART_Glass" Stretch="Fill" IsHitTestVisible="False" />
+                            </Canvas>
                         </Grid>
                     </Border>
                 </ControlTemplate>
@@ -125,15 +129,23 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Image x:Name="PART_Bloom" Margin="-25,-25,-25,-21" Stretch="Fill" IsHitTestVisible="False" />
-                        <Image x:Name="PART_Well" Stretch="Fill" IsHitTestVisible="False" />
+                        <Canvas IsHitTestVisible="False">
+                            <Image x:Name="PART_Bloom" Stretch="Fill" IsHitTestVisible="False" />
+                        </Canvas>
+                        <Canvas IsHitTestVisible="False">
+                            <Image x:Name="PART_Well" Stretch="Fill" IsHitTestVisible="False" />
+                        </Canvas>
                         <Grid x:Name="Travel" Margin="3,3,3,7">
                             <Grid.RenderTransform>
                                 <TranslateTransform x:Name="PressOffset" />
                             </Grid.RenderTransform>
-                            <Image x:Name="PART_Face" Stretch="Fill" IsHitTestVisible="False" />
+                            <Canvas IsHitTestVisible="False">
+                                <Image x:Name="PART_Face" Stretch="Fill" IsHitTestVisible="False" />
+                            </Canvas>
                             <Border x:Name="HoverGlow" CornerRadius="7" Background="#FFFFFF" Opacity="0" IsHitTestVisible="False" />
-                            <Image x:Name="PART_Shade" Stretch="Fill" Opacity="0" IsHitTestVisible="False" />
+                            <Canvas IsHitTestVisible="False">
+                                <Image x:Name="PART_Shade" Stretch="Fill" Opacity="0" IsHitTestVisible="False" />
+                            </Canvas>
                             <ContentPresenter
                                 Margin="{TemplateBinding Padding}"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"

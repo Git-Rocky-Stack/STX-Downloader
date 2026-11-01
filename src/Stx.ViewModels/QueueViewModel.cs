@@ -108,6 +108,7 @@ public sealed class QueueViewModel
     readonly IMediaCatalog _catalog;
     readonly IShell _shell;
     readonly Action<Action> _ui;
+    readonly Dictionary<long, long> _savedFile = new();
 
     public QueueViewModel(QueueEngine engine, IMediaCatalog catalog, IShell shell, Action<Action> ui)
     {
@@ -143,9 +144,15 @@ public sealed class QueueViewModel
 
     public void SetProgress(long jobId, Progress progress) => Find(jobId)?.Show(progress);
 
+    /// <summary>A new file exists, and it's ready to be measured.</summary>
+    public event EventHandler<SavedMedia>? FileRecorded;
+
     public void RecordFile(long jobId, string path)
     {
-        if (Find(jobId) is { } item) _catalog.AddFile(item.MediaId, path, null, SourceViewModel.OriginalFormat);
+        if (Find(jobId) is not { } item) return;
+        long fileId = _catalog.AddFile(item.MediaId, path, null, SourceViewModel.OriginalFormat);
+        _savedFile[jobId] = fileId;
+        FileRecorded?.Invoke(this, new SavedMedia(item.MediaId, fileId, path, item.Title));
     }
 
     QueueItemViewModel? Find(long jobId) => Items.FirstOrDefault(i => i.JobId == jobId);
@@ -159,6 +166,13 @@ public sealed class QueueViewModel
             item = new QueueItemViewModel(job.Id, media?.Title ?? media?.PageUrl ?? "Untitled", media?.PageUrl);
             Items.Add(item);
         }
+        bool finishing = item.State != JobState.Completed && job.State == JobState.Completed;
         item.Apply(job);
+
+        // A format chosen before the download is applied now, as its own job that keeps the original.
+        if (finishing && ConversionPlan.AfterDownload(job.Preset) is { } output && _savedFile.TryGetValue(job.Id, out long fileId))
+            _engine.Enqueue(job.MediaId, JobKind.Convert, new ConversionPlan(output, fileId, null).ToString());
     }
 }
+
+public sealed record SavedMedia(long MediaId, long FileId, string Path, string Title);

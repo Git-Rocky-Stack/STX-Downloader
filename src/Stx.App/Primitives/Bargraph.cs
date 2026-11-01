@@ -127,6 +127,8 @@ public sealed partial class Bargraph : Control
             Place(_peak[i], x - overhangX, -overhangY, segment + overhangX * 2, height + overhangY * 2);
         }
 
+        _glass.Width = ActualWidth - 2;
+        _glass.Height = ActualHeight - 2;
         double scale = XamlRoot?.RasterizationScale ?? 1;
         int w = (int)Math.Ceiling((ActualWidth - 2) * scale), h = (int)Math.Ceiling((ActualHeight - 2) * scale);
         if (w > 0 && h > 0) _glass.Source = ArtCache.Get($"glass:{w}x{h}", () => GlassArt.Render(w, h));

@@ -198,6 +198,57 @@ public sealed class DataTests : IDisposable
     }
 
     [Fact]
+    public void The_library_lists_items_with_their_files_newest_first()
+    {
+        using var db = Db.Open(DbPath);
+        var media = new MediaRepo(db);
+        long old = media.AddItem("https://x/1", "a", "Old");
+        long fresh = media.AddItem("https://x/2", "b", "New");
+        media.AddItem("https://x/3", "c", "Nothing saved yet");
+        media.AddFile(old, @"D:\old.mp4", null, "Original");
+        media.AddFile(fresh, @"D:\new.mp4", null, "Original");
+        media.AddFile(fresh, @"D:\new.flac", null, "Flac");
+
+        var library = media.Library();
+
+        Assert.Equal(["New", "Old"], library.Select(i => i.Title));
+        Assert.Equal(["Original", "Flac"], library[0].Files.Select(f => f.Format));
+    }
+
+    [Fact]
+    public void Facts_are_kept_per_file_and_replaced_when_measured_again()
+    {
+        using var db = Db.Open(DbPath);
+        var media = new MediaRepo(db);
+        long file = media.AddFile(media.AddItem("https://x/1", "a", "T"), "p", null, "Original");
+        Assert.Null(media.LoadFacts(file));
+
+        media.SaveFacts(file, "first");
+        media.SaveFacts(file, "second");
+
+        Assert.Equal("second", media.LoadFacts(file));
+    }
+
+    [Fact]
+    public void A_file_path_can_be_looked_up()
+    {
+        using var db = Db.Open(DbPath);
+        var media = new MediaRepo(db);
+        long file = media.AddFile(media.AddItem("https://x/1", "a", "T"), @"D:\s.mp4", null, "Original");
+        Assert.Equal(@"D:\s.mp4", media.FilePath(file));
+        Assert.Null(media.FilePath(404));
+    }
+
+    [Fact]
+    public void Conversion_jobs_persist()
+    {
+        using var db = Db.Open(DbPath);
+        var repo = new JobRepo(db);
+        var job = repo.Add(NewJob(JobKind.Convert) with { Preset = "convert:Flac:7" });
+        Assert.Equal(JobKind.Convert, repo.Get(job.Id)!.Kind);
+    }
+
+    [Fact]
     public void Deleting_a_media_item_removes_its_files()
     {
         using var db = Db.Open(DbPath);

@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Microsoft.Data.Sqlite;
 using Microsoft.UI.Dispatching;
+using Stx.App.Primitives;
+using Stx.Audio;
 using Stx.Core.Queue;
 using Stx.Data;
 using Stx.Tools;
@@ -19,6 +21,9 @@ public sealed class Composition : IDisposable
     readonly DispatcherQueueTimer _retryTimer;
     readonly CancellationTokenSource _closing = new();
     readonly Dictionary<long, long> _lastProgress = new();
+    readonly MediaRepo _catalog;
+    readonly SemaphoreSlim _measuring = new(1, 1);
+    LibraryRowViewModel? _selectedRow;
 
     public Composition(DispatcherQueue ui)
     {
@@ -30,16 +35,33 @@ public sealed class Composition : IDisposable
         CredentialFile.DeleteLeftovers();
         var process = new ProcessRunner();
         var catalog = new MediaRepo(_db);
+        _catalog = catalog;
         var vault = new CaptureVault();
         Tools = new ToolManager(_http, ToolManager.DefaultRoot(), new ToolOptions(UpdatesEnabled: true), process);
 
         var runner = new YtDlpRunner(process, Tools, job => RequestFor(job, catalog), vault);
-        Engine = new QueueEngine(new JobRepo(_db), runner, new QueuePolicy(), new SystemClock(), vault);
-        Queue = new QueueViewModel(Engine, catalog, new SystemShell(), OnUi);
-        Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine);
+        var probe = new Lazy<EncoderProbe>(() => new EncoderProbe(process, Tools.Paths.Ffmpeg ?? ""));
+        var converter = new ConversionRunner(
+            new FfmpegRunner(process, Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), () => probe.Value.BestH264Async()),
+            catalog.FilePath,
+            (media, path, format) => catalog.AddFile(media, path, null, format));
+        Engine = new QueueEngine(new JobRepo(_db), new JobRouter(runner, converter), new QueuePolicy(), new SystemClock(), vault);
+        var shell = new SystemShell();
+        Queue = new QueueViewModel(Engine, catalog, shell, OnUi);
+        SourceTruth = new SourceTruthViewModel(() => LookState.ReduceMotion);
+        Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine, () => SourceTruth.SelectedOutput);
+        Library = new LibraryViewModel(catalog, Engine, shell, File.Exists);
+
+        Queue.FileRecorded += (_, media) => _ = MeasureAsync(media);
+        converter.FileSaved += (_, media) => OnUi(() => _ = MeasureAsync(media));
+        Source.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SourceViewModel.ReportedAudio) && Source.ReportedAudio is { } reported) SourceTruth.Show("", reported);
+        };
 
         runner.LogLine += (_, line) => OnUi(() => Queue.AddLog(line.JobId, line.Text));
         runner.FileSaved += (_, file) => OnUi(() => Queue.RecordFile(file.JobId, file.Path));
+        runner.RolledBack += (_, _) => OnUi(() => Status.Report(new ToolStatus("yt-dlp", "rolled back after a failed update")));
         runner.ProgressChanged += (_, update) => ShowProgress(update);
 
         // The timer exists for retries, so it runs only while one is waiting. An idle app does no work.
@@ -53,12 +75,15 @@ public sealed class Composition : IDisposable
     public QueueEngine Engine { get; }
     public QueueViewModel Queue { get; }
     public SourceViewModel Source { get; }
+    public SourceTruthViewModel SourceTruth { get; }
+    public LibraryViewModel Library { get; }
     public EngineStatusViewModel Status { get; } = new();
 
     /// <summary>Call once the window is up, because a first run downloads tools and that must not hold up the app opening.</summary>
     public async Task StartAsync()
     {
         Queue.Load();
+        Library.Refresh();
         Engine.RecoverAfterRestart();
         var progress = new Progress<ToolStatus>(Status.Report);
         try
@@ -73,12 +98,59 @@ public sealed class Composition : IDisposable
         }
     }
 
+    /// <summary>A file was chosen in the library: show what's known, measuring it first if it never has been.</summary>
+    public void Select(LibraryRowViewModel? row)
+    {
+        _selectedRow = row;
+        if (row is null) { SourceTruth.Clear(); return; }
+
+        string? stored = _catalog.LoadFacts(row.FileId);
+        if (FactsJson.IsNoAudio(stored)) SourceTruth.ShowNoAudio(row.Title);
+        else if (FactsJson.Read(stored) is { } facts) SourceTruth.Show(row.Title, facts);
+        else if (!row.IsMissing) _ = MeasureAsync(new SavedMedia(row.MediaId, row.FileId, row.Path, row.Title));
+        else SourceTruth.Clear();
+    }
+
+    /// <summary>Converts the selected file to the output chosen on the rotary.</summary>
+    public void ConvertSelected()
+    {
+        if (_selectedRow is { } row) Library.ConvertCommand.Execute(new ConvertAsk(row, SourceTruth.SelectedOutput));
+    }
+
+    // One at a time and below normal priority, so measuring a batch never competes with what you're doing.
+    async Task MeasureAsync(SavedMedia media)
+    {
+        Library.Refresh();
+        if (Tools.Paths.Ffmpeg is not { } ffmpeg || Tools.FfprobePath is not { } ffprobe) return;
+
+        await _measuring.WaitAsync(_closing.Token).ConfigureAwait(false);
+        try
+        {
+            var facts = await new AudioMeasurer(ffmpeg, ffprobe).MeasureAsync(media.Path, _closing.Token).ConfigureAwait(false);
+            _catalog.SaveFacts(media.FileId, facts is null ? FactsJson.NoAudio : FactsJson.Write(facts));
+            OnUi(() =>
+            {
+                if (facts is null) SourceTruth.ShowNoAudio(media.Title);
+                else SourceTruth.ShowFinishedAnalysis(media.Title, facts);
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // The app is closing.
+        }
+        finally
+        {
+            _measuring.Release();
+        }
+    }
+
     public void Dispose()
     {
         _closing.Cancel();
         _retryTimer.Stop();
         _http.Dispose();
         _db.Dispose();
+        _measuring.Dispose();
         _closing.Dispose();
     }
 
@@ -118,6 +190,19 @@ public sealed class Composition : IDisposable
         {
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
                 Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+        }
+
+        public void OpenFile(string path)
+        {
+            if (File.Exists(path)) Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+
+        public void RevealFile(string path)
+        {
+            if (!File.Exists(path)) return;
+            var explorer = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
+            explorer.ArgumentList.Add($"/select,{path}");
+            Process.Start(explorer);
         }
     }
 }

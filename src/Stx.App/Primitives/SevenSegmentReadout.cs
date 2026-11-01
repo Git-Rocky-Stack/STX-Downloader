@@ -93,6 +93,8 @@ public sealed partial class SevenSegmentReadout : Control
     void DrawGlass()
     {
         if (_glass is null || ActualWidth < 1) return;
+        _glass.Width = ActualWidth - Frame * 2;
+        _glass.Height = ActualHeight - Frame * 2;
         double scale = XamlRoot?.RasterizationScale ?? 1;
         int w = (int)Math.Ceiling((ActualWidth - Frame * 2) * scale), h = (int)Math.Ceiling((ActualHeight - Frame * 2) * scale);
         if (w > 0 && h > 0) _glass.Source = ArtCache.Get($"glass:{w}x{h}", () => GlassArt.Render(w, h));

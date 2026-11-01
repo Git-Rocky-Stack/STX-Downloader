@@ -30,6 +30,7 @@ public static class SpectrumAnalyzer
     /// <summary>A lossy encoder's cutoff is a cliff: at least this far down within this span.</summary>
     const double CliffDb = 18;
     const double CliffSpanHz = 1000;
+    const double AudibleRangeDb = 70;
     const double ReferenceHz = 1500;
     const double KneeDb = 12;
 
@@ -117,6 +118,11 @@ public static class SpectrumAnalyzer
 
         // A cutoff is a cliff: the level falls hard within a short span. A natural slope never does, and a file
         // with no cliff reports the top of its band, so a clean file is never accused of a cutoff it doesn't have.
+        // Levels far below the loudest part are out of reach of hearing, so a cliff down there isn't the source's
+        // limit. A modern codec's own band edge can sit far above where a narrow recording's sound really ended.
+        double audible = smooth.Max() - AudibleRangeDb;
+        for (int i = 0; i < smooth.Length; i++) smooth[i] = Math.Max(smooth[i], audible);
+
         int span = Math.Max(1, (int)(CliffSpanHz / binHz));
         int foot = -1;
         for (int i = smooth.Length - 1 - span; i >= 0 && foot < 0; i--)

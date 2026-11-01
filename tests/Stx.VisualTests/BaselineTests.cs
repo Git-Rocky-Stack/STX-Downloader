@@ -26,7 +26,7 @@ public class BaselineTests
     public void Every_primitive_has_an_approved_image_in_both_modes()
     {
         string baselines = Path.Combine(Root(), "tests", "baselines");
-        foreach (string gallery in new[] { "faceplate", "display", "led", "bargraph", "sevenseg", "pad", "pushswitch", "rotary", "label", "list", "textbox", "dialog", "states", "all-primitives", "console" })
+        foreach (string gallery in new[] { "faceplate", "display", "led", "bargraph", "sevenseg", "pad", "pushswitch", "rotary", "label", "list", "textbox", "dialog", "states", "all-primitives", "console", "sourcetruth", "library" })
             foreach (string mode in new[] { "dark", "light" })
                 Assert.True(File.Exists(Path.Combine(baselines, $"{gallery}-{mode}.png")), $"No approved image for {gallery} {mode}");
     }

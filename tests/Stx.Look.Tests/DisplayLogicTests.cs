@@ -71,3 +71,48 @@ public class DisplayLogicTests
     public void Bright_display_text_meets_aa_on_its_screen(DisplayTone tone) =>
         Assert.True(LookTokens.Contrast(DisplayTones.Text(tone, false), DisplayTones.ScreenCenter(tone)) >= 4.5);
 }
+
+public class SpectrumGateTests
+{
+    static readonly double[] Data = [-10, -20];
+
+    [Fact]
+    public void Same_data_redraws_only_once()
+    {
+        var gate = new SpectrumRedrawGate();
+        Assert.True(gate.ShouldRedraw(Data, 16000, 100, 50));
+        Assert.False(gate.ShouldRedraw([-10, -20], 16000, 100, 50));
+        Assert.Equal(1, gate.DrawCount);
+    }
+
+    [Fact]
+    public void New_data_redraws()
+    {
+        var gate = new SpectrumRedrawGate();
+        gate.ShouldRedraw(Data, 16000, 100, 50);
+        Assert.True(gate.ShouldRedraw([-11, -20], 16000, 100, 50));
+    }
+
+    [Fact]
+    public void A_new_roll_off_redraws()
+    {
+        var gate = new SpectrumRedrawGate();
+        gate.ShouldRedraw(Data, 16000, 100, 50);
+        Assert.True(gate.ShouldRedraw(Data, 18000, 100, 50));
+    }
+
+    [Fact]
+    public void A_new_size_redraws()
+    {
+        var gate = new SpectrumRedrawGate();
+        gate.ShouldRedraw(Data, null, 100, 50);
+        Assert.True(gate.ShouldRedraw(Data, null, 120, 50));
+    }
+
+    [Fact]
+    public void Nothing_to_draw_before_layout()
+    {
+        var gate = new SpectrumRedrawGate();
+        Assert.False(gate.ShouldRedraw(Data, null, 0, 0));
+    }
+}
