@@ -1,0 +1,85 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Stx.Core.Files;
+using Stx.Look;
+
+namespace Stx.Core.Settings;
+
+public sealed record AppSettings
+{
+    public const int MostParallel = 8;
+
+    public LookMode LookMode { get; init; } = LookMode.Dark;
+    public int MaxParallel { get; init; } = 3;
+    public bool ClipboardDetect { get; init; }
+    public bool TrayMode { get; init; }
+    public bool StartWithWindows { get; init; }
+    public bool ToolUpdates { get; init; } = true;
+    public bool ReduceMotion { get; init; }
+    public string OutputFolder { get; init; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "STX Downloader");
+    public string FilenameTemplate { get; init; } = Files.FilenameTemplate.Default;
+
+    /// <summary>Brings anything out of range back in, so a hand-edited file can't stop the app.</summary>
+    public AppSettings Sanitized()
+    {
+        var defaults = new AppSettings();
+        return this with
+        {
+            MaxParallel = Math.Clamp(MaxParallel, 1, MostParallel),
+            OutputFolder = string.IsNullOrWhiteSpace(OutputFolder) ? defaults.OutputFolder : OutputFolder,
+            FilenameTemplate = string.IsNullOrWhiteSpace(FilenameTemplate) ? defaults.FilenameTemplate : FilenameTemplate,
+        };
+    }
+}
+
+public sealed class SettingsStore(string path)
+{
+    static readonly JsonSerializerOptions Pretty = new() { WriteIndented = true };
+
+    public static string DefaultPath() =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "STXDownloader", "settings.json");
+
+    /// <summary>A missing or damaged file means defaults. Settings are never a reason not to start.</summary>
+    public AppSettings Load()
+    {
+        try
+        {
+            return (JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new AppSettings()).Sanitized();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return new AppSettings();
+        }
+    }
+
+    /// <summary>Writes a temporary file and swaps it in, so a crash mid-save can't leave a half-written file.</summary>
+    public void Save(AppSettings settings)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        string temporary = path + ".tmp";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, Pretty));
+        File.Move(temporary, path, overwrite: true);
+    }
+}
+
+/// <summary>The app opens in the last chosen mode. The Windows light or dark setting plays no part.</summary>
+public static class LookStartup
+{
+    public static LookMode Choose(AppSettings settings, bool windowsIsDark) => settings.LookMode;
+}
+
+/// <summary>Decides whether copied text is a link worth offering. Only one whole web link counts, never text that mentions one.</summary>
+public static partial class LinkDetector
+{
+    public static bool IsMediaLink(string text)
+    {
+        string trimmed = text?.Trim() ?? "";
+        if (trimmed.Length == 0 || Whitespace().IsMatch(trimmed)) return false;
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            && uri.Scheme is "http" or "https"
+            && uri.Host.Contains('.');
+    }
+
+    [GeneratedRegex(@"\s")]
+    private static partial Regex Whitespace();
+}

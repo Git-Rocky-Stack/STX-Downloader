@@ -25,6 +25,25 @@ public static partial class FilenameTemplate
         });
     }
 
+    /// <summary>The same template in yt-dlp's own terms, so downloads are named as you set them.</summary>
+    public static string ToYtDlp(string template)
+    {
+        string source = string.IsNullOrWhiteSpace(template) ? Default : template;
+        // Only a name, never a path: yt-dlp's -P option alone decides the folder.
+        string flat = source.Replace("..", "").Replace('\\', ' ').Replace('/', ' ').Replace("%", "%%").Trim();
+        string fields = Token().Replace(flat, match => match.Groups[1].Value.ToLowerInvariant() switch
+        {
+            "title" => "%(title)s",
+            "id" => "%(id)s",
+            "artist" => "%(uploader)s",
+            "date" => "%(upload_date)s",
+            "height" => "%(height)s",
+            "format" => "%(ext)s",
+            _ => match.Value,
+        });
+        return fields + ".%(ext)s";
+    }
+
     [GeneratedRegex(@"\{([A-Za-z]+)\}")]
     private static partial Regex Token();
 }

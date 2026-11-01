@@ -41,6 +41,9 @@ public sealed class SourceViewModel : ObservableObject
     public IRelayCommand ConfirmPlaylistCommand { get; }
     public IRelayCommand DeclinePlaylistCommand { get; }
 
+    /// <summary>False while the tools are still installing, when reading a link would only fail.</summary>
+    public bool ToolsReady { get; set; } = true;
+
     public string Link { get => _link; set => SetProperty(ref _link, value ?? ""); }
     public string Message { get => _message; private set => SetProperty(ref _message, value); }
     public string NextStep { get => _nextStep; private set => SetProperty(ref _nextStep, value); }
@@ -64,6 +67,11 @@ public sealed class SourceViewModel : ObservableObject
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
         {
             Say("That isn't a web link.", "Links start with http:// or https://.");
+            return;
+        }
+        if (!ToolsReady)
+        {
+            Say("Still setting up the tools.", "Your link is kept. Press Analyze again when the engine light is steady.");
             return;
         }
 

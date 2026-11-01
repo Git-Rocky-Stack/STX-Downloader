@@ -21,10 +21,14 @@ public sealed partial class SourcePanel : ContentControl
     readonly Grid _offer = new() { Visibility = Visibility.Collapsed, ColumnSpacing = 16 };
     readonly TextBlock _offerText = new() { TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Segoe UI"), FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
     readonly Pad _add = new() { Lit = true, Content = "ADD ALL" };
+    readonly ClipboardOfferViewModel? _clipboard;
+    readonly Grid _clipRow = new() { Visibility = Visibility.Collapsed, ColumnSpacing = 16 };
+    readonly TextBlock _clipText = new() { FontFamily = new FontFamily("Segoe UI"), FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
 
-    public SourcePanel(SourceViewModel source)
+    public SourcePanel(SourceViewModel source, ClipboardOfferViewModel? clipboard = null)
     {
         _source = source;
+        _clipboard = clipboard;
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
         var paste = new Pad { Content = "PASTE" };
@@ -67,8 +71,10 @@ public sealed partial class SourcePanel : ContentControl
         column.Children.Add(_state);
         column.Children.Add(_next);
         column.Children.Add(_offer);
+        column.Children.Add(_clipRow);
         Content = new Faceplate { PanelName = "source", Padding = new Thickness(36, 28, 36, 28), Content = column };
 
+        if (clipboard is not null) BuildClipboardRow(clipboard, source);
         source.PropertyChanged += (_, _) => Paint();
         Loaded += (_, _) => { LookState.Changed += PaintInk; PaintInk(); };
         Unloaded += (_, _) => LookState.Changed -= PaintInk;
@@ -76,11 +82,37 @@ public sealed partial class SourcePanel : ContentControl
         Paint();
     }
 
+    void BuildClipboardRow(ClipboardOfferViewModel clipboard, SourceViewModel source)
+    {
+        var take = new Pad { Content = "GRAB IT", Lit = true, LitTone = PadTone.Blue };
+        var dismiss = new Pad { Content = "NO THANKS" };
+        take.Click += async (_, _) =>
+        {
+            source.Link = clipboard.Take() ?? "";
+            await source.AnalyzeCommand.ExecuteAsync(null);
+        };
+        dismiss.Click += (_, _) => clipboard.Dismiss();
+        _clipRow.ColumnDefinitions.Add(new ColumnDefinition());
+        _clipRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _clipRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(take, 1);
+        Grid.SetColumn(dismiss, 2);
+        _clipRow.Children.Add(_clipText);
+        _clipRow.Children.Add(take);
+        _clipRow.Children.Add(dismiss);
+        clipboard.PropertyChanged += (_, _) =>
+        {
+            _clipText.Text = clipboard.OfferedLink is { } link ? "Copied link: " + link : "";
+            _clipRow.Visibility = clipboard.OfferedLink is null ? Visibility.Collapsed : Visibility.Visible;
+        };
+    }
+
     void PaintInk()
     {
         var ink = LookBrushes.From(LookTokens.For(LookState.Mode)["Ink"]);
         _next.Foreground = ink;
         _offerText.Foreground = ink;
+        _clipText.Foreground = ink;
     }
 
     void Paint()

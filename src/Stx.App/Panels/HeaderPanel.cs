@@ -15,7 +15,7 @@ public sealed partial class HeaderPanel : ContentControl
     readonly Led _engine = new(), _fault = new() { Color = LedColor.Red };
     readonly EngravedLabel _engineText = new() { Kind = LabelKind.Label };
 
-    public HeaderPanel(EngineStatusViewModel status)
+    public HeaderPanel(EngineStatusViewModel status, Action? openSettings = null)
     {
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
@@ -29,6 +29,12 @@ public sealed partial class HeaderPanel : ContentControl
         var lights = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 24, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
         lights.Children.Add(Pair(_engine, _engineText));
         lights.Children.Add(Pair(_fault, new EngravedLabel { Kind = LabelKind.Label, Text = "Fault" }));
+        if (openSettings is not null)
+        {
+            var settings = new Pad { Content = "SETTINGS" };
+            settings.Click += (_, _) => openSettings();
+            lights.Children.Add(settings);
+        }
 
         var row = new Grid();
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -44,7 +50,7 @@ public sealed partial class HeaderPanel : ContentControl
 
     static StackPanel Pair(UIElement led, UIElement label)
     {
-        var pair = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        var pair = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
         pair.Children.Add(led);
         pair.Children.Add(label);
         return pair;

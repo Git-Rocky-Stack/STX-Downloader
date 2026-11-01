@@ -3,7 +3,9 @@ using Microsoft.Data.Sqlite;
 using Microsoft.UI.Dispatching;
 using Stx.App.Primitives;
 using Stx.Audio;
+using Stx.App.Platform;
 using Stx.Core.Queue;
+using Stx.Core.Settings;
 using Stx.Data;
 using Stx.Tools;
 using Stx.ViewModels;
@@ -28,6 +30,9 @@ public sealed class Composition : IDisposable
     public Composition(DispatcherQueue ui)
     {
         _ui = ui;
+        Settings = new SettingsViewModel(new SettingsStore(SettingsStore.DefaultPath()), new StartupRegistry());
+        LookState.Mode = LookStartup.Choose(Settings.Current, windowsIsDark: true);
+        LookState.ReduceMotionChosen = Settings.Current.ReduceMotion;
         _db = Db.Open(Db.DefaultPath());
         _http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("STXDownloader");
@@ -37,7 +42,7 @@ public sealed class Composition : IDisposable
         var catalog = new MediaRepo(_db);
         _catalog = catalog;
         var vault = new CaptureVault();
-        Tools = new ToolManager(_http, ToolManager.DefaultRoot(), new ToolOptions(UpdatesEnabled: true), process);
+        Tools = new ToolManager(_http, ToolManager.DefaultRoot(), new ToolOptions(Settings.Current.ToolUpdates), process);
 
         var runner = new YtDlpRunner(process, Tools, job => RequestFor(job, catalog), vault);
         var probe = new Lazy<EncoderProbe>(() => new EncoderProbe(process, Tools.Paths.Ffmpeg ?? ""));
@@ -45,12 +50,18 @@ public sealed class Composition : IDisposable
             new FfmpegRunner(process, Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), () => probe.Value.BestH264Async()),
             catalog.FilePath,
             (media, path, format) => catalog.AddFile(media, path, null, format));
-        Engine = new QueueEngine(new JobRepo(_db), new JobRouter(runner, converter), new QueuePolicy(), new SystemClock(), vault);
+        Engine = new QueueEngine(new JobRepo(_db), new JobRouter(runner, converter), new QueuePolicy { MaxParallel = Settings.Current.MaxParallel }, new SystemClock(), vault);
         var shell = new SystemShell();
         Queue = new QueueViewModel(Engine, catalog, shell, OnUi);
         SourceTruth = new SourceTruthViewModel(() => LookState.ReduceMotion);
         Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine, () => SourceTruth.SelectedOutput);
         Library = new LibraryViewModel(catalog, Engine, shell, File.Exists);
+
+        FirstRun = new FirstRunViewModel(Tools, Status);
+        Clipboard = new ClipboardOfferViewModel(() => Settings.Current.ClipboardDetect);
+        Source.ToolsReady = false;
+        FirstRun.PropertyChanged += (_, _) => Source.ToolsReady = FirstRun.IsReady;
+        Settings.Changed += (_, settings) => Apply(settings);
 
         Queue.FileRecorded += (_, media) => _ = MeasureAsync(media);
         converter.FileSaved += (_, media) => OnUi(() => _ = MeasureAsync(media));
@@ -69,6 +80,8 @@ public sealed class Composition : IDisposable
         _retryTimer.Interval = TimeSpan.FromSeconds(1);
         _retryTimer.Tick += (_, _) => { Engine.Tick(); UpdateRetryTimer(); };
         Engine.JobChanged += (_, _) => OnUi(UpdateRetryTimer);
+        // A pending retry is real work, so it carries on while the window is hidden. A timer already running is left be.
+        Activity.Register(() => Queue.HasWaitingJobs, () => { if (!_retryTimer.IsRunning) _retryTimer.Start(); }, () => _retryTimer.Stop(), keepRunningWhenHidden: true);
     }
 
     public ToolManager Tools { get; }
@@ -77,6 +90,10 @@ public sealed class Composition : IDisposable
     public SourceViewModel Source { get; }
     public SourceTruthViewModel SourceTruth { get; }
     public LibraryViewModel Library { get; }
+    public SettingsViewModel Settings { get; }
+    public FirstRunViewModel FirstRun { get; }
+    public ClipboardOfferViewModel Clipboard { get; }
+    public WindowActivity Activity { get; } = new();
     public EngineStatusViewModel Status { get; } = new();
 
     /// <summary>Call once the window is up, because a first run downloads tools and that must not hold up the app opening.</summary>
@@ -85,11 +102,11 @@ public sealed class Composition : IDisposable
         Queue.Load();
         Library.Refresh();
         Engine.RecoverAfterRestart();
-        var progress = new Progress<ToolStatus>(Status.Report);
         try
         {
-            var health = await Tools.EnsureAsync(progress, _closing.Token);
-            Status.Apply(health);
+            // Tools already on disk can work at once, even while their update check is still going.
+            Source.ToolsReady = File.Exists(Tools.YtDlpPath) && Tools.Paths.Ffmpeg is not null;
+            await FirstRun.StartAsync(_closing.Token);
             Engine.Tick();
         }
         catch (OperationCanceledException)
@@ -155,15 +172,24 @@ public sealed class Composition : IDisposable
     }
 
     DownloadRequest RequestFor(Job job, IMediaCatalog catalog) =>
-        new(job.Kind == JobKind.Link ? catalog.GetItem(job.MediaId)?.PageUrl : null, OutputFolder(), DownloadMode.Best, null) { Tools = Tools.Paths };
+        new(job.Kind == JobKind.Link ? catalog.GetItem(job.MediaId)?.PageUrl : null, Settings.Current.OutputFolder, DownloadMode.Best, null)
+        {
+            Tools = Tools.Paths,
+            OutputTemplate = Settings.Current.FilenameTemplate,
+        };
 
-    static string OutputFolder() =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "STX Downloader");
+    void Apply(AppSettings settings)
+    {
+        LookState.Mode = settings.LookMode;
+        LookState.ReduceMotionChosen = settings.ReduceMotion;
+        Tools.Options = new ToolOptions(settings.ToolUpdates);
+        Engine.Policy = new QueuePolicy { MaxParallel = settings.MaxParallel };
+        Engine.Tick();
+    }
 
     void UpdateRetryTimer()
     {
-        if (Queue.HasWaitingJobs) { if (!_retryTimer.IsRunning) _retryTimer.Start(); }
-        else _retryTimer.Stop();
+        Activity.Refresh();
     }
 
     // A download reports many times a second. Each shown update redraws glowing text, so the rate is capped.

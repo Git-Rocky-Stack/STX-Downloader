@@ -29,6 +29,8 @@ internal static class GalleryPages
         "console" => ConsoleSample.Build(),
         "sourcetruth" => ConsoleSample.SourceTruth(),
         "library" => ConsoleSample.LibraryPage(),
+        "settings" => ConsoleSample.Settings(),
+        "firstrun" => ConsoleSample.FirstRun(),
         _ => new Grid(),
     };
 

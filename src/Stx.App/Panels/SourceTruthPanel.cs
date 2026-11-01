@@ -21,6 +21,9 @@ public sealed partial class SourceTruthPanel : ContentControl
     readonly TextBlock _warning = new() { TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Segoe UI"), FontSize = 13 };
     readonly StateView _empty = new() { State = ViewState.Empty, Message = "SELECT A SAVED ITEM" };
     readonly Display _facts;
+    /// <summary>Runs only while a sweep plays. At rest, nothing here does any work.</summary>
+    public DispatcherTimer SweepTimer => _sweep;
+
     readonly DispatcherTimer _sweep = new() { Interval = TimeSpan.FromMilliseconds(1000.0 / MeterTimeline.FramesPerSecond) };
 
     public SourceTruthPanel(SourceTruthViewModel truth, Action? convert = null)

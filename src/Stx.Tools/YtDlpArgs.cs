@@ -14,6 +14,7 @@ public sealed record DownloadRequest(string? Url, string OutputFolder, DownloadM
     public ToolPaths? Tools { get; init; }
     public string? ConfigPath { get; init; }
     public MetadataOptions Metadata { get; init; } = MetadataOptions.None;
+    public string OutputTemplate { get; init; } = FilenameTemplate.Default;
 }
 
 /// <summary>Builds yt-dlp's arguments. The default keeps the original streams and never re-encodes.</summary>
@@ -36,7 +37,7 @@ public static class YtDlpArgs
             "-f", Format(request.Mode, request.MaxHeight),
             "--merge-output-format", "mp4/mkv",
             "-P", request.OutputFolder,
-            "-o", "%(title)s [%(id)s].%(ext)s",
+            "-o", FilenameTemplate.ToYtDlp(request.OutputTemplate),
             "--windows-filenames",
             "--trim-filenames", TrimLength(request.OutputFolder).ToString(CultureInfo.InvariantCulture),
             "--no-overwrites",

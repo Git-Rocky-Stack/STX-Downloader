@@ -5,6 +5,7 @@ using Stx.Audio;
 using Stx.Core.Errors;
 using Stx.Core.Jobs;
 using Stx.Core.Queue;
+using Stx.Core.Settings;
 using Stx.ViewModels;
 
 namespace Stx.App.Gallery;
@@ -59,6 +60,31 @@ internal static class ConsoleSample
         var library = new LibraryViewModel(new SampleLibrary(), jobs, new NoShell(), path => !path.Contains("moved"));
         library.Refresh();
         return new LibraryPanel(library, _ => { });
+    }
+
+    public static UIElement Settings()
+    {
+        string file = Path.Combine(Path.GetTempPath(), "stx-gallery-settings-" + Environment.ProcessId + ".json");
+        return new SettingsPanel(new SettingsViewModel(new SettingsStore(file), new NoStartup()), null);
+    }
+
+    public static UIElement FirstRun()
+    {
+        var first = new FirstRunViewModel(new OfflineSetup(), new EngineStatusViewModel());
+        _ = first.StartAsync();
+        return new FirstRunPanel(first);
+    }
+
+    sealed class NoStartup : IStartupRegistration
+    {
+        public bool IsEnabled => false;
+        public void Set(bool enabled) { }
+    }
+
+    sealed class OfflineSetup : Stx.Tools.IToolSetup
+    {
+        public Task<Stx.Tools.ToolHealth> EnsureAsync(IProgress<Stx.Tools.ToolStatus>? progress = null, CancellationToken cancel = default) =>
+            Task.FromResult(Stx.Tools.ToolHealth.Missing);
     }
 
     sealed class SampleLibrary : ILibraryCatalog

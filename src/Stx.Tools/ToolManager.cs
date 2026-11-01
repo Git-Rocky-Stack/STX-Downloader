@@ -9,6 +9,11 @@ public sealed record ToolOptions(bool UpdatesEnabled);
 
 public sealed record ToolStatus(string Tool, string Stage);
 
+public interface IToolSetup
+{
+    Task<ToolHealth> EnsureAsync(IProgress<ToolStatus>? progress = null, CancellationToken cancel = default);
+}
+
 /// <summary>The yt-dlp versions on hand, so a run can fall back when a fresh update turns out to be broken.</summary>
 public interface IYtDlpVersions
 {
@@ -24,8 +29,11 @@ public interface IYtDlpVersions
 /// an offline self-test, and every failure leaves what was already working in place. It talks only to the hosts
 /// in ToolVersions, and not at all when updates are off.
 /// </summary>
-public sealed class ToolManager(HttpClient http, string root, ToolOptions options, IProcessRunner process) : IYtDlpVersions
+public sealed class ToolManager(HttpClient http, string root, ToolOptions options, IProcessRunner process) : IYtDlpVersions, IToolSetup
 {
+    /// <summary>Can change while running, because Settings can turn updates off.</summary>
+    public ToolOptions Options { get; set; } = options;
+
     static readonly TimeSpan SelfTestLimit = TimeSpan.FromSeconds(30);
 
     string Tool(string name) => Path.Combine(root, name);
@@ -59,7 +67,7 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
         Directory.CreateDirectory(root);
         bool pending = false;
 
-        if (options.UpdatesEnabled)
+        if (Options.UpdatesEnabled)
         {
             if (File.Exists(YtDlpPath)) pending = await UpdateYtDlpAsync(progress, cancel).ConfigureAwait(false) == ToolHealth.UpdatePending;
             else await InstallYtDlpAsync(progress, cancel).ConfigureAwait(false);
@@ -77,7 +85,7 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
 
     public async Task<ToolHealth> UpdateYtDlpAsync(IProgress<ToolStatus>? progress, CancellationToken cancel)
     {
-        if (!options.UpdatesEnabled || !File.Exists(YtDlpPath)) return ToolHealth.Current;
+        if (!Options.UpdatesEnabled || !File.Exists(YtDlpPath)) return ToolHealth.Current;
 
         string? sums = await TextOrNull(ToolVersions.YtDlpSums, cancel).ConfigureAwait(false);
         string? latest = sums is null ? null : Checksums.Find(sums, "yt-dlp.exe");

@@ -11,8 +11,11 @@ public static class LookState
 
     public static event Action? Changed;
 
-    /// <summary>True when Windows is set to show no animations.</summary>
-    public static bool ReduceMotion => !Settings.AnimationsEnabled;
+    /// <summary>True when Windows is set to show no animations, or you chose that here.</summary>
+    public static bool ReduceMotion => ReduceMotionChosen || !Settings.AnimationsEnabled;
+
+    /// <summary>Set from the app's own setting, on top of the Windows one.</summary>
+    public static bool ReduceMotionChosen { get; set; }
 
     public static LookMode Mode
     {
