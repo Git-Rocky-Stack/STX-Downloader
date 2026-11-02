@@ -68,8 +68,11 @@ public sealed class FirstRunViewModel : ObservableObject
     bool _ready, _visible, _canRetry, _busy;
     string _message = "";
 
-    public FirstRunViewModel(IToolSetup setup, EngineStatusViewModel status)
+    readonly Func<bool> _downloadsAllowed;
+
+    public FirstRunViewModel(IToolSetup setup, EngineStatusViewModel status, Func<bool>? downloadsAllowed = null)
     {
+        _downloadsAllowed = downloadsAllowed ?? (() => true);
         _setup = setup;
         _status = status;
         RetryCommand = new AsyncRelayCommand(() => StartAsync());
@@ -99,6 +102,8 @@ public sealed class FirstRunViewModel : ObservableObject
             CanRetry = IsVisible;
             Message = health switch
             {
+                // With tool updates off, nothing was attempted, so the connection isn't the problem and Retry alone can't help.
+                ToolHealth.Missing when !_downloadsAllowed() => "Tool updates are off, so the missing tools weren't downloaded. Turn tool updates on in Settings, then retry.",
                 ToolHealth.Missing => "The tools couldn't download. Check your connection, then retry.",
                 ToolHealth.Degraded => "Deno couldn't download, so some formats won't be offered. Everything else works.",
                 _ => "",

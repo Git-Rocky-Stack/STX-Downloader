@@ -115,6 +115,8 @@ internal static class ConsoleSample
         public MediaRecord? GetItem(long id) => _items.FirstOrDefault(i => i.Id == id);
         public long AddFile(long mediaId, string path, string? hash, string format) => 0;
         public IReadOnlyList<MediaFact> ExistingFacts() => [];
+        public void RememberCapture(string key, long mediaId) { }
+        public long? RememberedCapture(string key) => null;
     }
 
     sealed class NeverRuns : IJobRunner

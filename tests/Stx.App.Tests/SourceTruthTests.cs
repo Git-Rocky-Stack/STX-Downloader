@@ -259,6 +259,21 @@ public class LibraryTests
     }
 
     [Fact]
+    public void One_file_reached_by_two_links_is_listed_once_under_whichever_saved_it_first()
+    {
+        // The catalog lists items newest first, so the first to save it comes last here.
+        _catalog.Stored.Add(new LibraryItem(2, "Copy", "https://x/2", [new LibraryFile(2, @"D:\m\SONG.mp4", SourceViewModel.OriginalFormat)]));
+        _catalog.Stored.Add(new LibraryItem(1, "Song", "https://x/1", [new LibraryFile(1, @"D:\m\song.mp4", SourceViewModel.OriginalFormat)]));
+        _files.Add(@"D:\m\SONG.mp4");
+        _files.Add(@"D:\m\song.mp4");
+        var library = Library();
+
+        library.Refresh();
+
+        Assert.Equal("Song", Assert.Single(library.Rows).Title);
+    }
+
+    [Fact]
     public void One_item_can_have_several_files()
     {
         _catalog.Stored.Add(new LibraryItem(1, "Song", "https://x", [new LibraryFile(1, @"D:\s.mp4", "Original"), new LibraryFile(2, @"D:\s.flac", "Flac")]));

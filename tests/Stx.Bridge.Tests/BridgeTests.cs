@@ -82,6 +82,115 @@ public class BridgeTests
     static JsonElement Reply(string json) => JsonDocument.Parse(json).RootElement;
     static bool Ok(string json) => Reply(json).GetProperty("ok").GetBoolean();
 
+    // A repeat click: the same stream, on the same page, with whatever token the page has by now.
+    const string SameStreamFreshToken = "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/1/2/10s/master.m3u8?fastly_token=DIFFERENT";
+    const string OtherStream = "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/9/9/10s/master.m3u8?fastly_token=SECRETTOKEN";
+
+    [Fact]
+    public void A_repeat_click_while_the_job_is_going_adds_nothing()
+    {
+        using var rig = new Rig();
+        Assert.Equal(1, Reply(rig.Handler.Handle(Capture())).GetProperty("jobs").GetInt32());
+
+        var again = Reply(rig.Handler.Handle(Capture(stream: SameStreamFreshToken)));
+
+        Assert.True(again.GetProperty("ok").GetBoolean());
+        Assert.Equal(0, again.GetProperty("jobs").GetInt32());
+        Assert.Equal(1, again.GetProperty("alreadyHere").GetInt32());
+        Assert.Single(rig.Engine.AllJobs());
+    }
+
+    [Fact]
+    public void Another_stream_with_the_same_title_on_the_same_page_is_its_own_job()
+    {
+        using var rig = new Rig();
+        rig.Handler.Handle(Capture());
+
+        var other = Reply(rig.Handler.Handle(Capture(stream: OtherStream)));
+
+        Assert.Equal(1, other.GetProperty("jobs").GetInt32());
+        Assert.Equal(2, rig.Engine.AllJobs().Count);
+    }
+
+    [Fact]
+    public void One_address_that_picks_its_video_by_query_is_a_different_stream_per_video()
+    {
+        using var rig = new Rig();
+        rig.Handler.Handle(Capture(stream: "https://cdn.example/play.m3u8?video=42"));
+
+        var other = Reply(rig.Handler.Handle(Capture(stream: "https://cdn.example/play.m3u8?video=43")));
+
+        Assert.Equal(1, other.GetProperty("jobs").GetInt32());
+    }
+
+    [Fact]
+    public async Task A_repeat_click_after_a_failure_tries_again()
+    {
+        using var rig = new Rig();
+        rig.Handler.Handle(Capture());
+        var job = Assert.Single(rig.Engine.AllJobs());
+        rig.Runner.Finish(job.Id, JobOutcome.Failure(ErrorKind.PrivateOrUnavailable));
+        for (int i = 0; i < 200 && rig.Engine.AllJobs()[0].State != JobState.Failed; i++) await Task.Delay(10);
+        Assert.Equal(JobState.Failed, rig.Engine.AllJobs()[0].State);
+
+        var again = Reply(rig.Handler.Handle(Capture(stream: SameStreamFreshToken)));
+
+        Assert.Equal(1, again.GetProperty("jobs").GetInt32());
+    }
+
+    [Fact]
+    public async Task A_repeat_click_after_the_file_is_saved_adds_nothing_until_it_is_deleted()
+    {
+        using var rig = new Rig();
+        string file = Path.Combine(Path.GetTempPath(), $"stx-saved-{Guid.NewGuid():N}.mp4");
+        File.WriteAllText(file, "saved");
+        try
+        {
+            rig.Handler.Handle(Capture());
+            var job = Assert.Single(rig.Engine.AllJobs());
+            rig.Catalog.AddFile(job.MediaId, file, null, "Original");
+            rig.Runner.Finish(job.Id, JobOutcome.Success);
+            for (int i = 0; i < 200 && rig.Engine.AllJobs()[0].State != JobState.Completed; i++) await Task.Delay(10);
+            Assert.Equal(JobState.Completed, rig.Engine.AllJobs()[0].State);
+
+            Assert.Equal(1, Reply(rig.Handler.Handle(Capture(stream: SameStreamFreshToken))).GetProperty("alreadyHere").GetInt32());
+
+            File.Delete(file);
+            Assert.Equal(1, Reply(rig.Handler.Handle(Capture(stream: SameStreamFreshToken))).GetProperty("jobs").GetInt32());
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public void A_repeat_click_after_a_restart_is_still_recognized()
+    {
+        using var rig = new Rig();
+        rig.Handler.Handle(Capture());
+
+        var restarted = new CaptureHandler(rig.Catalog, rig.Engine, () => true);
+        var again = Reply(restarted.Handle(Capture(stream: SameStreamFreshToken)));
+
+        Assert.Equal(1, again.GetProperty("alreadyHere").GetInt32());
+        Assert.Single(rig.Engine.AllJobs());
+    }
+
+    [Fact]
+    public void What_is_remembered_about_a_capture_holds_nothing_from_its_address()
+    {
+        using var rig = new Rig();
+        // A token under a name the scrubber doesn't know is the case this has to survive.
+        rig.Handler.Handle(Capture(stream: "https://cdn.example/master.m3u8?zzq=UNKNOWNSECRET", cookies: "SECRETCOOKIE"));
+
+        using var command = rig.Db_.CreateCommand();
+        command.CommandText = "SELECT key_hash FROM capture_keys;";
+        string stored = Assert.IsType<string>(command.ExecuteScalar());
+
+        Assert.Matches("^[0-9A-F]{64}$", stored);
+    }
+
     [Fact]
     public void Framing_round_trips_4_byte_length()
     {

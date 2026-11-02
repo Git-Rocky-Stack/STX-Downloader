@@ -11,6 +11,8 @@ public static partial class ErrorClassifier
         (ErrorKind.ToolFailure, Rule(@"requested format is not available")),
         (ErrorKind.DrmDetected, Rule(@"\bDRM\b")),
         (ErrorKind.OutputFailure, Rule(@"no space left|not enough space|errno 28|errno 13|permission denied|access is denied|cannot find the path|unable to open for writing|unable to write data|unable to create directory")),
+        // Before the next rule, because "503: Service Unavailable" is the site struggling, not the video being gone.
+        (ErrorKind.Network, Rule(@"HTTP Error 5\d\d|service unavailable|bad gateway|gateway time.?out")),
         (ErrorKind.PrivateOrUnavailable, Rule(@"private video|unavailable|not available|does not exist|has been removed|geo.?restrict|HTTP Error 404")),
         (ErrorKind.SignInNeeded, Rule(@"sign in to confirm|use --cookies|registered users|login required|log in|requires authentication|HTTP Error 401")),
         (ErrorKind.LinkExpired, Rule(@"HTTP Error 403|HTTP Error 410|link expired|url has expired")),

@@ -40,6 +40,9 @@ sealed class MemoryCatalog : IMediaCatalog
 
     public IReadOnlyList<MediaFact> ExistingFacts() =>
         Files.Select(f => new MediaFact(GetItem(f.Media)?.SourceId, null, f.Format, f.Path)).ToList();
+
+    public void RememberCapture(string key, long mediaId) { }
+    public long? RememberedCapture(string key) => null;
 }
 
 /// <summary>A job runner the test finishes by hand, on a plain context so results are ready at once.</summary>

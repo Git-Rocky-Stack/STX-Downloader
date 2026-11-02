@@ -6,11 +6,12 @@ namespace Stx.Bridge;
 /// <summary>The answer sent back to the extension. It never contains anything from the message's secrets.</summary>
 public static class BridgeReply
 {
-    public static string Sent(int jobs, int resumed) => Write(w =>
+    public static string Sent(int jobs, int resumed, int alreadyHere = 0) => Write(w =>
     {
         w.WriteBoolean("ok", true);
         w.WriteNumber("jobs", jobs);
         w.WriteNumber("resumed", resumed);
+        w.WriteNumber("alreadyHere", alreadyHere);
     });
 
     public static string Refused(string error, string message) => Write(w =>

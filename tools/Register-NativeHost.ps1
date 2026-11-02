@@ -27,7 +27,7 @@ New-Item -ItemType Directory -Force $folder | Out-Null
     path            = (Resolve-Path -LiteralPath $HostPath).Path
     type            = 'stdio'
     allowed_origins = @("chrome-extension://$id/")
-} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding utf8NoBOM
+} | ConvertTo-Json | ForEach-Object { [IO.File]::WriteAllText($manifest, $_) }
 
 foreach ($browser in $browsers) {
     $key = "HKCU:\Software\$browser\NativeMessagingHosts\$name"

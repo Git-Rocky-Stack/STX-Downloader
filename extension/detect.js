@@ -82,7 +82,25 @@ function nameIn(url) {
   let stem = last.replace(/\.[^.]*$/, '');
   try { stem = decodeURIComponent(stem); } catch { /* keep it as written */ }
   stem = stem.replace(/[-_]\d+$/, '');
-  return stem.length >= 3 && !GENERIC_NAMES.test(stem) ? stem : null;
+  return stem.length >= 3 && !GENERIC_NAMES.test(stem) && !looksLikeToken(stem) ? stem : null;
+}
+
+/** Hosts can put a signed token in the path. Titles get saved and shown, so one must never become a title. */
+function looksLikeToken(stem) {
+  if (/^[0-9a-f]{16,}$/i.test(stem)) return true;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stem)) return true;
+  // Words are short and rarely hold digits. A long unbroken run with digits in it isn't a word.
+  return stem.split(/[-_.~\s]+/).some(part => part.length >= 20 && /\d/.test(part));
+}
+
+/** What the popup says after the app answers a Save. */
+export function sentMessage(reply) {
+  const added = reply.jobs + reply.resumed;
+  const here = reply.alreadyHere || 0;
+  if (added === 0 && here > 0) return here > 1 ? `Those ${here} are already saved or in the queue.` : 'That one is already saved or in the queue.';
+  const note = here > 0 ? ` ${here} already saved or in the queue.` : '';
+  if (reply.resumed > 0) return `Resumed in the queue.${note}`;
+  return `Added to the queue${added > 1 ? `: ${added} items` : ''}.${note}`;
 }
 
 export function emptyState() {

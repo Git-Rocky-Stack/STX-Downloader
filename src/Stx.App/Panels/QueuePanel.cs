@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Stx.App.Primitives;
+using Stx.Core.Jobs;
 using Stx.Look;
 using Stx.ViewModels;
 using Windows.ApplicationModel.DataTransfer;
@@ -17,7 +18,9 @@ public sealed partial class QueueRow : Grid
 {
     readonly QueueItemViewModel _item;
     readonly Led _led = new() { VerticalAlignment = VerticalAlignment.Center };
+    readonly ScrollingGlowText _title = new() { Tone = DisplayTone.Cyan };
     readonly GlowText _status = new() { Tone = DisplayTone.Cyan, Dimmed = true };
+    bool _selected, _pointerOver;
     readonly Bargraph _meter = new() { VerticalAlignment = VerticalAlignment.Center };
     readonly SevenSegmentReadout _readout = new() { VerticalAlignment = VerticalAlignment.Center };
 
@@ -33,7 +36,8 @@ public sealed partial class QueueRow : Grid
         ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var lines = new StackPanel();
-        lines.Children.Add(new GlowText { Tone = DisplayTone.Cyan, Text = item.Title.ToUpperInvariant() });
+        _title.Text = item.Title.ToUpperInvariant();
+        lines.Children.Add(_title);
         lines.Children.Add(_status);
         var screen = new Display { Tone = DisplayTone.Cyan, Height = 64, Padding = new Thickness(12, 6, 12, 6), Content = lines };
 
@@ -45,8 +49,23 @@ public sealed partial class QueueRow : Grid
         Children.Add(_meter);
         Children.Add(_readout);
 
+        PointerEntered += (_, _) => { _pointerOver = true; PaintScrolling(); };
+        PointerExited += (_, _) => { _pointerOver = false; PaintScrolling(); };
         item.PropertyChanged += OnChanged;
         Paint();
+    }
+
+    /// <summary>The row is the selected one in its list.</summary>
+    public bool Selected
+    {
+        get => _selected;
+        set { _selected = value; PaintScrolling(); }
+    }
+
+    void PaintScrolling()
+    {
+        _title.Working = _item.State is JobState.Queued or JobState.Running or JobState.Analyzing or JobState.Waiting;
+        _title.LookedAt = _selected || _pointerOver;
     }
 
     void OnChanged(object? sender, PropertyChangedEventArgs e) => Paint();
@@ -58,6 +77,7 @@ public sealed partial class QueueRow : Grid
         _status.Text = _item.Status;
         _meter.Value = _item.Percent;
         _readout.Text = ((int)Math.Round(_item.Percent)).ToString(CultureInfo.InvariantCulture);
+        PaintScrolling();
     }
 }
 
@@ -80,7 +100,11 @@ public sealed partial class QueuePanel : ContentControl
         foreach (string state in new[] { "", "PointerOver", "Pressed", "Disabled" })
             _list.Resources[$"ListViewItemSelectionIndicator{(state.Length == 0 ? "" : state)}Brush"] = LookBrushes.From("#58C7FF");
 
-        _list.SelectionChanged += (_, _) => PaintActions();
+        _list.SelectionChanged += (_, _) =>
+        {
+            foreach (QueueRowHost host in _list.Items) host.Row.Selected = ReferenceEquals(host, _list.SelectedItem);
+            PaintActions();
+        };
 
         _pause.Click += (_, _) => Act(queue.Pause);
         _resume.Click += (_, _) => Act(queue.Resume);
@@ -164,12 +188,15 @@ public sealed partial class QueuePanel : ContentControl
         {
             Item = item;
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
-            Content = new QueueRow(item);
+            Row = new QueueRow(item);
+            Content = Row;
             item.PropertyChanged += (_, _) => Name();
             Name();
         }
 
         public QueueItemViewModel Item { get; }
+
+        public QueueRow Row { get; }
 
         void Name() => AutomationProperties.SetName(this, $"{Item.Title}: {Item.Status}");
     }

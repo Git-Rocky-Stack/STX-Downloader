@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Stx.Core.Errors;
@@ -9,12 +11,15 @@ using Stx.Core.Queue;
 namespace Stx.Bridge;
 
 /// <summary>Turns a click in the extension into queue jobs. Everything arriving here is checked first, and a bad message makes no jobs at all.</summary>
-public sealed partial class CaptureHandler(IMediaCatalog catalog, QueueEngine engine, Func<bool> toolsReady)
+public sealed partial class CaptureHandler(IMediaCatalog catalog, QueueEngine engine, Func<bool> toolsReady, Func<string, bool>? fileExists = null)
 {
     public const int MaxBatch = 200;
     const int MaxTitle = 300;
 
     static readonly string[] AllowedHeaders = ["Referer", "Origin", "User-Agent"];
+
+    readonly object _handling = new();
+    readonly Func<string, bool> _fileExists = fileExists ?? File.Exists;
 
     sealed record Planned(string PageUrl, string? SourceId, string? Title, CaptureSecrets? Secrets);
 
@@ -48,19 +53,50 @@ public sealed partial class CaptureHandler(IMediaCatalog catalog, QueueEngine en
         }
         if (!toolsReady()) return BridgeReply.Refused("NotReady", "STX Downloader is still setting up. Try again when it's ready.");
 
-        int resumed = 0;
-        foreach (var plan in plans)
+        int resumed = 0, alreadyHere = 0;
+        lock (_handling)
         {
-            if (plan.Secrets is { } secrets && Resume(plan, secrets))
+            // Decided once, before this click adds anything, so two rows of one click never count against each other.
+            var present = MediaAlreadyHere();
+            foreach (var plan in plans)
             {
-                resumed++;
-                continue;
+                if (plan.Secrets is { } secrets && Resume(plan, secrets))
+                {
+                    resumed++;
+                    continue;
+                }
+                string key = StreamKey(plan);
+                if (catalog.RememberedCapture(key) is { } earlier && present.Contains(earlier))
+                {
+                    alreadyHere++;
+                    continue;
+                }
+                long media = catalog.AddItem(plan.PageUrl, plan.SourceId, plan.Title);
+                engine.Enqueue(media, plan.Secrets is null ? JobKind.Link : JobKind.Captured, PresetCatalog.Default.Name, plan.Secrets);
+                catalog.RememberCapture(key, media);
             }
-            long media = catalog.AddItem(plan.PageUrl, plan.SourceId, plan.Title);
-            engine.Enqueue(media, plan.Secrets is null ? JobKind.Link : JobKind.Captured, PresetCatalog.Default.Name, plan.Secrets);
         }
-        return BridgeReply.Sent(plans.Count - resumed, resumed);
+        return BridgeReply.Sent(plans.Count - resumed - alreadyHere, resumed, alreadyHere);
     }
+
+    // In the queue and still going, or finished with its file still on disk. Failed, canceled or deleted work can be sent again.
+    HashSet<long> MediaAlreadyHere()
+    {
+        var present = engine.AllJobs()
+            .Where(j => j.State is not (JobState.Failed or JobState.Canceled or JobState.Completed))
+            .Select(j => j.MediaId)
+            .ToHashSet();
+        foreach (var fact in catalog.ExistingFacts())
+            if (fact.Path is { } path && _fileExists(path)) present.Add(fact.MediaId);
+        return present;
+    }
+
+    // Only secrets are ignored, because a fresh token on a stream is the same stream, while ?video=42 and ?video=43 are not.
+    // A token under a name nobody knows just makes this miss, and then the bytes are compared once the file exists.
+    // It's stored, so only its hash leaves here: an unknown token mustn't reach the database.
+    static string StreamKey(Planned plan) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            plan.SourceId is { } id ? "id:" + id : $"stream:{Redactor.ScrubLink(plan.Secrets!.StreamUrl)}\n{plan.Title}")));
 
     static Planned? Plan(CaptureItem source, CaptureMessage message, IReadOnlyDictionary<string, string> headers)
     {

@@ -9,6 +9,8 @@ namespace Stx.ViewModels;
 public sealed class ConversionRunner(FfmpegRunner ffmpeg, Func<long, string?> filePath, Func<long, string, string, long> addFile) : IJobRunner
 {
     public event EventHandler<SavedMedia>? FileSaved;
+    public event EventHandler<JobLogLine>? LogLine;
+    public event EventHandler<JobProgress>? ProgressChanged;
 
     public async Task<JobOutcome> RunAsync(Job job, CancellationToken cancel)
     {
@@ -23,11 +25,15 @@ public sealed class ConversionRunner(FfmpegRunner ffmpeg, Func<long, string?> fi
             Metadata = preset?.Metadata ?? new MetadataOptions(true, false, true),
         };
 
-        var result = await ffmpeg.ConvertAsync(request, null, cancel).ConfigureAwait(false);
+        var result = await ffmpeg.ConvertAsync(
+            request,
+            percent => ProgressChanged?.Invoke(this, new JobProgress(job.Id, new Progress(percent, null, null, null))),
+            cancel,
+            line => LogLine?.Invoke(this, new JobLogLine(job.Id, line))).ConfigureAwait(false);
         if (!result.IsSuccess) return JobOutcome.Failure(result.Error ?? ErrorKind.ToolFailure);
 
         long fileId = addFile(job.MediaId, result.OutputPath!, plan.PresetName ?? plan.Output.ToString());
-        FileSaved?.Invoke(this, new SavedMedia(job.MediaId, fileId, result.OutputPath!, Path.GetFileNameWithoutExtension(result.OutputPath!)));
+        FileSaved?.Invoke(this, new SavedMedia(job.MediaId, fileId, result.OutputPath!, Path.GetFileNameWithoutExtension(result.OutputPath!)) { JobId = job.Id });
         return JobOutcome.Success;
     }
 }

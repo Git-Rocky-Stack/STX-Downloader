@@ -12,7 +12,7 @@ public static class ErrorKindText
         ErrorKind.PrivateOrUnavailable => "This item is private, removed or unavailable.",
         ErrorKind.DrmDetected => "This stream is DRM-protected, so it can't be saved.",
         ErrorKind.LinkExpired => "The stream link has expired.",
-        ErrorKind.Network => "The connection dropped or couldn't be made.",
+        ErrorKind.Network => "The connection dropped, or the site isn't responding.",
         ErrorKind.OutputFailure => "The file couldn't be written.",
         _ => "The download tool stopped unexpectedly.",
     };

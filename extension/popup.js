@@ -1,4 +1,4 @@
-import { canDownload, emptyState, labelFor, listFor, saveAllUsesCookies } from './detect.js';
+import { canDownload, emptyState, labelFor, listFor, saveAllUsesCookies, sentMessage } from './detect.js';
 
 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 const statusLine = document.getElementById('status');
@@ -12,8 +12,7 @@ async function save(items, withCookies, button) {
   statusLine.textContent = 'Sending to STX Downloader…';
   const reply = await chrome.runtime.sendMessage({ type: 'send', items, page: page(), withCookies });
   if (reply?.ok) {
-    const count = reply.jobs + reply.resumed;
-    statusLine.textContent = reply.resumed > 0 ? 'Resumed in the queue.' : `Added to the queue${count > 1 ? `: ${count} items` : ''}.`;
+    statusLine.textContent = sentMessage(reply);
   } else {
     statusLine.textContent = reply?.message || 'STX Downloader didn\'t answer.';
     button.disabled = false;

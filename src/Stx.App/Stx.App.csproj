@@ -11,6 +11,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>STXDownloader</AssemblyName>
+    <AssemblyTitle>STX Downloader</AssemblyTitle>
     <RootNamespace>Stx.App</RootNamespace>
     <ApplicationIcon>Assets\stx.ico</ApplicationIcon>
   </PropertyGroup>
@@ -29,4 +30,9 @@
     <Content Include="Assets\badge.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\stx.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- dotnet publish leaves out the compiled XAML of an unpackaged WinUI app. Without these three, every styled control has no template: no faceplates, no pads. -->
+  <Target Name="PublishCompiledXaml" AfterTargets="Publish">
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).pri;$(OutDir)App.xbf" DestinationFolder="$(PublishDir)" />
+    <Copy SourceFiles="$(OutDir)Themes\Generic.xbf" DestinationFolder="$(PublishDir)Themes" />
+  </Target>
 </Project>

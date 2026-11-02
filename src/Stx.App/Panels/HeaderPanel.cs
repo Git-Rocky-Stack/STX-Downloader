@@ -13,7 +13,7 @@ namespace Stx.App.Panels;
 /// <summary>The top plate: the name, and whether the tools are ready.</summary>
 public sealed partial class HeaderPanel : ContentControl
 {
-    const double BadgeHeight = 34;
+    const double BadgeHeight = 41;
 
     readonly Led _engine = new(), _fault = new() { Color = LedColor.Red };
     readonly EngravedLabel _engineText = new() { Kind = LabelKind.Label };
@@ -24,12 +24,17 @@ public sealed partial class HeaderPanel : ContentControl
 
         var brand = new Image
         {
-            Source = new BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "badge.png"))),
+            // Scaled once, on loading, to the exact pixels this display needs. The picture is 2521 wide, and shrinking that live blurs its fine detail.
+            Source = new BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "badge.png")))
+            {
+                DecodePixelType = DecodePixelType.Logical,
+                DecodePixelHeight = (int)BadgeHeight,
+            },
             Height = BadgeHeight,
             Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
-        AutomationProperties.SetName(brand, "STX");
+        AutomationProperties.SetName(brand, "STX-1");
         var name = new StackPanel { Spacing = 6 };
         name.Children.Add(brand);
         name.Children.Add(new EngravedLabel { Kind = LabelKind.Sub, Text = "Media capture console" });
@@ -50,7 +55,7 @@ public sealed partial class HeaderPanel : ContentControl
         Grid.SetColumn(lights, 1);
         row.Children.Add(name);
         row.Children.Add(lights);
-        Content = new Faceplate { PanelName = "header", Padding = new Thickness(36, 22, 36, 22), Content = row };
+        Content = new Faceplate { PanelName = "header", Padding = new Thickness(36, 18, 36, 19), Content = row };
 
         status.PropertyChanged += (_, _) => Paint(status);
         Paint(status);

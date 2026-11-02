@@ -3,6 +3,9 @@
   "name": "STX Downloader",
   "version": "1.0.0",
   "description": "Finds media on the current tab and hands it to the STX Downloader app.",
+  "author": { "email": "support@strategia-x.com" },
+  "homepage_url": "https://strategia-x.com",
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyvqI06nLj/aM7hVVKX5unOKOUemHiLYJc+FHKdTxA2IcCm36PgqcRvuZDtP9k5fFnjenpX9/7nt1BehT6mmOaGzEtq7VwRneipse4PO0xK3CV67VGvUicNuH3Jnmj2UJLjuMLmfnPyhhZ/Nlu1QB9GMH+ZDygJC4s9YPz4zgbFndCMhA22BHG49GC6YLNwznqNFtY+QFnhDQOkHxreTj5CZjg7/n7A8k1o5NzehvJZRfB2zCBVzgxuuRmODh/aDuysPIPzx1Afic8lcWUHs/fNdo17p2oHFj/iKWivfD1aVOoK6C8R1UGPtZNpshDsiZAkkYPmRL8bMwn70r3afQLwIDAQAB",
   "permissions": [
     "webRequest",
@@ -20,6 +23,7 @@
   },
   "action": {
     "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" },
     "default_title": "STX Downloader"
   },
   "content_scripts": [

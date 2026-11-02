@@ -21,6 +21,7 @@ public sealed class QueueItemViewModel(long jobId, string title, string? pageUrl
     LedColor _ledColor = LedColor.Amber;
     string _error = "", _next = "";
     JobState _state = JobState.Queued;
+    bool _alreadySaved, _converting;
 
     public long JobId { get; } = jobId;
     public string Title { get; } = title;
@@ -59,6 +60,7 @@ public sealed class QueueItemViewModel(long jobId, string title, string? pageUrl
     public void Apply(Job job)
     {
         MediaId = job.MediaId;
+        _converting = job.Kind == JobKind.Convert;
         State = job.State;
         (LedColor, LedState) = job.State switch
         {
@@ -79,7 +81,7 @@ public sealed class QueueItemViewModel(long jobId, string title, string? pageUrl
             JobState.Paused => "PAUSED",
             JobState.Waiting => "RETRYING SHORTLY",
             JobState.Analyzing => "MEASURING",
-            JobState.Completed => "COMPLETE",
+            JobState.Completed => _alreadySaved ? AlreadySavedStatus : "COMPLETE",
             JobState.Failed => "FAILED",
             JobState.Canceled => "CANCELED",
             JobState.NeedsRecapture => "NEEDS RE-CAPTURE",
@@ -92,12 +94,22 @@ public sealed class QueueItemViewModel(long jobId, string title, string? pageUrl
         OnPropertyChanged(nameof(CanRetry));
     }
 
+    const string AlreadySavedStatus = "COMPLETE · SAME FILE ALREADY SAVED";
+
+    /// <summary>The bytes turned out to be a file already in the library, so that one was kept and this copy removed.</summary>
+    public void MarkAlreadySaved()
+    {
+        _alreadySaved = true;
+        if (State == JobState.Completed) Status = AlreadySavedStatus;
+    }
+
     public void Show(Progress progress)
     {
         if (State != JobState.Running) return;
         Percent = progress.Percent;
         string detail = string.Join(" · ", new[] { progress.Speed, progress.Eta is null ? null : "ETA " + progress.Eta }.Where(s => s is not null));
-        Status = detail.Length > 0 ? $"DOWNLOADING · {detail}" : "DOWNLOADING";
+        string doing = _converting ? "CONVERTING" : "DOWNLOADING";
+        Status = detail.Length > 0 ? $"{doing} · {detail}" : doing;
     }
 }
 
@@ -155,12 +167,19 @@ public sealed class QueueViewModel
     /// <summary>A new file exists, and it's ready to be measured.</summary>
     public event EventHandler<SavedMedia>? FileRecorded;
 
-    public void RecordFile(long jobId, string path)
+    public void RecordFile(long jobId, string path, bool reused = false)
     {
         if (Find(jobId) is not { } item) return;
         long fileId = _catalog.AddFile(item.MediaId, path, null, SourceViewModel.OriginalFormat);
         _savedFile[jobId] = fileId;
-        FileRecorded?.Invoke(this, new SavedMedia(item.MediaId, fileId, path, item.Title));
+        FileRecorded?.Invoke(this, new SavedMedia(item.MediaId, fileId, path, item.Title) { JobId = jobId, WasAlreadyThere = reused });
+    }
+
+    public void MarkAlreadySaved(long jobId, string keptPath)
+    {
+        if (Find(jobId) is not { } item) return;
+        item.MarkAlreadySaved();
+        item.AddLog($"These are the same bytes as {keptPath}, so that file was kept and this copy removed.");
     }
 
     QueueItemViewModel? Find(long jobId) => Items.FirstOrDefault(i => i.JobId == jobId);
@@ -183,4 +202,10 @@ public sealed class QueueViewModel
     }
 }
 
-public sealed record SavedMedia(long MediaId, long FileId, string Path, string Title);
+public sealed record SavedMedia(long MediaId, long FileId, string Path, string Title)
+{
+    public long? JobId { get; init; }
+
+    /// <summary>The tool found this file already there. It isn't this job's to remove.</summary>
+    public bool WasAlreadyThere { get; init; }
+}

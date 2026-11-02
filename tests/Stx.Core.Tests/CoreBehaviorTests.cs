@@ -144,6 +144,49 @@ public class ErrorClassifierTests
         Assert.DoesNotContain("try", ErrorKind.DrmDetected.NextStep(), StringComparison.OrdinalIgnoreCase);
 }
 
+public class ServerErrorTests
+{
+    [Theory]
+    [InlineData("ERROR: unable to download video data: HTTP Error 503: Service Unavailable")]
+    [InlineData("ERROR: unable to download video data: HTTP Error 500: Internal Server Error")]
+    [InlineData("ERROR: unable to download video data: HTTP Error 502: Bad Gateway")]
+    [InlineData("ERROR: 504 Gateway Timeout")]
+    public void A_struggling_server_is_a_retryable_network_failure_not_a_missing_video(string output)
+    {
+        Assert.Equal(ErrorKind.Network, ErrorClassifier.Classify(output, 1));
+        Assert.True(Stx.Core.Queue.QueuePolicy.WorthRetrying(ErrorClassifier.Classify(output, 1)));
+    }
+
+    [Fact]
+    public void A_video_that_is_really_gone_is_still_unavailable() =>
+        Assert.Equal(ErrorKind.PrivateOrUnavailable, ErrorClassifier.Classify("ERROR: [youtube] abc: Video unavailable", 1));
+}
+
+public class ScrubLinkSecretTests
+{
+    [Theory]
+    [InlineData("https://zoom.us/rec/share/x?pwd=SECRET", "pwd")]
+    [InlineData("https://a.example/v?password=SECRET&t=1", "password")]
+    [InlineData("https://a.example/v?sessionid=SECRET", "sessionid")]
+    [InlineData("https://a.example/v?session_id=SECRET", "session_id")]
+    [InlineData("https://a.example/v;jsessionid=SECRET", "jsessionid")]
+    [InlineData("https://a.example/v?PHPSESSID=SECRET", "PHPSESSID")]
+    [InlineData("https://a.example/v?sid=SECRET", "sid")]
+    [InlineData("https://a.example/v?secret=SECRET", "secret")]
+    public void Secrets_leave_a_stored_link_and_its_name_stays(string url, string name)
+    {
+        string scrubbed = Stx.Core.Logging.Redactor.ScrubLink(url);
+        Assert.DoesNotContain("SECRET", scrubbed);
+        Assert.Contains(name + "=", scrubbed);
+    }
+
+    [Theory]
+    [InlineData("https://www.youtube.com/watch?v=aqz-KE-bpKQ&list=PL123&si=abc")]
+    [InlineData("https://a.example/watch?id=7&session=")]
+    [InlineData("https://a.example/watch?consider=1&inside=2")]
+    public void Ordinary_links_are_unchanged(string url) => Assert.Equal(url, Stx.Core.Logging.Redactor.ScrubLink(url));
+}
+
 public class VerdictTests
 {
     [Fact]

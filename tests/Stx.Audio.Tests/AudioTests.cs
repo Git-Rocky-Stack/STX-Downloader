@@ -47,12 +47,13 @@ public class SpectrumTests
         Assert.InRange(result.RollOffHz!.Value, 15000, 18000);
     }
 
-    // A 2005 recording in a modern codec. Its sound ends far below where the codec's own band ends, and only
+    // Made here from noise, not recorded: pink noise cut off near 5 kHz plus faint white noise, through real Opus at 256 kbps.
+    // Sound that ends far below where its modern codec's own band ends, and only
     // the first of those is the truth about the source. Read 20.1 kHz before this was fixed.
     [Fact]
     public void A_codec_edge_far_below_the_sound_is_not_the_roll_off()
     {
-        using var pcm = Fixture.Pcm("real-narrowband-opus-48k-mono.f32");
+        using var pcm = Fixture.Pcm("narrowband-opus-48k-mono.f32");
         var result = SpectrumAnalyzer.Analyze(pcm, 48000);
         Assert.InRange(result.RollOffHz!.Value, 3000, 10000);
     }

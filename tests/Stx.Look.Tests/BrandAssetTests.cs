@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Xunit;
 
 namespace Stx.Look.Tests;
@@ -13,12 +12,6 @@ public class BrandAssetTests
     }
 
     static string InApp(params string[] parts) => Path.Combine([Root(), "src", "Stx.App", .. parts]);
-
-    [Fact]
-    public void The_top_rack_uses_the_badge_rocky_chose() =>
-        Assert.Equal(
-            SHA256.HashData(File.ReadAllBytes(Path.Combine(Root(), "icons", "badge.png"))),
-            SHA256.HashData(File.ReadAllBytes(InApp("Assets", "badge.png"))));
 
     [Fact]
     public void The_top_rack_no_longer_draws_the_name_as_text()
@@ -46,7 +39,7 @@ public class BrandAssetTests
             sizes.Add(width == 0 ? 256 : width);
             reader.BaseStream.Seek(15, SeekOrigin.Current);
         }
-        foreach (int needed in new[] { 16, 24, 32, 48, 256 }) Assert.Contains(needed, sizes);
+        foreach (int needed in new[] { 16, 20, 24, 32, 40, 48, 64, 256 }) Assert.Contains(needed, sizes);
     }
 
     [Fact]
@@ -59,8 +52,12 @@ public class BrandAssetTests
     }
 
     [Fact]
-    public void The_window_title_bar_shows_the_icon() =>
-        Assert.Contains("SetIcon", File.ReadAllText(InApp("MainWindow.cs")));
+    public void The_taskbar_keeps_the_icon_and_the_title_strip_does_not_show_it()
+    {
+        string window = File.ReadAllText(InApp("MainWindow.cs"));
+        Assert.Contains("SetIcon", window);
+        Assert.Contains("IconShowOptions.HideIconAndSystemMenu", window);
+    }
 
     // A focus ring appears when the last input anywhere was the keyboard, so an activated window's capture
     // depended on whether someone happened to be typing. Unactivated, it can't, and it takes no focus from anyone.

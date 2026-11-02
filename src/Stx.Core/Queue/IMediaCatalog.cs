@@ -9,6 +9,8 @@ public interface IMediaCatalog
     MediaRecord? GetItem(long id);
     long AddFile(long mediaId, string path, string? hash, string format);
     IReadOnlyList<MediaFact> ExistingFacts();
+    void RememberCapture(string key, long mediaId);
+    long? RememberedCapture(string key);
 }
 
 public sealed record LibraryFile(long Id, string Path, string Format);

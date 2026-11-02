@@ -60,6 +60,17 @@ public static partial class FilenameTemplate
         });
     }
 
+    /// <summary>
+    /// A name that two different videos can't share, for when this template's name is already taken. Null when the
+    /// template already has {id}, because then the name can only be taken by the same video.
+    /// </summary>
+    public static string? UniqueVariant(string template)
+    {
+        string source = string.IsNullOrWhiteSpace(template) ? Default : template;
+        bool hasId = Token().Matches(source).Any(m => m.Groups[1].Value.Equals("id", StringComparison.OrdinalIgnoreCase));
+        return hasId ? null : source.TrimEnd() + " [{id}]";
+    }
+
     [GeneratedRegex(@"\{([A-Za-z]+)\}")]
     private static partial Regex Token();
 }

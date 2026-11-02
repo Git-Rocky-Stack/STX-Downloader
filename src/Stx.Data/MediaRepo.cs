@@ -64,11 +64,49 @@ public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog, ILib
         lock (connection)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT i.source_id, f.hash, f.format, f.path FROM media_files f JOIN media_items i ON i.id = f.media_id;";
+            command.CommandText = "SELECT i.source_id, f.hash, f.format, f.path, i.id, f.id FROM media_files f JOIN media_items i ON i.id = f.media_id;";
             using var reader = command.ExecuteReader();
             var facts = new List<MediaFact>();
-            while (reader.Read()) facts.Add(new MediaFact(Text(reader, 0), Text(reader, 1), reader.GetString(2), Text(reader, 3)));
+            while (reader.Read()) facts.Add(new MediaFact(Text(reader, 0), Text(reader, 1), reader.GetString(2), Text(reader, 3), reader.GetInt64(4), reader.GetInt64(5)));
             return facts;
+        }
+    }
+
+    /// <summary>Remembers which item a capture went to. The key is a hash, so nothing in a stream's address is stored.</summary>
+    public void RememberCapture(string key, long mediaId)
+    {
+        lock (connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "INSERT OR REPLACE INTO capture_keys (key_hash, media_id) VALUES ($key, $media);";
+            command.Parameters.AddWithValue("$key", key);
+            command.Parameters.AddWithValue("$media", mediaId);
+            command.ExecuteNonQuery();
+        }
+    }
+
+    public long? RememberedCapture(string key)
+    {
+        lock (connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT media_id FROM capture_keys WHERE key_hash = $key;";
+            command.Parameters.AddWithValue("$key", key);
+            return command.ExecuteScalar() is long media ? media : null;
+        }
+    }
+
+    /// <summary>Records what a file's bytes are, and where they live, which differs from where it was saved when they were already here.</summary>
+    public void SetFileIdentity(long fileId, string hash, string path)
+    {
+        lock (connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE media_files SET hash = $hash, path = $path WHERE id = $id;";
+            command.Parameters.AddWithValue("$hash", hash);
+            command.Parameters.AddWithValue("$path", path);
+            command.Parameters.AddWithValue("$id", fileId);
+            command.ExecuteNonQuery();
         }
     }
 

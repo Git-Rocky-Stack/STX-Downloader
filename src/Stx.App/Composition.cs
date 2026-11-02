@@ -27,6 +27,7 @@ public sealed class Composition : IDisposable
     readonly Dictionary<long, long> _lastProgress = new();
     readonly MediaRepo _catalog;
     readonly SemaphoreSlim _measuring = new(1, 1);
+    readonly IdenticalFileCheck _identical;
     PipeServer? _bridge;
     LibraryRowViewModel? _selectedRow;
 
@@ -44,6 +45,7 @@ public sealed class Composition : IDisposable
         var process = new ProcessRunner();
         var catalog = new MediaRepo(_db);
         _catalog = catalog;
+        _identical = new IdenticalFileCheck(catalog.ExistingFacts, catalog.SetFileIdentity, File.Exists, File.Delete);
         var vault = new CaptureVault();
         Tools = new ToolManager(_http, ToolManager.DefaultRoot(), new ToolOptions(Settings.Current.ToolUpdates), process);
 
@@ -60,21 +62,23 @@ public sealed class Composition : IDisposable
         Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine, () => SourceTruth.SelectedOutput);
         Library = new LibraryViewModel(catalog, Engine, shell, File.Exists);
 
-        FirstRun = new FirstRunViewModel(Tools, Status);
+        FirstRun = new FirstRunViewModel(Tools, Status, () => Settings.Current.ToolUpdates);
         Clipboard = new ClipboardOfferViewModel(() => Settings.Current.ClipboardDetect);
         Source.ToolsReady = false;
         FirstRun.PropertyChanged += (_, _) => Source.ToolsReady = FirstRun.ToolsUsable(ToolsOnDisk());
         Settings.Changed += (_, settings) => Apply(settings);
 
-        Queue.FileRecorded += (_, media) => _ = MeasureAsync(media);
-        converter.FileSaved += (_, media) => OnUi(() => _ = MeasureAsync(media));
+        Queue.FileRecorded += (_, media) => _ = SettleAsync(media);
+        converter.FileSaved += (_, media) => OnUi(() => _ = SettleAsync(media));
+        converter.LogLine += (_, line) => OnUi(() => Queue.AddLog(line.JobId, line.Text));
+        converter.ProgressChanged += (_, update) => ShowProgress(update);
         Source.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SourceViewModel.ReportedAudio) && Source.ReportedAudio is { } reported) SourceTruth.Show("", reported);
         };
 
         runner.LogLine += (_, line) => OnUi(() => Queue.AddLog(line.JobId, line.Text));
-        runner.FileSaved += (_, file) => OnUi(() => Queue.RecordFile(file.JobId, file.Path));
+        runner.FileSaved += (_, file) => OnUi(() => Queue.RecordFile(file.JobId, file.Path, file.Reused));
         runner.RolledBack += (_, _) => OnUi(() => Status.Report(new ToolStatus("yt-dlp", "rolled back after a failed update")));
         runner.ProgressChanged += (_, update) => ShowProgress(update);
 
@@ -157,10 +161,40 @@ public sealed class Composition : IDisposable
         if (_selectedRow is { } row) Library.ConvertCommand.Execute(new ConvertAsk(row, SourceTruth.SelectedOutput));
     }
 
+    // A newly saved file: find out if its bytes are already here, then measure whichever file is kept.
+    async Task SettleAsync(SavedMedia media)
+    {
+        Library.Refresh();
+        SavedMedia settled;
+        try
+        {
+            await _measuring.WaitAsync(_closing.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        try
+        {
+            settled = await _identical.SettleAsync(media, _closing.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        finally
+        {
+            _measuring.Release();
+        }
+
+        if (settled.Path != media.Path && media.JobId is { } job) OnUi(() => Queue.MarkAlreadySaved(job, settled.Path));
+        await MeasureAsync(settled).ConfigureAwait(false);
+    }
+
     // One at a time and below normal priority, so measuring a batch never competes with what you're doing.
     async Task MeasureAsync(SavedMedia media)
     {
-        Library.Refresh();
+        OnUi(Library.Refresh);
         if (Tools.Paths.Ffmpeg is not { } ffmpeg || Tools.FfprobePath is not { } ffprobe) return;
 
         await _measuring.WaitAsync(_closing.Token).ConfigureAwait(false);
@@ -201,13 +235,16 @@ public sealed class Composition : IDisposable
     {
         var item = catalog.GetItem(job.MediaId);
         var (mode, height) = DownloadChoices.Map(Settings.Current.Download);
+        string Named(string template) => job.Kind == JobKind.Captured ? FilenameTemplate.ForCaptured(template, item?.Title, job.MediaId) : template;
+        string chosen = Settings.Current.FilenameTemplate;
         return new(job.Kind == JobKind.Link ? item?.PageUrl : null, Settings.Current.OutputFolder, mode, height)
         {
             Tools = Tools.Paths,
             Metadata = DownloadChoices.Metadata(Settings.Current),
-            OutputTemplate = job.Kind == JobKind.Captured
-                ? FilenameTemplate.ForCaptured(Settings.Current.FilenameTemplate, item?.Title, job.MediaId)
-                : Settings.Current.FilenameTemplate,
+            OutputTemplate = Named(chosen),
+            UniqueTemplate = FilenameTemplate.UniqueVariant(chosen) is { } unique ? Named(unique) : null,
+            IsOwnFile = path => catalog.ExistingFacts().Any(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase)
+                && (f.MediaId == job.MediaId || (item?.SourceId is { } source && f.SourceId == source))),
         };
     }
 

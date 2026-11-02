@@ -1,6 +1,6 @@
 # Performance
 
-Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, which exits non-zero outside the budgets. Only the app's own process is counted: yt-dlp, FFmpeg and Deno are separate processes.
+Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, every run exiting 0. The script exits non-zero outside the budgets. Only the app's own process is counted: yt-dlp, FFmpeg and Deno are separate processes.
 
 **Machine:** Intel Core i5-8350U (8 logical cores), Intel UHD Graphics 620, 32 GB RAM, Windows 11, 96 DPI.
 
@@ -12,14 +12,23 @@ Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, which exits non-ze
 
 ```
 scenario  mode   wsMB   privateMB privateMaxMB cpuPct gpu3dPct toolSamples exited
-idle      dark   172.90     69.90        71.00   0.01     0.00 0/10        False
-idle      light  172.80     70.60        70.90   0.00     0.00 0/10        False
-hidden    dark   168.20     66.60        67.80   0.01     0.00 0/10        False
-job       dark   176.80     67.30        71.10   0.38     0.32 10/10       False
-after job dark   205.40     94.90        94.90   0.00     0.00 0/10        False
+idle      dark   179.30     79.10        80.00   0.01     0.00 0/10        False
+idle      light  178.00     77.10        77.40   0.00     0.00 0/10        False
+hidden    dark   174.40     74.90        75.50   0.01     0.00 0/10        False
+job       dark   185.20     76.30        79.40   0.31     0.33 10/10       False
+after job dark   211.10    102.30       102.30   0.00     0.00 0/10        False
 ```
 
 The job is a real YouTube webinar. `after job` is measured once it had finished saving a 310 MB file and the file's audio had been measured.
+
+**Identical-file check.** Each new file is hashed inside the app, on one core. That 310 MB file took 1208 ms (measured separately with the same hash), so for about a second it uses roughly 12% of this machine's total CPU, above the 2% moving budget. It's over within one sampling interval and doesn't show in the 30 second averages above.
+
+**A scrolling queue title.** One row scrolling, measured with a separate 20 second sample, using the same counters, on the packaged app:
+
+```
+while scrolling: cpu 1.436% of total, gpu3d 3.35% over about 20 s
+after coming to rest: cpu 0.000% of total, gpu3d 0.00% over about 20 s
+```
 
 ## Every primitive at once
 
@@ -36,7 +45,7 @@ all-primitives dark  139.70     60.90        61.00   0.00     0.00 False   (held
 
 - One machine, at 96 DPI. High-DPI displays are not measured.
 - An earlier run reached 148 MB private memory just after a large 4K download. The 310 MB download here reached 95 MB. That larger case was not measured again, so it may be near the 150 MB budget.
-- Several jobs at once were not measured. The job row is one download.
+- Several jobs at once were not measured. The job row is one download. Several long titles scrolling at once weren't measured either: one uses most of the 2% and 5% budgets, so a few together could pass them.
 
 ## Reduced motion
 

@@ -15,6 +15,12 @@ public sealed record DownloadRequest(string? Url, string OutputFolder, DownloadM
     public string? ConfigPath { get; init; }
     public MetadataOptions Metadata { get; init; } = MetadataOptions.None;
     public string OutputTemplate { get; init; } = FilenameTemplate.Default;
+
+    /// <summary>Used instead if OutputTemplate's name is already taken by something else. Null when it can't be.</summary>
+    public string? UniqueTemplate { get; init; }
+
+    /// <summary>Whether a file already on disk is this same source's. Without this, a taken name counts as someone else's.</summary>
+    public Func<string, bool>? IsOwnFile { get; init; }
 }
 
 /// <summary>Builds yt-dlp's arguments. The default keeps the original streams and never re-encodes.</summary>
@@ -43,6 +49,8 @@ public static class YtDlpArgs
             "--windows-filenames",
             "--trim-filenames", TrimLength(request.OutputFolder).ToString(CultureInfo.InvariantCulture),
             "--no-overwrites",
+            // A saved file's date is when it was saved, which is also how a file this run didn't write is told apart.
+            "--no-mtime",
             "--continue",
             "--print", $"after_move:{FileMarker}%(filepath)s",
             "--no-quiet",

@@ -42,6 +42,6 @@ public static partial class Redactor
     private static partial Regex QueryStrings();
 
     // Some hosts put tokens in the path, and tools print loose name=value pairs.
-    [GeneratedRegex(@"(?<name>\b(?:[a-z_-]*token|hdntl|hdnts|hdnea|sig|signature|auth|policy|key-pair-id|api_key|apikey))=[^\s&/""']+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<name>\b(?:[a-z_-]*token|hdntl|hdnts|hdnea|sig|signature|auth|policy|key-pair-id|api_key|apikey|pwd|passwd|password|secret|[a-z_-]*session(?:_?id)?|phpsessid|sid))=[^\s&/""']+", RegexOptions.IgnoreCase)]
     private static partial Regex TokenValues();
 }

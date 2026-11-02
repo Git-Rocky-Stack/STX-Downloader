@@ -184,6 +184,25 @@ public sealed class DataTests : IDisposable
     }
 
     [Fact]
+    public void A_files_identity_is_stored_and_read_back_with_its_item()
+    {
+        using var db = Db.Open(DbPath);
+        var media = new MediaRepo(db);
+        long item = media.AddItem("https://x/1", "yt:abc", "Song");
+        long file = media.AddFile(item, @"D:\Music\Copy.m4a", null, "Original");
+
+        media.SetFileIdentity(file, "abc123", @"D:\Music\Kept.m4a");
+
+        var fact = Assert.Single(media.ExistingFacts());
+        Assert.Equal("abc123", fact.Hash);
+        Assert.Equal(@"D:\Music\Kept.m4a", fact.Path);
+        Assert.Equal(item, fact.MediaId);
+        Assert.Equal(@"D:\Music\Kept.m4a", media.FilePath(file));
+        Assert.Equal(fact, Dedupe.SameBytes("abc123", @"D:\Music\New.m4a", media.ExistingFacts()));
+        Assert.Null(Dedupe.SameBytes("abc123", @"d:\music\KEPT.m4a", media.ExistingFacts()));
+    }
+
+    [Fact]
     public void Files_feed_the_duplicate_check()
     {
         using var db = Db.Open(DbPath);
@@ -257,5 +276,20 @@ public sealed class DataTests : IDisposable
         media.AddFile(item, "p", "h", "m4a");
         media.DeleteItem(item);
         Assert.Empty(media.ExistingFacts());
+    }
+
+    [Fact]
+    public void A_remembered_capture_reads_back_and_goes_with_its_item()
+    {
+        using var db = Db.Open(DbPath);
+        var repo = new MediaRepo(db);
+        long media = repo.AddItem("https://a.example", null, "Clip");
+        Assert.Null(repo.RememberedCapture("KEY"));
+
+        repo.RememberCapture("KEY", media);
+        Assert.Equal(media, repo.RememberedCapture("KEY"));
+
+        repo.DeleteItem(media);
+        Assert.Null(repo.RememberedCapture("KEY"));
     }
 }

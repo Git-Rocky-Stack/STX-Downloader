@@ -62,8 +62,13 @@ public sealed class LibraryViewModel : ObservableObject
     public void Refresh()
     {
         Rows.Clear();
-        foreach (var item in _catalog.Library())
-            foreach (var file in item.Files)
+        var items = _catalog.Library();
+        // Two links can lead to one file. It's listed once, under whichever saved it first.
+        var firstRow = items.SelectMany(i => i.Files)
+            .GroupBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Min(f => f.Id), StringComparer.OrdinalIgnoreCase);
+        foreach (var item in items)
+            foreach (var file in item.Files.Where(f => firstRow[f.Path] == f.Id))
                 Rows.Add(new LibraryRowViewModel(item, file, _exists(file.Path)));
         OnPropertyChanged(nameof(IsEmpty));
     }

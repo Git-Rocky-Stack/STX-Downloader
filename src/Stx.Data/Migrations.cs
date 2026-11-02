@@ -51,6 +51,12 @@ public static class Migrations
         CREATE INDEX media_items_source ON media_items(source_id);
         CREATE INDEX media_files_media ON media_files(media_id);
         """,
+        """
+        CREATE TABLE capture_keys (
+            key_hash TEXT PRIMARY KEY,
+            media_id INTEGER NOT NULL REFERENCES media_items(id) ON DELETE CASCADE
+        );
+        """,
     ];
 
     public static int Latest => Steps.Length;

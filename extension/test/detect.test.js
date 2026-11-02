@@ -4,11 +4,38 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import {
   addResponse, applyPage, canDownload, classify, emptyState, findEmbeds,
-  batchMessage, captureMessage, cookieUrls, groupStreams, labelFor, saveAllUsesCookies, listFor, mayCapture, netscapeCookies, parseMaster, readTracker,
+  batchMessage, captureMessage, cookieUrls, groupStreams, labelFor, saveAllUsesCookies, listFor, mayCapture, netscapeCookies, parseMaster, readTracker, sentMessage,
 } from '../detect.js';
 
 const fixtureChevrolet = JSON.parse(readFileSync(new URL('./fixtures/chevrolet.json', import.meta.url)));
 const master = 'https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/1/2/10s/master.m3u8?fastly_token=x';
+
+test('a token in a stream address never becomes its title', () => {
+  for (const url of [
+    'https://cdn.example/v/9f8e7d6c5b4a39281706f5e4d3c2b1a0.m3u8',
+    'https://cdn.example/v/3f2a8c10-7b1e-4d2a-9c3f-0123456789ab.m3u8',
+    'https://cdn.example/v/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.m3u8',
+    'https://cdn.example/v/clip-a1B2c3D4e5F6g7H8i9J0k1L2.mp4',
+  ]) assert.equal(captureMessage({ kind: 'hls', url }, { url: 'https://a.example/', userAgent: 'x' }, null).Title, undefined, url);
+});
+
+test('ordinary file names still become titles', () => {
+  for (const [url, title] of [
+    ['https://cdn.example/v/talk.m3u8', 'talk'],
+    ['https://cdn.example/v/my_long_conference_keynote_about_engines_2026.mp4', 'my_long_conference_keynote_about_engines'],
+    ['https://cdn.example/v/R9CF0A_aero.mp4', 'R9CF0A_aero'],
+    ['https://cdn.example/v/internationalizationconference.mp4', 'internationalizationconference'],
+  ]) assert.equal(captureMessage({ kind: 'hls', url }, { url: 'https://a.example/', userAgent: 'x' }, null).Title, title);
+});
+
+test('the popup says what happened to a Save', () => {
+  assert.equal(sentMessage({ jobs: 1, resumed: 0, alreadyHere: 0 }), 'Added to the queue.');
+  assert.equal(sentMessage({ jobs: 3, resumed: 0 }), 'Added to the queue: 3 items.');
+  assert.equal(sentMessage({ jobs: 0, resumed: 1, alreadyHere: 0 }), 'Resumed in the queue.');
+  assert.equal(sentMessage({ jobs: 0, resumed: 0, alreadyHere: 1 }), 'That one is already saved or in the queue.');
+  assert.equal(sentMessage({ jobs: 0, resumed: 0, alreadyHere: 2 }), 'Those 2 are already saved or in the queue.');
+  assert.equal(sentMessage({ jobs: 1, resumed: 0, alreadyHere: 2 }), 'Added to the queue. 2 already saved or in the queue.');
+});
 
 function chevroletState() {
   return fixtureChevrolet.reduce((s, r) => addResponse(s, r.url, r.contentType), emptyState());
