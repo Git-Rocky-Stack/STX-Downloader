@@ -1,0 +1,3 @@
+[generic] Extracting URL: https://httpbin.org/status/403
+[generic] 403: Downloading webpage
+ERROR: [generic] 403: Unable to download webpage: HTTP Error 403: Forbidden (caused by <HTTPError 403: Forbidden>)

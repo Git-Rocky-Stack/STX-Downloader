@@ -1,0 +1,3 @@
+[generic] Extracting URL: https://httpbin.org/status/404
+[generic] 404: Downloading webpage
+ERROR: [generic] 404: Unable to download webpage: HTTP Error 404: Not Found (caused by <HTTPError 404: Not Found>)

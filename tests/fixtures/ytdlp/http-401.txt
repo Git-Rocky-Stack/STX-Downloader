@@ -1,0 +1,3 @@
+[generic] Extracting URL: https://httpbin.org/status/401
+[generic] 401: Downloading webpage
+ERROR: [generic] 401: Unable to download webpage: HTTP Error 401: Unauthorized (caused by <HTTPError 401: Unauthorized>)

@@ -1,0 +1,3 @@
+[generic] Extracting URL: https://nonexistent-host-stx.invalid/video.mp4
+[generic] video: Downloading webpage
+ERROR: [generic] video: Unable to download webpage: HTTPSConnection(host='nonexistent-host-stx.invalid', port=443): Failed to resolve 'nonexistent-host-stx.invalid' ([Errno 11001] getaddrinfo failed) (caused by TransportError("HTTPSConnection(host='nonexistent-host-stx.invalid', port=443): Failed to resolve 'nonexistent-host-stx.invalid' ([Errno 11001] getaddrinfo failed)"))

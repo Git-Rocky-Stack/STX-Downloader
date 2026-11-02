@@ -1,0 +1,98 @@
+[
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/10s/master.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/10s/master.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://metrics.brightcove.com/v2/tracker?domain=videocloud&platform=video-js&session=X&player_mode=media&account=336103926&destination=https%3A%2F%2Fwww.chevrolet.com%2Fperformance%2Fcorvette%2Fexperience&platform_version=7.53.0&player=players.brightcove.com%2F336103926%2ForeViUI17k_default&player_name=Chevrolet%20%20Default%20Player%20-%20Prod&source=&autoplay=false&ads_enabled=false&media_type=video&time=1793523037126&event=video_impression&video=6382509310112&video_name=Corvette%20Owner%20Academy%20Walkaround&custom_fields=%5Bobject%20Object%5D&video_data=%5Bobject%20Object%5D&video_ads_supported=true&tags=ada%20compliant&video_duration=413&media_url=https%3A%2F%2Fmanifest.prod.boltdns.net%2Fmanifest%2Fv1%2Fhls%2Fv4%2Fclear%2F336103926%2Fa8e86113-d115-4ed3-8cb0-a62273d37121%2F10s%2Fmaster.m3u8%3Ffastly_token%3DX&qos.content.sourceMimeType=application%2Fvnd.apple.mpegurl&seq=4_0&preload=metadata",
+  "contentType": "image/gif"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/e5aab561-067a-42e6-8f2a-88bba47c68c5/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://metrics.brightcove.com/v2/tracker?domain=videocloud&platform=video-js&session=X&player_mode=media&account=336103926&destination=https%3A%2F%2Fwww.chevrolet.com%2Fperformance%2Fcorvette%2Fexperience&platform_version=7.53.0&player=players.brightcove.com%2F336103926%2ForeViUI17k_default&player_name=Chevrolet%20%20Default%20Player%20-%20Prod&source=&autoplay=false&ads_enabled=false&media_type=video&time=1793523037157&event=video_impression&video=6382507256112&video_name=Corvette%20Owner%20Academy%20Driver%20Assistance&custom_fields=%5Bobject%20Object%5D&video_data=%5Bobject%20Object%5D&video_ads_supported=true&tags=ada%20compliant&video_duration=172&media_url=https%3A%2F%2Fmanifest.prod.boltdns.net%2Fmanifest%2Fv1%2Fhls%2Fv4%2Fclear%2F336103926%2F2d662ee4-d80b-4b9a-bcc2-fd778224a1a6%2F10s%2Fmaster.m3u8%3Ffastly_token%3DX&qos.content.sourceMimeType=application%2Fvnd.apple.mpegurl&seq=4_0&preload=metadata",
+  "contentType": "image/gif"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/4f75ed78-df23-4005-aaf2-696783c3cba3/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/f15be6a8-54a0-4829-ba4c-1d4fc9123d5c/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/4f75ed78-df23-4005-aaf2-696783c3cba3/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/e5aab561-067a-42e6-8f2a-88bba47c68c5/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/f15be6a8-54a0-4829-ba4c-1d4fc9123d5c/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/726ff030-15ea-4b55-b6e0-c8bf4b7cb503/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/726ff030-15ea-4b55-b6e0-c8bf4b7cb503/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/93c1052c-9940-4226-8aa4-76ebc19bbad5/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://metrics.brightcove.com/v2/tracker?domain=videocloud&platform=video-js&session=X&player_mode=media&account=336103926&destination=https%3A%2F%2Fwww.chevrolet.com%2Fperformance%2Fcorvette%2Fexperience&platform_version=7.53.0&player=players.brightcove.com%2F336103926%2ForeViUI17k_default&player_name=Chevrolet%20%20Default%20Player%20-%20Prod&source=&autoplay=false&ads_enabled=false&media_type=video&caption_track_language=en-US&caption_track_label=en-US&caption_track_kind=subtitles&event=captions_enabled&video=6382507256112&video_name=Corvette%20Owner%20Academy%20Driver%20Assistance&custom_fields=%5Bobject%20Object%5D&video_data=%5Bobject%20Object%5D&video_ads_supported=true&tags=ada%20compliant&video_duration=172&media_url=https%3A%2F%2Fmanifest.prod.boltdns.net%2Fmanifest%2Fv1%2Fhls%2Fv4%2Fclear%2F336103926%2F2d662ee4-d80b-4b9a-bcc2-fd778224a1a6%2F10s%2Fmaster.m3u8%3Ffastly_token%3DX&time=1793523037830&seq=5",
+  "contentType": "image/gif"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/fc1be36a-4358-4f57-9144-db4544f03b4b/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/485a39da-bd7c-4a31-b922-8391f6e844b8/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://metrics.brightcove.com/v2/tracker?domain=videocloud&platform=video-js&session=X&player_mode=media&account=336103926&destination=https%3A%2F%2Fwww.chevrolet.com%2Fperformance%2Fcorvette%2Fexperience&platform_version=7.53.0&player=players.brightcove.com%2F336103926%2ForeViUI17k_default&player_name=Chevrolet%20%20Default%20Player%20-%20Prod&source=&autoplay=false&ads_enabled=false&media_type=video&caption_track_language=en-US&caption_track_label=en-US&caption_track_kind=subtitles&event=captions_enabled&video=6382509310112&video_name=Corvette%20Owner%20Academy%20Walkaround&custom_fields=%5Bobject%20Object%5D&video_data=%5Bobject%20Object%5D&video_ads_supported=true&tags=ada%20compliant&video_duration=413&media_url=https%3A%2F%2Fmanifest.prod.boltdns.net%2Fmanifest%2Fv1%2Fhls%2Fv4%2Fclear%2F336103926%2Fa8e86113-d115-4ed3-8cb0-a62273d37121%2F10s%2Fmaster.m3u8%3Ffastly_token%3DX&time=1793523037896&seq=5",
+  "contentType": "image/gif"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/74cca339-a7a0-4762-ac61-30de00d44e45/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/99980c33-c674-43d2-b6ff-eec0c75580e3/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://manifest.prod.boltdns.net/manifest/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/cfbe3d00-3f62-452c-bb09-faec66ed2d84/10s/rendition.m3u8?fastly_token=X",
+  "contentType": "application/x-mpegURL"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/74cca339-a7a0-4762-ac61-30de00d44e45/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/cfbe3d00-3f62-452c-bb09-faec66ed2d84/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/2d662ee4-d80b-4b9a-bcc2-fd778224a1a6/485a39da-bd7c-4a31-b922-8391f6e844b8/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ },
+ {
+  "url": "https://video2.marketing.gm.com/media/v1/hls/v4/clear/336103926/a8e86113-d115-4ed3-8cb0-a62273d37121/99980c33-c674-43d2-b6ff-eec0c75580e3/5x/segment0.ts",
+  "contentType": "video/MP2T"
+ }
+]

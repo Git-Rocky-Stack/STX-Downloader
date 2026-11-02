@@ -1,0 +1,3 @@
+[youtube:tab] Extracting URL: https://www.youtube.com/playlist?list=PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+[youtube:tab] PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx: Downloading webpage
+ERROR: [youtube:tab] PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx: YouTube said: The playlist does not exist.

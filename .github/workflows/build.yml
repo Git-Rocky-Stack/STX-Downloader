@@ -1,0 +1,29 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build
+        run: dotnet build src/Stx.App -c Release -p:Platform=x64 --nologo
+      # The screenshot tests compare against pixels from one machine's GPU and fonts, so they run locally.
+      - name: Test
+        shell: pwsh
+        run: |
+          foreach ($project in 'Look', 'Art', 'Core', 'Data', 'Tools', 'Audio', 'Bridge', 'App') {
+            dotnet test "tests/Stx.$project.Tests" -c Release -p:Platform=x64 --nologo
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+      - name: Test extension
+        run: node --test extension/test/

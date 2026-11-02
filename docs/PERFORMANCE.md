@@ -1,0 +1,59 @@
+# Performance
+
+Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, every run exiting 0. The script exits non-zero outside the budgets. Only the app's own process is counted: yt-dlp, FFmpeg and Deno are separate processes.
+
+**Machine:** Intel Core i5-8350U (8 logical cores), Intel UHD Graphics 620, 32 GB RAM, Windows 11, 96 DPI.
+
+**Budgets:** with no work running, 0% CPU over 30 seconds (the script fails at 0.05% or more). While animating or running a job, under 2% of total CPU and under 5% GPU. Private memory under 150 MB.
+
+`cpuPct` is a share of all 8 cores. Each row is 10 samples over 30 seconds, after settling. `toolSamples` is how many samples had a tool running under the app.
+
+## The real app
+
+```
+scenario  mode   wsMB   privateMB privateMaxMB cpuPct gpu3dPct toolSamples exited
+idle      dark   179.30     79.10        80.00   0.01     0.00 0/10        False
+idle      light  178.00     77.10        77.40   0.00     0.00 0/10        False
+hidden    dark   174.40     74.90        75.50   0.01     0.00 0/10        False
+job       dark   185.20     76.30        79.40   0.31     0.33 10/10       False
+after job dark   211.10    102.30       102.30   0.00     0.00 0/10        False
+```
+
+The job is a real YouTube webinar. `after job` is measured once it had finished saving a 310 MB file and the file's audio had been measured.
+
+**Identical-file check.** Each new file is hashed inside the app, on one core. That 310 MB file took 1208 ms (measured separately with the same hash), so for about a second it uses roughly 12% of this machine's total CPU, above the 2% moving budget. It's over within one sampling interval and doesn't show in the 30 second averages above.
+
+**A scrolling queue title.** One row scrolling, measured with a separate 20 second sample, using the same counters, on the packaged app:
+
+```
+while scrolling: cpu 1.436% of total, gpu3d 3.35% over about 20 s
+after coming to rest: cpu 0.000% of total, gpu3d 0.00% over about 20 s
+```
+
+## Every primitive at once
+
+A stress page, more than any real screen shows.
+
+```
+scenario       mode  wsMB   privateMB privateMaxMB cpuPct gpu3dPct exited
+all-primitives dark  135.50     54.50        54.60   0.44     1.18 False
+all-primitives light 134.90     53.90        54.00   0.51     1.18 False
+all-primitives dark  139.70     60.90        61.00   0.00     0.00 False   (held still)
+```
+
+## Limits of these numbers
+
+- One machine, at 96 DPI. High-DPI displays are not measured.
+- An earlier run reached 148 MB private memory just after a large 4K download. The 310 MB download here reached 95 MB. That larger case was not measured again, so it may be near the 150 MB budget.
+- Several jobs at once were not measured. The job row is one download. Several long titles scrolling at once weren't measured either: one uses most of the 2% and 5% budgets, so a few together could pass them.
+
+## Reduced motion
+
+Checked with the Windows animation setting really switched off, by capturing the LED page 24 times:
+
+```
+animations on  : distinct frames of LED gallery in 24 captures = 2
+animations off : distinct frames of LED gallery in 24 captures = 1
+```
+
+Windows' setting is watched live, so LEDs stop without a restart. The meter sweep and the knob overshoot are covered by unit tests (`MeterTimeline.Sweep`, `PressTravel.TurnEasing`), not by this capture.

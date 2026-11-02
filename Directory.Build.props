@@ -1,0 +1,11 @@
+<Project>
+  <!-- Who made it, carried in every built file's properties. -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Company>Strategia-X</Company>
+    <Authors>Rocky Elsalaymeh</Authors>
+    <Product>STX Downloader</Product>
+    <Copyright>Copyright (c) 2026 Rocky Elsalaymeh, Strategia-X</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+</Project>
