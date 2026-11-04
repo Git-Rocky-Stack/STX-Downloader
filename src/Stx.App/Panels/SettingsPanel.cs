@@ -12,7 +12,7 @@ namespace Stx.App.Panels;
 /// <summary>Settings, as switches on a plate. Every change applies and saves at once.</summary>
 public sealed partial class SettingsPanel : ContentControl
 {
-    public SettingsPanel(SettingsViewModel settings, Window? owner)
+    public SettingsPanel(SettingsViewModel settings, Window? owner, Action? openGuide = null, Action? openTutorial = null)
     {
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
@@ -77,12 +77,24 @@ public sealed partial class SettingsPanel : ContentControl
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         top.ColumnDefinitions.Add(new ColumnDefinition());
         var dials = new StackPanel { Spacing = 16 };
-        dials.Children.Add(download);
-        dials.Children.Add(parallel);
+        dials.Children.Add(download.Captioned());
+        dials.Children.Add(parallel.Captioned());
         Grid.SetColumn(dials, 0);
+
+        var help = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Top };
+        if (openGuide is not null) help.Children.Add(HelpPad("USER GUIDE", openGuide));
+        if (openTutorial is not null) help.Children.Add(HelpPad("TUTORIAL", openTutorial));
+        // On the shorter row of switches, so they squeeze nothing when the window is narrow.
+        var secondRow = new Grid { ColumnSpacing = 16 };
+        secondRow.ColumnDefinitions.Add(new ColumnDefinition());
+        secondRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(help, 1);
+        secondRow.Children.Add(embed);
+        secondRow.Children.Add(help);
+
         var rows = new StackPanel { Spacing = 16 };
         rows.Children.Add(switches);
-        rows.Children.Add(embed);
+        rows.Children.Add(secondRow);
         rows.Children.Add(fields);
         Grid.SetColumn(rows, 1);
         top.Children.Add(dials);
@@ -92,6 +104,13 @@ public sealed partial class SettingsPanel : ContentControl
         column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Settings" });
         column.Children.Add(top);
         Content = new Faceplate { PanelName = "settings", Padding = new Thickness(36, 28, 36, 28), Content = column };
+    }
+
+    static Pad HelpPad(string text, Action open)
+    {
+        var pad = new Pad { Content = text };
+        pad.Click += (_, _) => open();
+        return pad;
     }
 
     static PushSwitch Switch(string label, bool on, Action<bool> changed)

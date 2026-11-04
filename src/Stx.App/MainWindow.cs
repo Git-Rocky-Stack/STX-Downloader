@@ -17,6 +17,8 @@ public sealed partial class MainWindow : Window
     readonly Composition _app;
     readonly Tray _tray;
     readonly ClipboardWatcher _clipboard;
+    readonly GuidePanel _guide;
+    readonly TutorialPanel _tutorial;
     bool _quitting;
 
     public MainWindow(bool startHidden = false, bool pointerLight = false)
@@ -28,13 +30,19 @@ public sealed partial class MainWindow : Window
         _app = new Composition(DispatcherQueue);
         StartsHidden = startHidden && _app.Settings.Current.TrayMode;
 
-        var settings = new SettingsPanel(_app.Settings, this) { Visibility = Visibility.Collapsed };
+        _guide = new GuidePanel(() => ShowHelp(null)) { Visibility = Visibility.Collapsed };
+        _tutorial = new TutorialPanel(() => ShowHelp(null)) { Visibility = Visibility.Collapsed };
+        var settings = new SettingsPanel(_app.Settings, this,
+            () => ShowHelp(_guide.Visibility == Visibility.Visible ? null : _guide),
+            () => ShowHelp(_tutorial.Visibility == Visibility.Visible ? null : _tutorial)) { Visibility = Visibility.Collapsed };
         var first = new FirstRunPanel(_app.FirstRun);
         var truth = new SourceTruthPanel(_app.SourceTruth, _app.ConvertSelected);
 
         var rack = new StackPanel { Spacing = 8, Padding = new Thickness(8) };
         rack.Children.Add(new HeaderPanel(_app.Status, () => settings.Visibility = settings.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible));
         rack.Children.Add(settings);
+        rack.Children.Add(_guide);
+        rack.Children.Add(_tutorial);
         rack.Children.Add(first);
         rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard));
 
@@ -64,6 +72,7 @@ public sealed partial class MainWindow : Window
         _clipboard = new ClipboardWatcher(_app.Clipboard);
         ApplyBackgroundChoices(_app.Settings.Current);
         _app.Settings.Changed += (_, current) => ApplyBackgroundChoices(current);
+        if (_app.Settings.TakeFirstLaunchGuide()) ShowHelp(_guide);
 
         AppWindow.Closing += OnClosing;
         Closed += (_, _) => Shutdown();
@@ -108,6 +117,16 @@ public sealed partial class MainWindow : Window
         root.PointerExited += (_, _) => light.Hide();
     }
 
+    // One help plate at a time, and a closed tutorial holds no video.
+    void ShowHelp(ContentControl? plate)
+    {
+        _tutorial.Stop();
+        _guide.Visibility = ReferenceEquals(plate, _guide) ? Visibility.Visible : Visibility.Collapsed;
+        _tutorial.Visibility = ReferenceEquals(plate, _tutorial) ? Visibility.Visible : Visibility.Collapsed;
+        if (ReferenceEquals(plate, _tutorial)) _tutorial.Open();
+        if (plate is not null) DispatcherQueue.TryEnqueue(() => plate.StartBringIntoView());
+    }
+
     /// <summary>Brings the window back, from the tray or from a second launch.</summary>
     public void ShowFromTray()
     {
@@ -139,6 +158,7 @@ public sealed partial class MainWindow : Window
 
     void Shutdown()
     {
+        _tutorial.Stop();
         _tray.Dispose();
         _clipboard.Dispose();
         _app.Dispose();

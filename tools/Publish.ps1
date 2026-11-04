@@ -41,7 +41,7 @@ $docs = New-Item -ItemType Directory -Force (Join-Path $stage 'docs')
 foreach ($doc in 'THIRD_PARTY.md', 'PERFORMANCE.md', 'REAL-SITE-CHECKS.md') { Copy-Item -LiteralPath (Join-Path $root "docs\$doc") $docs }
 Get-ChildItem -LiteralPath $stage -Filter *.pdb -Recurse | Remove-Item -Confirm:$false
 
-foreach ($needed in 'STXDownloader.exe', 'STXDownloader.pri', 'App.xbf', 'Themes\Generic.xbf', 'STXNativeHost.exe', 'Assets\badge.png', 'Assets\stx.ico', 'extension\manifest.json', 'extension\icons\icon-128.png', 'tools\Register-NativeHost.ps1') {
+foreach ($needed in 'STXDownloader.exe', 'STXDownloader.pri', 'App.xbf', 'Themes\Generic.xbf', 'STXNativeHost.exe', 'Assets\badge.png', 'Assets\stx.ico', 'Assets\tutorial.mp4', 'extension\manifest.json', 'extension\icons\icon-128.png', 'tools\Register-NativeHost.ps1') {
     if (-not (Test-Path -LiteralPath (Join-Path $stage $needed))) { throw "Missing from the release: $needed" }
 }
 

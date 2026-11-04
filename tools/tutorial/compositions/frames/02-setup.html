@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+#f02 { position:absolute; inset:0; background:#08090A; overflow:hidden; font-family:Montserrat, sans-serif; }
+#f02 .glow { position:absolute; left:50%; top:46%; width:1600px; height:900px; margin:-450px 0 0 -800px; background:radial-gradient(closest-side, rgba(255,200,101,0.07), rgba(255,200,101,0)); }
+#f02 .rule { position:absolute; left:120px; right:120px; top:132px; height:1px; background:rgba(223,227,232,0.10); }
+#f02 .chap { position:absolute; left:120px; top:84px; font:500 30px/1 "JetBrains Mono", monospace; letter-spacing:0.3em; color:#FFC865; }
+#f02 .cam { position:absolute; overflow:hidden; border-radius:12px; border:1px solid rgba(223,227,232,0.10); box-shadow:0 24px 64px rgba(0,0,0,0.6); background:#2A2C2F; }
+#f02 .cam img { position:absolute; display:block; max-width:none; }
+#f02 .ring { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); }
+#f02 .spot { position:absolute; border-radius:10px; box-shadow:0 0 0 2px rgba(255,200,101,0.85), 0 0 0 9999px rgba(8,9,10,0.58); }
+#f02 .cursor { position:absolute; display:block; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+#f02 .cap { position:absolute; left:120px; right:120px; bottom:104px; font:600 48px/1.25 Montserrat, sans-serif; letter-spacing:-0.01em; color:#DFE3E8; }
+#f02 .cap { opacity:0; }
+#f02 .ripple { position:absolute; width:96px; height:96px; border-radius:50%; border:3px solid rgba(255,200,101,0.95); opacity:0; pointer-events:none; }
+#f02 .hl { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); opacity:0; }
+#f02 .dim { position:absolute; border-radius:10px; background:rgba(8,9,10,0.82); }
+      </style>
+      <div id="f02" data-composition-id="f02" data-width="1920" data-height="1080">
+        <div class="glow"></div>
+        <div class="chap" data-layout-allow-overlap>02 · SET UP</div><div class="rule"></div>
+        <div class="cam" style="left:256px;top:330px;width:1408px;height:272px"><img data-layout-allow-overflow src="assets/plates/rack.png" alt="" style="width:5386px;left:-3978px;top:-102px" /><div class="spot" style="left:60px;top:74px;width:526px;height:118px"></div></div>
+        <p class="cap cap-a">The first run downloads its tools, about 430 MB.</p>
+        <p class="cap cap-b">Wait for the engine light to hold steady.</p>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#f02", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.inOut" }, 0);
+        tl.fromTo("#f02 .chap, #f02 .rule", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.25);
+        tl.fromTo("#f02 .cam, #f02 .popup", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.35);
+        tl.fromTo("#f02 .cap-a", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.7);
+        tl.to("#f02 .cap-a", { opacity: 0, duration: 0.35, ease: "power2.in" }, 4.4);
+        tl.fromTo("#f02 .cap-b", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 4.75);
+        tl.set("#f02 .spot", { opacity: 0 }, 0);
+        tl.fromTo("#f02 .cam img", { scale: 0.74, transformOrigin: "100% 235px" }, { scale: 1, duration: 4.2, ease: "power2.inOut" }, 0.4);
+        tl.to("#f02 .spot", { opacity: 1, duration: 0.6, ease: "power2.out" }, 4.8);
+        window.__timelines["f02"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

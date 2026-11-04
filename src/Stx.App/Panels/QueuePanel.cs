@@ -190,14 +190,14 @@ public sealed partial class QueuePanel : ContentControl
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
             Row = new QueueRow(item);
             Content = Row;
-            item.PropertyChanged += (_, _) => Name();
-            Name();
+            item.PropertyChanged += (_, _) => Announce();
+            Announce();
         }
 
         public QueueItemViewModel Item { get; }
 
         public QueueRow Row { get; }
 
-        void Name() => AutomationProperties.SetName(this, $"{Item.Title}: {Item.Status}");
+        void Announce() => AutomationProperties.SetName(this, $"{Item.Title}: {Item.Status}");
     }
 }

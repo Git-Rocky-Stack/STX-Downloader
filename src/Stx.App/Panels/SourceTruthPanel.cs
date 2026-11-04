@@ -48,7 +48,7 @@ public sealed partial class SourceTruthPanel : ContentControl
         controls.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         controls.ColumnDefinitions.Add(new ColumnDefinition());
         Grid.SetColumn(meters, 1);
-        controls.Children.Add(_output);
+        controls.Children.Add(_output.Captioned());
         controls.Children.Add(meters);
 
         var column = new StackPanel { Spacing = 12 };

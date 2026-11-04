@@ -45,6 +45,16 @@ public sealed partial class Rotary : Control
     /// <summary>What this knob selects, spoken before the current position.</summary>
     public string Label { get; set; } = "";
 
+    /// <summary>The knob with its label under it. The scale says where it's set, and only this says what it sets.</summary>
+    public StackPanel Captioned()
+    {
+        var dial = new StackPanel();
+        dial.Children.Add(this);
+        // The knob's square has an empty corner under its scale, so the caption can sit up into it, close enough to read as one.
+        dial.Children.Add(new EngravedLabel { Kind = LabelKind.Label, Text = Label, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, -16, 0, 0) });
+        return dial;
+    }
+
     public IReadOnlyList<string> Items
     {
         get => _items;

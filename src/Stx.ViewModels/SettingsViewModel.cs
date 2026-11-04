@@ -49,6 +49,14 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
         }
     }
 
+    /// <summary>True on the first launch only. Saved straight away, so the guide never opens by itself twice.</summary>
+    public bool TakeFirstLaunchGuide()
+    {
+        if (_settings.GuideShown) return false;
+        Apply(_settings with { GuideShown = true });
+        return true;
+    }
+
     void Apply(AppSettings next, [CallerMemberName] string? name = null)
     {
         var clean = next.Sanitized();
@@ -92,10 +100,12 @@ public sealed class FirstRunViewModel : ObservableObject
     {
         IsBusy = true;
         CanRetry = false;
+        var progress = new ThreadSafeProgress(_status.Report);
         try
         {
-            var progress = new ThreadSafeProgress(_status.Report);
-            var health = await _setup.EnsureAsync(progress, cancel);
+            ToolHealth health;
+            try { health = await _setup.EnsureAsync(progress, cancel); }
+            finally { progress.Finish(); }
             _status.Apply(health);
             IsReady = health != ToolHealth.Missing;
             IsVisible = health is ToolHealth.Missing or ToolHealth.Degraded;
@@ -124,15 +134,34 @@ public sealed class FirstRunViewModel : ObservableObject
         }
     }
 
-    /// <summary>Tool setup reports from pool threads, and what it reports drives controls that only accept the UI thread.</summary>
+    /// <summary>
+    /// Tool setup reports from pool threads, and what it reports drives controls that only accept the UI thread.
+    /// A posted report can arrive after setup has ended, and it mustn't replace how setup ended.
+    /// </summary>
     sealed class ThreadSafeProgress(Action<ToolStatus> report) : IProgress<ToolStatus>
     {
         readonly SynchronizationContext? _home = SynchronizationContext.Current;
+        readonly object _gate = new();
+        bool _finished;
 
         public void Report(ToolStatus value)
         {
-            if (_home is null) report(value);
-            else _home.Post(_ => report(value), null);
+            if (_home is null) Deliver(value);
+            else _home.Post(_ => Deliver(value), null);
+        }
+
+        /// <summary>Once this returns, no report is being delivered and none will be.</summary>
+        public void Finish()
+        {
+            lock (_gate) _finished = true;
+        }
+
+        void Deliver(ToolStatus value)
+        {
+            lock (_gate)
+            {
+                if (!_finished) report(value);
+            }
         }
     }
 }

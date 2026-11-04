@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+#f08 { position:absolute; inset:0; background:#08090A; overflow:hidden; font-family:Montserrat, sans-serif; }
+#f08 .glow { position:absolute; left:50%; top:46%; width:1600px; height:900px; margin:-450px 0 0 -800px; background:radial-gradient(closest-side, rgba(255,200,101,0.07), rgba(255,200,101,0)); }
+#f08 .rule { position:absolute; left:120px; right:120px; top:132px; height:1px; background:rgba(223,227,232,0.10); }
+#f08 .chap { position:absolute; left:120px; top:84px; font:500 30px/1 "JetBrains Mono", monospace; letter-spacing:0.3em; color:#FFC865; }
+#f08 .cam { position:absolute; overflow:hidden; border-radius:12px; border:1px solid rgba(223,227,232,0.10); box-shadow:0 24px 64px rgba(0,0,0,0.6); background:#2A2C2F; }
+#f08 .cam img { position:absolute; display:block; max-width:none; }
+#f08 .ring { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); }
+#f08 .spot { position:absolute; border-radius:10px; box-shadow:0 0 0 2px rgba(255,200,101,0.85), 0 0 0 9999px rgba(8,9,10,0.58); }
+#f08 .cursor { position:absolute; display:block; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+#f08 .cap { position:absolute; left:120px; right:120px; bottom:104px; font:600 48px/1.25 Montserrat, sans-serif; letter-spacing:-0.01em; color:#DFE3E8; }
+#f08 .cap { opacity:0; }
+#f08 .ripple { position:absolute; width:96px; height:96px; border-radius:50%; border:3px solid rgba(255,200,101,0.95); opacity:0; pointer-events:none; }
+#f08 .hl { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); opacity:0; }
+#f08 .dim { position:absolute; border-radius:10px; background:rgba(8,9,10,0.82); }
+      </style>
+      <div id="f08" data-composition-id="f08" data-width="1920" data-height="1080">
+        <div class="glow"></div>
+        <div class="chap" data-layout-allow-overlap>08 · MAKE IT YOURS</div><div class="rule"></div>
+        <div class="cam tight" style="left:383px;top:300px;width:1153px;height:352px"><img data-layout-allow-overflow src="assets/plates/rack.png" alt="" style="width:6970px;left:-5676px;top:-1179px" /><div class="spot" style="left:150px;top:58px;width:448px;height:240px"></div></div>
+        <div class="cam wide" style="left:168px;top:196px;width:1584px;height:458px"><img data-layout-allow-overflow src="assets/plates/settings.png" alt="" style="width:1584px;left:0px;top:-140px" /><div class="hl k1" style="left:36px;top:52px;width:194px;height:184px"></div><div class="hl k2" style="left:248px;top:248px;width:1182px;height:74px"></div><div class="hl k3" style="left:36px;top:252px;width:194px;height:180px"></div></div><div class="end" style="position:absolute;inset:0;z-index:5;background:#000000;opacity:0"><img class="badge" src="assets/stx-badge.png" alt="" style="position:absolute;left:404px;top:441px;width:1112px;height:198px" /></div>
+        <p class="cap cap-a">Set your quality, folder and how many run at once.</p>
+        <p class="cap cap-b">Everything's in the USER GUIDE.</p>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#f08", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.inOut" }, 0);
+        tl.fromTo("#f08 .chap, #f08 .rule", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.25);
+        tl.fromTo("#f08 .wide", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.35);
+        tl.fromTo("#f08 .cap-a", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.7);
+        tl.to("#f08 .cap-a", { opacity: 0, duration: 0.35, ease: "power2.in" }, 3.4);
+        tl.fromTo("#f08 .cap-b", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 3.75);
+        tl.set("#f08 .tight", { opacity: 0 }, 0);
+        tl.to("#f08 .k1, #f08 .k2, #f08 .k3", { opacity: 1, duration: 0.35, ease: "power2.out", stagger: 0.5 }, 1.0);
+        tl.to("#f08 .wide", { opacity: 0, duration: 0.5, ease: "power1.inOut" }, 3.4);
+        tl.to("#f08 .tight", { opacity: 1, duration: 0.5, ease: "power1.inOut" }, 3.4);
+        tl.set("#f08 .end", { opacity: 1 }, 6.0);
+        tl.fromTo("#f08 .badge", { opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1, duration: 1.0, ease: "back.out(1.3)", immediateRender: false }, 6.15);
+        window.__timelines["f08"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+#f03 { position:absolute; inset:0; background:#08090A; overflow:hidden; font-family:Montserrat, sans-serif; }
+#f03 .glow { position:absolute; left:50%; top:46%; width:1600px; height:900px; margin:-450px 0 0 -800px; background:radial-gradient(closest-side, rgba(255,200,101,0.07), rgba(255,200,101,0)); }
+#f03 .rule { position:absolute; left:120px; right:120px; top:132px; height:1px; background:rgba(223,227,232,0.10); }
+#f03 .chap { position:absolute; left:120px; top:84px; font:500 30px/1 "JetBrains Mono", monospace; letter-spacing:0.3em; color:#FFC865; }
+#f03 .cam { position:absolute; overflow:hidden; border-radius:12px; border:1px solid rgba(223,227,232,0.10); box-shadow:0 24px 64px rgba(0,0,0,0.6); background:#2A2C2F; }
+#f03 .cam img { position:absolute; display:block; max-width:none; }
+#f03 .ring { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); }
+#f03 .spot { position:absolute; border-radius:10px; box-shadow:0 0 0 2px rgba(255,200,101,0.85), 0 0 0 9999px rgba(8,9,10,0.58); }
+#f03 .cursor { position:absolute; display:block; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+#f03 .cap { position:absolute; left:120px; right:120px; bottom:104px; font:600 48px/1.25 Montserrat, sans-serif; letter-spacing:-0.01em; color:#DFE3E8; }
+#f03 .cap { opacity:0; }
+#f03 .ripple { position:absolute; width:96px; height:96px; border-radius:50%; border:3px solid rgba(255,200,101,0.95); opacity:0; pointer-events:none; }
+#f03 .hl { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); opacity:0; }
+#f03 .dim { position:absolute; border-radius:10px; background:rgba(8,9,10,0.82); }
+      </style>
+      <div id="f03" data-composition-id="f03" data-width="1920" data-height="1080">
+        <div class="glow"></div>
+        <div class="chap" data-layout-allow-overlap>03 · SAVE FROM A LINK</div><div class="rule"></div>
+        <div class="cam" style="left:352px;top:250px;width:1216px;height:480px"><img data-layout-allow-overflow src="assets/plates/playlist.png" alt="" style="width:5069px;left:-3744px;top:-176px" /><svg class="cursor" style="left:1056px;top:144px" width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2 L4 19 L8.6 14.8 L11.6 21.6 L14.6 20.3 L11.7 13.6 L18 13.4 Z" fill="#F4F6F8" stroke="#08090A" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="dim" style="left:46px;top:284px;width:1140px;height:180px"></div><div class="hl row" style="left:46px;top:284px;width:1140px;height:180px"></div><div class="ripple r1" style="left:1028px;top:135px"></div></div>
+        <p class="cap cap-a">Copy a link and press PASTE. It reads the link straight away.</p>
+        <p class="cap cap-b">A playlist asks first: add its items, or just this video.</p>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#f03", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.inOut" }, 0);
+        tl.fromTo("#f03 .chap, #f03 .rule", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.25);
+        tl.fromTo("#f03 .cam, #f03 .popup", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.35);
+        tl.fromTo("#f03 .cap-a", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.7);
+        tl.to("#f03 .cap-a", { opacity: 0, duration: 0.35, ease: "power2.in" }, 5.8);
+        tl.fromTo("#f03 .cap-b", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 6.15);
+        tl.fromTo("#f03 .cursor", { x: -560, y: 220 }, { x: 0, y: 0, duration: 0.9, ease: "power3.out", immediateRender: true }, 1.0);
+        tl.to("#f03 .cursor", { scale: 0.85, duration: 0.08, ease: "power2.in", yoyo: true, repeat: 1, transformOrigin: "20% 10%" }, 2.1);
+        tl.fromTo("#f03 .r1", { xPercent: -50, yPercent: -50, scale: 0.2, opacity: 0.95 }, { scale: 4, opacity: 0, duration: 0.7, ease: "power2.out", immediateRender: false }, 2.12);
+        tl.to("#f03 .dim", { opacity: 0, duration: 0.5, ease: "power2.out" }, 2.6);
+        tl.to("#f03 .row", { opacity: 1, duration: 0.5, ease: "power2.out" }, 6.4);
+        tl.set("#f03 .cursor", { opacity: 0 }, 0);
+        tl.to("#f03 .cursor", { opacity: 1, duration: 0.25, ease: "power1.out" }, 1.0);
+        window.__timelines["f03"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

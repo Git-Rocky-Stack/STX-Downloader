@@ -43,6 +43,8 @@ Each line points at the code that does it.
 - Black anodized by default, brushed aluminum as light mode (`src/Stx.App/Panels/SettingsPanel.cs:20`).
 - Choose best quality, up to 1080p or 720p, video only or audio only, and which metadata to embed (`src/Stx.App/Panels/SettingsPanel.cs:32`, `src/Stx.Tools/DownloadChoices.cs:9`).
 - Tray mode (`src/Stx.App/Platform/Tray.cs:6`), start with Windows (`src/Stx.App/Platform/StartupRegistry.cs:7`) and an optional clipboard offer, off by default (`src/Stx.App/Platform/ClipboardWatcher.cs:7`).
+- A USER GUIDE pad and a TUTORIAL pad on the Settings plate (`src/Stx.App/Panels/SettingsPanel.cs:85`, `src/Stx.App/Panels/SettingsPanel.cs:86`). The guide opens by itself on first launch, once (`src/Stx.App/MainWindow.cs:75`), and covers each plate (`src/Stx.ViewModels/GuideContent.cs:12`).
+- The tutorial is a 76-second captioned walkthrough with no sound that ships with the app. It starts by itself unless reduce motion is on (`src/Stx.App/Panels/TutorialPanel.cs:60`).
 
 ## Install
 
@@ -57,7 +59,7 @@ To capture from pages:
 
 3. In Chrome or Edge, open the extensions page, turn on **Developer mode**, choose **Load unpacked**, and pick the `extension` folder inside the install folder. The setup offers to show you that folder.
 
-The setup already registers the browser hand-off (`tools/installer/STXDownloader.iss:81`).
+The setup already registers the browser hand-off (`tools/installer/STXDownloader.iss:82`).
 
 A zip is also released. Unzip it anywhere, run `STXDownloader.exe`, and run `tools\Register-NativeHost.ps1` once to connect the browser. It writes to your account only, and `-Remove` undoes it.
 
