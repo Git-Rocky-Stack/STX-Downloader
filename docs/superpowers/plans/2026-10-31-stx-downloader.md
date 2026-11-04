@@ -1,5 +1,7 @@
 # STX Downloader Implementation Plan
 
+> **Status (2026-11-04): historical.** This is the plan v1 was built from. Its checkboxes were never ticked during the build, so they do not show what is done; progress was logged in `.superpowers/sdd/` (git-ignored) and in git history, and v1.0.0 shipped in commit `81b80a4`. For what the app does today, read `README.md` and its code anchors, not this file.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a light, MIT-licensed Windows app that saves YouTube and website media, tells the truth about source audio, and looks like premium solid-state hardware.

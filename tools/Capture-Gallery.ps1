@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory)] [string] $Name,
     [ValidateSet('dark', 'light')] [string] $Mode = 'dark',
     [Parameter(Mandatory)] [string] $Out,
-    [int] $SettleSeconds = 3
+    [int] $SettleSeconds = 3,
+    [switch] $ReduceMotion
 )
 # Asks the window to draw itself, rather than copying the screen. So the image holds only the app's content:
 # no title bar, nothing from the desktop, nothing from windows on top, and it never takes focus from you.
@@ -21,7 +22,9 @@ if (-not ('StxCaptureWindow.Native' -as [type])) {
 '@
 }
 
-$p = Start-Process $exe -ArgumentList "--gallery=$Name", "--mode=$Mode", '--hold' -PassThru
+$arguments = @("--gallery=$Name", "--mode=$Mode", '--hold')
+if ($ReduceMotion) { $arguments += '--reduce-motion' }
+$p = Start-Process $exe -ArgumentList $arguments -PassThru
 try {
     $deadline = (Get-Date).AddSeconds(20)
     while ($p.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100; $p.Refresh() }

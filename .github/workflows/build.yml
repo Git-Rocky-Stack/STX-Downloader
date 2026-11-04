@@ -26,4 +26,4 @@ jobs:
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
           }
       - name: Test extension
-        run: node --test extension/test/
+        run: node --test "extension/test/*.test.js"

@@ -346,7 +346,7 @@ public class LibraryTests
         Assert.Equal(OutputChoice.Flac, request.Output);
         Assert.Equal(1, request.FileId);
         Assert.Null(request.PresetName);
-        Assert.True(_files.Contains(@"D:\m\song.mp4"));
+        Assert.Contains(@"D:\m\song.mp4", _files);
     }
 
     [Fact]

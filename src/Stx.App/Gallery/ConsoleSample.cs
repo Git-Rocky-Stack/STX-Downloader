@@ -39,7 +39,20 @@ internal static class ConsoleSample
         rack.Children.Add(new HeaderPanel(status));
         rack.Children.Add(new SourcePanel(source));
         rack.Children.Add(new QueuePanel(queue));
-        return new ScrollViewer { Content = rack };
+        // Starts scrolled, so the queue's pads are whole in the 601 pixel window these pictures are taken at.
+        var scroller = new ScrollViewer { Content = rack };
+        scroller.Loaded += (_, _) => scroller.ChangeView(null, 44, null, disableAnimation: true);
+        return scroller;
+    }
+
+    /// <summary>The source plate after a sample playlist link was analyzed, so the tutorial shows the real offer. Nothing is fetched.</summary>
+    public static UIElement Playlist()
+    {
+        var catalog = new Catalog();
+        var engine = new QueueEngine(new Memory(), new NeverRuns(), new QueuePolicy { MaxParallel = 0 }, new SystemClock(), new CaptureVault());
+        var source = new SourceViewModel(new SamplePlaylist(), catalog, engine) { Link = "https://www.youtube.com/watch?v=SAMPLE00001&list=PLSAMPLE" };
+        _ = source.AnalyzeCommand.ExecuteAsync(null);
+        return new ScrollViewer { Content = new SourcePanel(source) { Margin = new Thickness(8) } };
     }
 
     /// <summary>The panel on a sample measurement. The product only ever shows values measured from a real file.</summary>
@@ -67,7 +80,29 @@ internal static class ConsoleSample
         string file = Path.Combine(Path.GetTempPath(), "stx-gallery-settings-" + Environment.ProcessId + ".json");
         // A fixed sample, so a baseline never holds a real user's folder.
         File.WriteAllText(file, "{\"OutputFolder\":\"D:\\\\Media\\\\STX Downloader\"}");
-        return new SettingsPanel(new SettingsViewModel(new SettingsStore(file), new NoStartup()), null);
+        return new SettingsPanel(new SettingsViewModel(new SettingsStore(file), new NoStartup()), null, () => { }, () => { });
+    }
+
+    /// <summary>The top of the real rack with settings open, and the plates its help pads open, so the whole stack can be captured.</summary>
+    public static UIElement Rack()
+    {
+        var status = new EngineStatusViewModel();
+        status.Apply(Stx.Tools.ToolHealth.Current);
+        var rack = new StackPanel { Spacing = 8, Padding = new Thickness(8) };
+        rack.Children.Add(new HeaderPanel(status, () => { }));
+        rack.Children.Add(Settings());
+        return new ScrollViewer { Content = rack };
+    }
+
+    public static UIElement Guide() => new ScrollViewer { Content = new GuidePanel(() => { }) { Margin = new Thickness(8) } };
+
+    /// <summary>Opened straight away, so a capture shows the plate as it is when the pad is pressed.</summary>
+    public static UIElement Tutorial()
+    {
+        var plate = new TutorialPanel(() => { }) { Margin = new Thickness(8) };
+        plate.Loaded += (_, _) => plate.Open();
+        plate.Unloaded += (_, _) => plate.Stop();
+        return new ScrollViewer { Content = plate };
     }
 
     public static UIElement FirstRun()
@@ -129,6 +164,16 @@ internal static class ConsoleSample
         public void OpenPage(string url) { }
         public void OpenFile(string path) { }
         public void RevealFile(string path) { }
+    }
+
+    sealed class SamplePlaylist : ILinkAnalyzer
+    {
+        public Task<LinkAnalysis> AnalyzeAsync(string url, CancellationToken cancel = default) => Task.FromResult(LinkAnalysis.Found("Sample playlist",
+        [
+            new Stx.Tools.PlaylistEntry("SAMPLE00001", "Sample music video", "https://www.youtube.com/watch?v=SAMPLE00001", true),
+            new Stx.Tools.PlaylistEntry("SAMPLE00002", "Sample live session", "https://www.youtube.com/watch?v=SAMPLE00002", true),
+            new Stx.Tools.PlaylistEntry("SAMPLE00003", "Sample interview", "https://www.youtube.com/watch?v=SAMPLE00003", true),
+        ]));
     }
 
     sealed class NoAnalyzer : ILinkAnalyzer

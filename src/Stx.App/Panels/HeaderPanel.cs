@@ -14,6 +14,8 @@ namespace Stx.App.Panels;
 public sealed partial class HeaderPanel : ContentControl
 {
     const double BadgeHeight = 41;
+    // The same empty band above the badge as the line of type below it, so the badge is centered between the screws.
+    const double SubLabelBand = 22;
 
     readonly Led _engine = new(), _fault = new() { Color = LedColor.Red };
     readonly EngravedLabel _engineText = new() { Kind = LabelKind.Label };
@@ -24,7 +26,7 @@ public sealed partial class HeaderPanel : ContentControl
 
         var brand = new Image
         {
-            // Scaled once, on loading, to the exact pixels this display needs. The picture is 2521 wide, and shrinking that live blurs its fine detail.
+            // Scaled once, on loading, to the exact pixels this display needs. The picture is 1112 wide, and shrinking that live blurs its fine detail.
             Source = new BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "badge.png")))
             {
                 DecodePixelType = DecodePixelType.Logical,
@@ -33,11 +35,19 @@ public sealed partial class HeaderPanel : ContentControl
             Height = BadgeHeight,
             Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Left,
+            // The picture's transparent margin is deeper below the letters than above, so without this they sit a pixel high of the screws' midpoint.
+            Margin = new Thickness(0, 1, 0, -1),
         };
         AutomationProperties.SetName(brand, "STX-1");
-        var name = new StackPanel { Spacing = 6 };
+        var subLabel = new EngravedLabel { Kind = LabelKind.Sub, Text = "Media capture console", VerticalAlignment = VerticalAlignment.Bottom };
+        var name = new Grid { VerticalAlignment = VerticalAlignment.Center };
+        name.RowDefinitions.Add(new RowDefinition { Height = new GridLength(SubLabelBand) });
+        name.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        name.RowDefinitions.Add(new RowDefinition { Height = new GridLength(SubLabelBand) });
+        Grid.SetRow(brand, 1);
+        Grid.SetRow(subLabel, 2);
         name.Children.Add(brand);
-        name.Children.Add(new EngravedLabel { Kind = LabelKind.Sub, Text = "Media capture console" });
+        name.Children.Add(subLabel);
 
         var lights = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 24, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
         lights.Children.Add(Pair(_engine, _engineText));
@@ -55,7 +65,7 @@ public sealed partial class HeaderPanel : ContentControl
         Grid.SetColumn(lights, 1);
         row.Children.Add(name);
         row.Children.Add(lights);
-        Content = new Faceplate { PanelName = "header", Padding = new Thickness(36, 18, 36, 19), Content = row };
+        Content = new Faceplate { PanelName = "header", Padding = new Thickness(36, 18, 36, 18), Content = row };
 
         status.PropertyChanged += (_, _) => Paint(status);
         Paint(status);

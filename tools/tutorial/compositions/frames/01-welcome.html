@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+#f01 { position:absolute; inset:0; background:#000000; overflow:hidden; font-family:Montserrat, sans-serif; }
+#f01 .glow { position:absolute; left:50%; top:46%; width:1600px; height:900px; margin:-450px 0 0 -800px; background:radial-gradient(closest-side, rgba(255,200,101,0.07), rgba(255,200,101,0)); }
+#f01 .rule { position:absolute; left:120px; right:120px; top:132px; height:1px; background:rgba(223,227,232,0.10); }
+#f01 .chap { position:absolute; left:120px; top:84px; font:500 30px/1 "JetBrains Mono", monospace; letter-spacing:0.3em; color:#FFC865; }
+#f01 .cam { position:absolute; overflow:hidden; border-radius:12px; border:1px solid rgba(223,227,232,0.10); box-shadow:0 24px 64px rgba(0,0,0,0.6); background:#2A2C2F; }
+#f01 .cam img { position:absolute; display:block; max-width:none; }
+#f01 .ring { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); }
+#f01 .spot { position:absolute; border-radius:10px; box-shadow:0 0 0 2px rgba(255,200,101,0.85), 0 0 0 9999px rgba(8,9,10,0.58); }
+#f01 .cursor { position:absolute; display:block; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+#f01 .cap { position:absolute; left:120px; right:120px; bottom:104px; font:600 48px/1.25 Montserrat, sans-serif; letter-spacing:-0.01em; color:#DFE3E8; }
+#f01 .cap { opacity:0; }
+#f01 .ripple { position:absolute; width:96px; height:96px; border-radius:50%; border:3px solid rgba(255,200,101,0.95); opacity:0; pointer-events:none; }
+#f01 .hl { position:absolute; border-radius:10px; box-shadow:0 0 0 3px rgba(255,200,101,0.9); opacity:0; }
+#f01 .dim { position:absolute; border-radius:10px; background:rgba(8,9,10,0.82); }
+      </style>
+      <div id="f01" data-composition-id="f01" data-width="1920" data-height="1080">
+        
+        
+        <img class="logo" src="assets/stx-icon.png" alt="" style="position:absolute;left:660px;top:120px;width:600px;height:600px" />
+        <p class="cap cap-a">Your first save, start to finish.</p>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#f01 .logo", { opacity: 0, scale: 0.82 }, { opacity: 1, scale: 1, duration: 1.3, ease: "back.out(1.4)" }, 0.2);
+        tl.fromTo("#f01 .cap-a", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 1.8);
+        window.__timelines["f01"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

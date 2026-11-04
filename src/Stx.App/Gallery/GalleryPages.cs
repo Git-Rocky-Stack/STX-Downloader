@@ -29,9 +29,13 @@ internal static class GalleryPages
         "console" => ConsoleSample.Build(),
         "pointerlight" => PointerLightSample(options.Hold),
         "sourcetruth" => ConsoleSample.SourceTruth(),
+        "playlist" => ConsoleSample.Playlist(),
         "library" => ConsoleSample.LibraryPage(),
         "settings" => ConsoleSample.Settings(),
         "firstrun" => ConsoleSample.FirstRun(),
+        "rack" => ConsoleSample.Rack(),
+        "guide" => ConsoleSample.Guide(),
+        "tutorial" => ConsoleSample.Tutorial(),
         _ => new Grid(),
     };
 

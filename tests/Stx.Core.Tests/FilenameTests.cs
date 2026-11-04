@@ -37,7 +37,7 @@ public class FilenameTests
     public void Illegal_characters_are_removed()
     {
         string name = Name("a<b>:c?");
-        Assert.Empty(name.Where(c => "<>:\"/\\|?*".Contains(c)));
+        Assert.DoesNotContain(name, c => "<>:\"/\\|?*".Contains(c));
         Assert.EndsWith(".mp4", name);
         Assert.Contains("a", name);
         Assert.Contains("c", name);
@@ -52,7 +52,7 @@ public class FilenameTests
 
     [Fact]
     public void Control_characters_are_removed() =>
-        Assert.Empty(Name("a\tb\nc\0d\u001f").Where(char.IsControl));
+        Assert.DoesNotContain(Name("a\tb\nc\0d\u001f"), char.IsControl);
 
     [Theory]
     [InlineData("song.")]

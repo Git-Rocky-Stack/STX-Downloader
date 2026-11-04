@@ -199,6 +199,77 @@ public class FirstRunTests
         Assert.Equal("ENGINE CURRENT", status.EngineText);
     }
 
+    // Reports are posted to the UI thread, so one can be delivered after setup has already said how it ended.
+    [Fact]
+    public void A_report_delivered_after_setup_ended_does_not_replace_the_result()
+    {
+        var home = new HeldPosts();
+        var status = new EngineStatusViewModel();
+        var outer = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(home);
+        try
+        {
+            var run = new FirstRunViewModel(new FakeSetup(ToolHealth.Current), status).StartAsync();
+            Assert.True(run.IsCompletedSuccessfully);
+            Assert.Equal(1, home.Waiting);
+            home.Deliver();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(outer);
+        }
+        Assert.Equal("ENGINE CURRENT", status.EngineText);
+    }
+
+    [Fact]
+    public void While_setup_runs_its_reports_reach_the_engine_line()
+    {
+        var home = new HeldPosts();
+        var setup = new ReportsThenWaits();
+        var status = new EngineStatusViewModel();
+        var outer = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(home);
+        try
+        {
+            var run = new FirstRunViewModel(setup, status).StartAsync();
+            home.Deliver();
+            Assert.Equal("FFMPEG: DOWNLOADING", status.EngineText);
+
+            setup.Finish(ToolHealth.Current);
+            home.Deliver();
+            Assert.True(run.IsCompletedSuccessfully);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(outer);
+        }
+        Assert.Equal("ENGINE CURRENT", status.EngineText);
+    }
+
+    /// <summary>Stands in for the UI thread: nothing posted runs until the test says so.</summary>
+    sealed class HeldPosts : SynchronizationContext
+    {
+        readonly Queue<(SendOrPostCallback Callback, object? State)> _posts = new();
+        public int Waiting => _posts.Count;
+        public override void Post(SendOrPostCallback d, object? state) => _posts.Enqueue((d, state));
+        public void Deliver()
+        {
+            while (_posts.TryDequeue(out var post)) post.Callback(post.State);
+        }
+    }
+
+    sealed class ReportsThenWaits : IToolSetup
+    {
+        readonly TaskCompletionSource<ToolHealth> _end = new();
+        public void Finish(ToolHealth health) => _end.SetResult(health);
+
+        public Task<ToolHealth> EnsureAsync(IProgress<ToolStatus>? progress = null, CancellationToken cancel = default)
+        {
+            progress?.Report(new ToolStatus("FFmpeg", "Downloading"));
+            return _end.Task;
+        }
+    }
+
     [Fact]
     public void Before_setup_finishes_it_is_not_ready() =>
         Assert.False(Panel(ToolHealth.Current).IsReady);

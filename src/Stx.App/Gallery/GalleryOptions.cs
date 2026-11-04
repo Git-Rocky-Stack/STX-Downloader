@@ -2,8 +2,8 @@ using Stx.Look;
 
 namespace Stx.App.Gallery;
 
-/// <summary>Args: --gallery=&lt;name&gt; --mode=dark|light --hold</summary>
-public sealed record GalleryOptions(string Name, LookMode Mode, bool Hold)
+/// <summary>Args: --gallery=&lt;name&gt; --mode=dark|light --hold --reduce-motion</summary>
+public sealed record GalleryOptions(string Name, LookMode Mode, bool Hold, bool ReduceMotion = false)
 {
     public static GalleryOptions Parse(string[] args)
     {
@@ -13,6 +13,7 @@ public sealed record GalleryOptions(string Name, LookMode Mode, bool Hold)
         return new GalleryOptions(
             Value("gallery", "empty"),
             Value("mode", "dark") == "light" ? LookMode.Light : LookMode.Dark,
-            args.Contains("--hold"));
+            args.Contains("--hold"),
+            args.Contains("--reduce-motion"));
     }
 }

@@ -25,6 +25,8 @@ public sealed record AppSettings
     public bool EmbedChapters { get; init; }
     public string OutputFolder { get; init; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "STX Downloader");
     public string FilenameTemplate { get; init; } = Files.FilenameTemplate.Default;
+    /// <summary>The guide opens by itself once, on the first launch.</summary>
+    public bool GuideShown { get; init; }
 
     /// <summary>Brings anything out of range back in, so a hand-edited file can't stop the app.</summary>
     public AppSettings Sanitized()

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "preferences": {
+    "flow": {
+      "value": "automation",
+      "confirmed_in": [
+        "tutorial"
+      ],
+      "updated_at": "2026-11-02T09:14:24.289Z"
+    },
+    "storyboard": {
+      "value": "yes",
+      "confirmed_in": [
+        "tutorial"
+      ],
+      "updated_at": "2026-11-02T09:14:24.463Z"
+    }
+  },
+  "sightings": {}
+}
