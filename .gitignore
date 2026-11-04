@@ -9,3 +9,4 @@ docs/analysis/
 tests/Stx.VisualTests/output/
 extension/node_modules/
 dist/
+TestResults/

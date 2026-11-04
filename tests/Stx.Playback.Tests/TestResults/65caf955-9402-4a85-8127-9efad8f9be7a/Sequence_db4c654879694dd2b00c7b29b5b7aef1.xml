@@ -1,4 +1,0 @@
-<?xml version="1.0"?>
-<TestSequence>
-  <Test Name="Stx.Playback.Tests.LibVlcEngineTests.Changed_fires_as_playback_starts" DisplayName="Stx.Playback.Tests.LibVlcEngineTests.Changed_fires_as_playback_starts" Source="C:\Users\User\Desktop\Development Projects\Strategia-Enhanced-App\STX Downloader\tests\Stx.Playback.Tests\bin\x64\Release\net10.0-windows\win-x64\Stx.Playback.Tests.dll" Completed="False" />
-</TestSequence>
