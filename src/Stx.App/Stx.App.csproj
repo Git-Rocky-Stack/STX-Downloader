@@ -16,8 +16,10 @@
     <ApplicationIcon>Assets\stx.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="LibVLCSharp.WinUI" Version="3.10.2" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Stx.Look\Stx.Look.csproj" />
