@@ -12,6 +12,7 @@ public sealed partial class GalleryWindow : Window
     public GalleryWindow(GalleryOptions options)
     {
         LookState.Mode = options.Mode;
+        LookState.ReduceMotionChosen = options.ReduceMotion;
         Title = $"STX gallery {options.Name} {options.Mode}";
         AppWindow.Resize(new Windows.Graphics.SizeInt32(960, 640));
         var root = new Grid { Background = new SolidColorBrush(ColorHelper.FromArgb(255, 8, 9, 10)) };
