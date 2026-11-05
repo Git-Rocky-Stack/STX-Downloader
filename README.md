@@ -52,7 +52,7 @@ Each line points at the code that does it.
 - A PLAYER plate sits beside the Library, above Source Truth (`src/Stx.App/MainWindow.cs:57`). OPEN in the Library plays the file there and never hands it to another app (`src/Stx.ViewModels/LibraryViewModel.cs:48`, `src/Stx.App/Composition.cs:168`).
 - A file opened from File Explorer joins the Library and plays (`src/Stx.App/App.xaml.cs:27`, `src/Stx.App/Composition.cs:176`). A second launch with a file hands it to the copy already running, over a named pipe only your account can open (`src/Stx.App/Platform/SingleInstance.cs:26`, `src/Stx.Bridge/OpenRequests.cs`).
 - FULL fills the screen and Esc brings the console back. The video keeps playing through it (`src/Stx.App/Panels/PlayerPanel.cs:194`, `src/Stx.App/Panels/PlayerPanel.cs:117`, `src/Stx.App/MainWindow.cs:73`).
-- Hidden in the tray, the player stops decoding pictures and the sound carries on (`src/Stx.App/MainWindow.cs:90`, `src/Stx.Playback/LibVlcEngine.cs:228`).
+- Hidden in the tray, the player stops decoding pictures and the sound carries on (`src/Stx.App/MainWindow.cs:90`, `src/Stx.Playback/LibVlcEngine.cs:231`).
 - A PERFORMANCE knob in Settings sets how hard playback may work: AUTO picks from the PC, or choose ECO, BALANCED or MAX (`src/Stx.App/Panels/SettingsPanel.cs:45`, `src/Stx.Core/Playback/PerformanceProfile.cs:16`).
 - MIDI plays, using the FluidR3_GM SoundFont that ships with the app (`src/Stx.Playback/LibVlcEngine.cs:22`).
 - **Dirac and VC-2 video are refused.** VLC 3.0.24's engine crashes on them, the desktop VLC build included. Rather than let STX close, it shows "DIRAC VIDEO CAN'T BE PLAYED SAFELY" (`src/Stx.Playback/LibVlcEngine.cs:19`).

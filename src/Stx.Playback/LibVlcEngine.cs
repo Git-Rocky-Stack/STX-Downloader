@@ -49,6 +49,9 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (headless) Start(null);
     }
 
+    /// <summary>Opens files paused at their start (LibVLC's start-paused). No picture is drawn until the player steps a frame; the screenshot galleries do that so every capture shows the same first frame.</summary>
+    public bool StartPaused { get; set; }
+
     /// <summary>The PERFORMANCE profile. A change applies from the next <see cref="Open"/>.</summary>
     public PerformanceProfile Profile { get; set; }
 
@@ -155,7 +158,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
             lock (_gate)
             {
                 if (_disposed || _vlc is null || generation != _generation) return;
-                media = new Media(_vlc, path, FromType.FromPath, LibVlcOptions.ForMedia(Profile));
+                media = new Media(_vlc, path, FromType.FromPath, [.. LibVlcOptions.ForMedia(Profile), .. StartPaused ? [":start-paused"] : Array.Empty<string>()]);
             }
             var (mono, dirac) = Inspect(media);
             if (dirac)

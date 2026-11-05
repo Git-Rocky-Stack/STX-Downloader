@@ -24,6 +24,28 @@ if (-not ('StxCaptureWindow.Native' -as [type])) {
 '@
 }
 
+if (-not ('StxCaptureWindow.Pixels' -as [type])) {
+    # Compiled, because a PowerShell loop over every pixel takes seconds, longer than the retry window below.
+    Add-Type -Namespace StxCaptureWindow -Name Pixels -MemberDefinition @'
+public static bool PureBlack(byte[] bgra)
+{
+    for (int i = 0; i < bgra.Length; i += 4)
+        if (bgra[i] != 0 || bgra[i + 1] != 0 || bgra[i + 2] != 0) return false;
+    return true;
+}
+'@
+}
+
+function Test-PureBlack([Drawing.Bitmap] $image) {
+    $data = $image.LockBits((New-Object Drawing.Rectangle 0, 0, $image.Width, $image.Height), 'ReadOnly', 'Format32bppArgb')
+    try {
+        $bytes = New-Object byte[] ($data.Stride * $image.Height)
+        [Runtime.InteropServices.Marshal]::Copy($data.Scan0, $bytes, 0, $bytes.Length)
+    }
+    finally { $image.UnlockBits($data) }
+    [StxCaptureWindow.Pixels]::PureBlack($bytes)
+}
+
 $arguments = @("--gallery=$Name", "--mode=$Mode")
 if (-not $Live) { $arguments += '--hold' }
 if ($ReduceMotion) { $arguments += '--reduce-motion' }
@@ -41,23 +63,36 @@ try {
     [StxCaptureWindow.Native]::GetWindowRect($h, $window) | Out-Null
     [StxCaptureWindow.Native]::GetClientRect($h, $client) | Out-Null
     [StxCaptureWindow.Native]::ClientToScreen($h, $origin) | Out-Null
-
-    $whole = New-Object Drawing.Bitmap ($window[2] - $window[0]), ($window[3] - $window[1])
-    $g = [Drawing.Graphics]::FromImage($whole)
-    $dc = $g.GetHdc()
-    # 2 is PW_RENDERFULLCONTENT, which includes the composition layers this app is drawn with.
-    $drawn = [StxCaptureWindow.Native]::PrintWindow($h, $dc, 2)
-    $g.ReleaseHdc($dc)
-    $g.Dispose()
-    if (-not $drawn) { throw "Window would not draw itself for gallery '$Name'" }
-
     $area = New-Object Drawing.Rectangle ($origin[0] - $window[0]), ($origin[1] - $window[1]), $client[2], $client[3]
-    $content = $whole.Clone($area, $whole.PixelFormat)
+
+    # A window that hasn't presented a frame yet prints as pure black, and as its content a few hundred milliseconds later.
+    # Neither mode's background is pure black, so pure black means "not drawn yet": print again until it isn't, for up to 5 s
+    # after the first print returns (a window still starting up can hold that first print for seconds).
+    # A window that really draws black stays black, and its comparison fails.
+    $content = $null
+    $retryUntil = $null
+    $retries = 0
+    while ($true) {
+        if ($content) { $content.Dispose() }
+        $whole = New-Object Drawing.Bitmap ($window[2] - $window[0]), ($window[3] - $window[1])
+        $g = [Drawing.Graphics]::FromImage($whole)
+        $dc = $g.GetHdc()
+        # 2 is PW_RENDERFULLCONTENT, which includes the composition layers this app is drawn with.
+        $drawn = [StxCaptureWindow.Native]::PrintWindow($h, $dc, 2)
+        $g.ReleaseHdc($dc)
+        $g.Dispose()
+        if (-not $drawn) { $whole.Dispose(); throw "Window would not draw itself for gallery '$Name'" }
+        $content = $whole.Clone($area, $whole.PixelFormat)
+        $whole.Dispose()
+        if ($null -eq $retryUntil) { $retryUntil = (Get-Date).AddSeconds(5) }
+        if (-not (Test-PureBlack $content) -or (Get-Date) -ge $retryUntil) { break }
+        $retries++
+        Start-Sleep -Milliseconds 100
+    }
     New-Item -ItemType Directory -Force (Split-Path $Out -Parent) | Out-Null
     $content.Save($Out)
     $content.Dispose()
-    $whole.Dispose()
-    "captured $Name $Mode $($client[2])x$($client[3]) -> $Out"
+    "captured $Name $Mode $($client[2])x$($client[3]) -> $Out$(if ($retries) { " (printed $($retries + 1) times; the first prints were pure black)" })"
 }
 finally {
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue

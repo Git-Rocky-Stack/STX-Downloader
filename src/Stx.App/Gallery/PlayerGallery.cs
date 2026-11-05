@@ -47,19 +47,20 @@ internal static class PlayerGallery
         panel.FullScreenChanged += (_, on) => { if (!options.Hold) window.AppWindow.SetPresenter(on ? AppWindowPresenterKind.FullScreen : AppWindowPresenterKind.Default); };
         window.Closed += (_, _) => player.Dispose();
 
-        // --hold pauses once the first picture is on screen (or, for sound only, once it is playing), so captures match.
+        // --hold opens the file paused at its start and steps one frame, so every capture shows the same first picture.
         if (options.Hold)
         {
+            engine.StartPaused = true;
             var hold = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
             hold.Tick += (_, _) =>
             {
-                if (!player.IsPlaying || (engine.HasVideo && engine.Decoded.Shown < 1)) return;
+                if (engine.State != PlaybackState.Paused) return;
                 hold.Stop();
-                player.PlayPauseCommand.Execute(null);
-                player.SeekCommand.Execute(0.0);
+                engine.Player?.NextFrame();
             };
             hold.Start();
         }
+
         panel.Loaded += (_, _) =>
         {
             player.Volume = 20;

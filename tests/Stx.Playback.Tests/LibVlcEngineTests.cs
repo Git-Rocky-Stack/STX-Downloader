@@ -120,6 +120,18 @@ public class LibVlcEngineTests
     }
 
     [Fact]
+    // LibVLC 3.0.24's start-paused stops before the first picture is decoded; the gallery steps one frame from there.
+    public void Start_paused_opens_and_waits_at_the_start()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true) { StartPaused = true };
+        engine.Open(Fixture.File("moving.mp4"));
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Paused), $"state {engine.State}");
+        Thread.Sleep(1000);
+        Assert.Equal(PlaybackState.Paused, engine.State);
+        Assert.True(engine.Position < TimeSpan.FromMilliseconds(100), $"position {engine.Position}");
+    }
+
+    [Fact]
     public void Open_without_a_surface_waits_for_one()
     {
         using var engine = new LibVlcEngine(Fixture.Profile);

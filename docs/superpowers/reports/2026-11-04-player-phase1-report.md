@@ -31,7 +31,7 @@ Every number below was measured on the reference machine: i5-8350U (8 logical co
 | F4 | SharpDX has been unmaintained since 2019 | Stated in `docs/THIRD_PARTY.md` | n/a (documentation) |
 | F5 | WASAPI refused the format at every start | Root cause: Windows refuses a **one-channel** shared-mode stream. Mono now goes to WASAPI in stereo; surround is untouched | `Mono_audio_plays_through_wasapi_in_stereo`, `Surround_is_not_downmixed` |
 | F6 | "Failed to set on top" | Root cause in VLC 3.0: `display.c:1171-1173` and `win32/common.c:697-699`. It's logged once for every windowless output, and no option avoids it. It's classified as harmless | `The_video_output_logs_no_errors` |
-| F7 | Screws and border in full screen | `Faceplate.Bare` | Baseline `player-full-dark`, waiting for approval |
+| F7 | Screws and border in full screen | `Faceplate.Bare` | Baseline `player-full-dark`, approved by Rocky |
 | N1 | No real click had been made | A real click on PAUSE over the picture in full screen. The window is made topmost first, and the test checks the point is STX's own before clicking | `A_real_click_on_a_pad_over_the_video_lands` |
 | N2 | Compositor drops weren't measured | 4K60 HEVC full screen for 60 s: LibVLC's lost pictures and DWM's dropped plus missed frames are each under 1% | `Full_screen_4K60_loses_under_1_percent` |
 | N3 | Only synthetic 8-bit SDR had been played | The corpus has HEVC Main10, HDR10, AV1 and VP9 | `Real_world_profiles_are_present`, `Every_corpus_file_plays` |
@@ -98,6 +98,26 @@ After the final review's fix pass:
 - Corpus: passed again.
 - Player visual tests and player accessibility scan: 10 of 10.
 
+**Baselines approved and made repeatable.** Rocky approved the seven new images. Two fixes made their comparisons pass every time:
+- **The held frame.**
+  - Before: the player galleries paused after the first picture and jumped back to the start. That landed on a different frame each run.
+  - Now: they open the file paused at its start and step one frame, so every capture is the first frame (`src/Stx.App/Gallery/PlayerGallery.cs:53`, `src/Stx.Playback/LibVlcEngine.cs:53`).
+  - Rocky re-approved `player-light` and `player-full-dark`, which had shown a later frame.
+- **Black captures.**
+  - The problem: a window that hasn't drawn a frame yet captures as pure black. This hit 3 of 15 console captures, even after the 3-second wait.
+  - The fix: `tools/Capture-Gallery.ps1` captures again while the picture is pure black, for up to 5 seconds. A window that really draws black still fails its comparison.
+  - The test: `A_capture_is_never_a_window_that_has_not_drawn_yet` (`tests/Stx.VisualTests/BaselineTests.cs`).
+
+The suites, run again on 2026-11-04 after these fixes:
+
+```
+Visual: Passed!  - Failed:     0, Passed:   113
+Playback: Passed!  - Failed:     0, Passed:    33
+App: Passed!  - Failed:     0, Passed:   204   (Look 177, Art 69, Core 268, Data 30, Tools 190, Audio 68, Bridge 56: all passed, 0 failed)
+Extension: pass 57 fail 0
+App build: 0 Warning(s) 0 Error(s)
+```
+
 Every test added in Phase 1 was break-checked: each was made to fail by breaking the code it covers, then the code was restored. The breaks and results are in the plan's ledger.
 
 ## Final review: a self-review
@@ -109,10 +129,6 @@ Rocky asked for no subagents, so the whole-branch review is a self-review by the
 
 ## Not done, and why
 
-- **Screenshot baselines wait for Rocky's approval** (plan Step 5.4 and 7.4). Candidates:
-  - `player-dark`, `player-light`, `player-audio-dark`, `player-audio-light`, `player-full-dark`;
-  - updated `settings-dark` and `settings-light`.
-  The two `settings` baseline tests fail until the new images are approved.
 - **Installer size.** The SoundFont is about 112 MB of the 195 MB installer. A smaller SoundFont would cut that, at some cost in sound quality, but STX hasn't tested whether its FluidSynth build reads the compressed SF3 format.
 - **Code signing** comes after the final phase (Rocky). The README says the setup and app files are signed through Azure Artifact Signing. `tools/Publish.ps1` can sign (`-Sign`), but this build was made without it, and nothing here shows a signed release: UNVERIFIED.
 - **The installer itself** was built but not installed and uninstalled on a clean machine.
