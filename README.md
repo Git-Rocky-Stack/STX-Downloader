@@ -85,7 +85,7 @@ Downloads go to your Videos folder unless you change it in Settings. If OneDrive
 
 ```
 dotnet build src/Stx.App -c Release -p:Platform=x64
-dotnet test tests/Stx.Core.Tests
+dotnet test --project tests/Stx.Core.Tests
 node --test "extension/test/*.test.js"
 tools\Publish.ps1        # add -Sign to sign, with an az login that may use the Strategia-X signing account
 ```

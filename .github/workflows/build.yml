@@ -32,7 +32,7 @@ jobs:
         shell: pwsh
         run: |
           foreach ($project in 'Look', 'Art', 'Core', 'Data', 'Tools', 'Audio', 'Bridge', 'App', 'Playback') {
-            dotnet test "tests/Stx.$project.Tests" -c Release -p:Platform=x64 --nologo --filter "Category!=Device&Category!=Corpus"
+            dotnet test --project "tests/Stx.$project.Tests" -c Release -p:Platform=x64 --filter-not-trait "Category=Device" --filter-not-trait "Category=Corpus"
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
           }
       - name: Test extension

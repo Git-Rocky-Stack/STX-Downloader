@@ -136,7 +136,7 @@ public class FileAssociationTests
     public void Default_apps_opens_the_right_page(int build, string link) => Assert.Equal(link, FileAssociations.DefaultAppsLink(build));
 
     // Phase 3: the installer registers STX for every format the corpus proves it plays. One plan, two writers.
-    // To make the file again: STX_WRITE_ASSOCIATIONS=1 dotnet test tests/Stx.Core.Tests --filter The_installer_registers_exactly_the_plan
+    // To make the file again: STX_WRITE_ASSOCIATIONS=1 dotnet test --project tests/Stx.Core.Tests --filter-method *The_installer_registers_exactly_the_plan
     [Fact]
     public void The_installer_registers_exactly_the_plan()
     {
