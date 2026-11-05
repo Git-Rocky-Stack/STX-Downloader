@@ -1,0 +1,16 @@
+<SAMI>
+<HEAD>
+<TITLE>STX corpus</TITLE>
+<STYLE TYPE="text/css">
+<!--
+P { font-family: Arial; color: white; }
+.ENCC { Name: English; lang: en-US; }
+-->
+</STYLE>
+</HEAD>
+<BODY>
+<SYNC Start=200><P Class=ENCC>STX corpus: SAMI line one
+<SYNC Start=2600><P Class=ENCC>STX corpus: SAMI line two
+<SYNC Start=4800><P Class=ENCC>&nbsp;
+</BODY>
+</SAMI>

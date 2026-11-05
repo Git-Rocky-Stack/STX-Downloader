@@ -1,0 +1,390 @@
+{
+  "source": "https://www.videolan.org/vlc/features.html",
+  "read": "2026-11-04",
+  "libvlc": "3.0.24",
+  "note": "Transcribed from the page's 'Input Formats' and 'Plays all formats' lists (video codecs, audio codecs, subtitles, tags). Grouped items are split where the page lists separate formats (MPEG ES/PS/TS/PVA/MP3; OGG/OGM/Annodex; the six text subtitle formats). 'Input Media' (network, discs, DVB, capture) belongs to Phase 2. The last group is not on VideoLAN's page: it is STX's own check of modern profiles. Two names occur twice on the page and are told apart here: the input format FLAC is 'FLAC (file)' and the OGM subtitle format is 'OGM (subtitles)'.",
+  "features": [
+    {
+      "name": "MPEG ES",
+      "group": "input format"
+    },
+    {
+      "name": "MPEG PS",
+      "group": "input format"
+    },
+    {
+      "name": "MPEG TS",
+      "group": "input format"
+    },
+    {
+      "name": "PVA",
+      "group": "input format"
+    },
+    {
+      "name": "MP3",
+      "group": "input format"
+    },
+    {
+      "name": "AVI",
+      "group": "input format"
+    },
+    {
+      "name": "ASF / WMV / WMA",
+      "group": "input format"
+    },
+    {
+      "name": "MP4 / MOV / 3GP",
+      "group": "input format"
+    },
+    {
+      "name": "OGG",
+      "group": "input format"
+    },
+    {
+      "name": "OGM",
+      "group": "input format"
+    },
+    {
+      "name": "Annodex",
+      "group": "input format"
+    },
+    {
+      "name": "Matroska (MKV)",
+      "group": "input format"
+    },
+    {
+      "name": "Real",
+      "group": "input format"
+    },
+    {
+      "name": "WAV",
+      "group": "input format"
+    },
+    {
+      "name": "WAV (DTS)",
+      "group": "input format"
+    },
+    {
+      "name": "Raw DTS",
+      "group": "input format"
+    },
+    {
+      "name": "Raw AAC",
+      "group": "input format"
+    },
+    {
+      "name": "Raw AC3/A52",
+      "group": "input format"
+    },
+    {
+      "name": "Raw DV",
+      "group": "input format"
+    },
+    {
+      "name": "FLAC (file)",
+      "group": "input format"
+    },
+    {
+      "name": "FLV (Flash)",
+      "group": "input format"
+    },
+    {
+      "name": "MXF",
+      "group": "input format"
+    },
+    {
+      "name": "Nut",
+      "group": "input format"
+    },
+    {
+      "name": "Standard MIDI / SMF",
+      "group": "input format"
+    },
+    {
+      "name": "Creative Voice",
+      "group": "input format"
+    },
+    {
+      "name": "MPEG-1/2",
+      "group": "video codec"
+    },
+    {
+      "name": "DivX (1/2/3/4/5/6)",
+      "group": "video codec"
+    },
+    {
+      "name": "MPEG-4 ASP",
+      "group": "video codec"
+    },
+    {
+      "name": "XviD",
+      "group": "video codec"
+    },
+    {
+      "name": "3ivX D4",
+      "group": "video codec"
+    },
+    {
+      "name": "H.261",
+      "group": "video codec"
+    },
+    {
+      "name": "H.263 / H.263i",
+      "group": "video codec"
+    },
+    {
+      "name": "H.264 / MPEG-4 AVC",
+      "group": "video codec"
+    },
+    {
+      "name": "Cinepak",
+      "group": "video codec"
+    },
+    {
+      "name": "Theora",
+      "group": "video codec"
+    },
+    {
+      "name": "Dirac / VC-2",
+      "group": "video codec"
+    },
+    {
+      "name": "MJPEG (A/B)",
+      "group": "video codec"
+    },
+    {
+      "name": "WMV 1/2",
+      "group": "video codec"
+    },
+    {
+      "name": "WMV 3 / WMV-9 / VC-1",
+      "group": "video codec"
+    },
+    {
+      "name": "Sorenson 1/3",
+      "group": "video codec"
+    },
+    {
+      "name": "DV",
+      "group": "video codec"
+    },
+    {
+      "name": "On2 VP3/VP5/VP6",
+      "group": "video codec"
+    },
+    {
+      "name": "Indeo Video v3 (IV32)",
+      "group": "video codec"
+    },
+    {
+      "name": "Real Video (1/2/3/4)",
+      "group": "video codec"
+    },
+    {
+      "name": "MPEG Layer 1/2",
+      "group": "audio codec"
+    },
+    {
+      "name": "MP3 - MPEG Layer 3",
+      "group": "audio codec"
+    },
+    {
+      "name": "AAC - MPEG-4 part3",
+      "group": "audio codec"
+    },
+    {
+      "name": "Vorbis",
+      "group": "audio codec"
+    },
+    {
+      "name": "AC3 - A/52",
+      "group": "audio codec"
+    },
+    {
+      "name": "E-AC-3",
+      "group": "audio codec"
+    },
+    {
+      "name": "MLP / TrueHD",
+      "group": "audio codec"
+    },
+    {
+      "name": "DTS",
+      "group": "audio codec"
+    },
+    {
+      "name": "WMA 1/2",
+      "group": "audio codec"
+    },
+    {
+      "name": "WMA 3",
+      "group": "audio codec"
+    },
+    {
+      "name": "FLAC",
+      "group": "audio codec"
+    },
+    {
+      "name": "ALAC",
+      "group": "audio codec"
+    },
+    {
+      "name": "Speex",
+      "group": "audio codec"
+    },
+    {
+      "name": "Musepack / MPC",
+      "group": "audio codec"
+    },
+    {
+      "name": "ATRAC 3",
+      "group": "audio codec"
+    },
+    {
+      "name": "Wavpack",
+      "group": "audio codec"
+    },
+    {
+      "name": "Mod",
+      "group": "audio codec"
+    },
+    {
+      "name": "TrueAudio",
+      "group": "audio codec"
+    },
+    {
+      "name": "APE",
+      "group": "audio codec"
+    },
+    {
+      "name": "Real Audio",
+      "group": "audio codec"
+    },
+    {
+      "name": "Alaw/µlaw",
+      "group": "audio codec"
+    },
+    {
+      "name": "AMR (3GPP)",
+      "group": "audio codec"
+    },
+    {
+      "name": "MIDI",
+      "group": "audio codec"
+    },
+    {
+      "name": "LPCM",
+      "group": "audio codec"
+    },
+    {
+      "name": "ADPCM",
+      "group": "audio codec"
+    },
+    {
+      "name": "QCELP",
+      "group": "audio codec"
+    },
+    {
+      "name": "DV Audio",
+      "group": "audio codec"
+    },
+    {
+      "name": "QDM2/QDMC",
+      "group": "audio codec"
+    },
+    {
+      "name": "MACE",
+      "group": "audio codec"
+    },
+    {
+      "name": "DVD",
+      "group": "subtitle"
+    },
+    {
+      "name": "MicroDVD",
+      "group": "subtitle"
+    },
+    {
+      "name": "SubRIP",
+      "group": "subtitle"
+    },
+    {
+      "name": "SubViewer",
+      "group": "subtitle"
+    },
+    {
+      "name": "SSA1-5",
+      "group": "subtitle"
+    },
+    {
+      "name": "SAMI",
+      "group": "subtitle"
+    },
+    {
+      "name": "VPlayer",
+      "group": "subtitle"
+    },
+    {
+      "name": "Closed captions",
+      "group": "subtitle"
+    },
+    {
+      "name": "Vobsub",
+      "group": "subtitle"
+    },
+    {
+      "name": "Universal Subtitle Format (USF)",
+      "group": "subtitle"
+    },
+    {
+      "name": "SVCD / CVD",
+      "group": "subtitle",
+      "untestable": "No public sample with SVCD or CVD subtitles was found (searched samples.ffmpeg.org allsamples.txt and fate-suite.ffmpeg.org, 2026-11-04). The one SVCD image there plays but has no subtitle stream. LibVLC 3.0.24 ships the decoders (codec/libsvcdsub_plugin.dll, codec/libcvdsub_plugin.dll)."
+    },
+    {
+      "name": "DVB",
+      "group": "subtitle"
+    },
+    {
+      "name": "OGM (subtitles)",
+      "group": "subtitle"
+    },
+    {
+      "name": "CMML",
+      "group": "subtitle",
+      "untestable": "LibVLC 3.0.24 ships no CMML decoder (plugins/codec has no CMML module; checked 2026-11-04), so neither VLC 3.0.24 nor STX shows CMML; VideoLAN's page still lists it. The Ogg Skeleton + CMML sample still plays as Ogg/Theora (entry skeleton-cmml.ogv)."
+    },
+    {
+      "name": "Kate",
+      "group": "subtitle"
+    },
+    {
+      "name": "ID3 tags",
+      "group": "tags"
+    },
+    {
+      "name": "APEv2",
+      "group": "tags"
+    },
+    {
+      "name": "Vorbis comment",
+      "group": "tags"
+    },
+    {
+      "name": "HEVC Main10",
+      "group": "real-world profile (STX addition, not on VideoLAN's page)"
+    },
+    {
+      "name": "HDR10 (PQ, BT.2020)",
+      "group": "real-world profile (STX addition, not on VideoLAN's page)"
+    },
+    {
+      "name": "AV1",
+      "group": "real-world profile (STX addition, not on VideoLAN's page)"
+    },
+    {
+      "name": "VP9",
+      "group": "real-world profile (STX addition, not on VideoLAN's page)"
+    }
+  ]
+}
