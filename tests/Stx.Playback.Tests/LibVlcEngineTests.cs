@@ -50,6 +50,23 @@ public class LibVlcEngineTests
         Assert.Null(engine.HandedToLibVlc);
     }
 
+    // Phase 6, done when: SHARPEN visibly applies. VLC's own log confirms its sharpen filter is on the picture; the
+    // screenshot comparison of the effect is a local gate (PlayerPlaybackTests).
+    [Fact]
+    public void Sharpen_loads_vlcs_filter_and_a_live_change_carries_on_where_it_was()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(Fixture.File("tiny.mp4"));
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.6)), $"state {engine.State}");
+        Assert.Null(engine.EnhanceSeen);
+
+        var before = engine.Position;
+        engine.Enhance = EnhanceLevel.Sharpen;
+        Assert.True(Fixture.Within(Five, () => engine.EnhanceSeen == EnhanceLevel.Sharpen), $"seen {engine.EnhanceSeen}, errors {string.Join("; ", engine.LoggedErrors)}");
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position >= before - TimeSpan.FromSeconds(0.3)),
+            $"state {engine.State}, position {engine.Position}, before {before}");
+    }
+
     [Fact]
     public void Reports_audio_only()
     {

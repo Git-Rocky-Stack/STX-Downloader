@@ -81,6 +81,8 @@ public static class GuideContent
                 "PERFORMANCE in Settings sets how hard playback may work. AUTO picks from your PC.",
                 // LibVlcEngine.cs DiracRefused and Inspect; docs/PLAYBACK.md
                 "Dirac and VC-2 video crash VLC's engine, so STX refuses them and shows DIRAC VIDEO CAN'T BE PLAYED SAFELY instead.",
+                // PlayerPanel.cs EnhanceDial, Enhance.cs Status, LibVlcEngine.cs EnhanceSeen
+                "The ENHANCE knob sharpens the picture, or upscales it on a GPU with super resolution. It changes only what's on screen, never the file. Under it, the Player says what's really running, or why not: a GPU without super resolution says UPSCALE UNAVAILABLE.",
                 // SourcePanel.cs PLAY STREAM, Composition.cs PlayStreamAsync, StreamOpener.cs
                 "PLAY STREAM plays the address in the Source box: a stream, or an internet radio station or its playlist. A web page goes to ANALYZE instead. UDP and RTP need a listening port, so STX refuses them.",
                 // SourcePanel.cs PLAY DISC, Composition.cs PlayDisc, DiscCheck.cs

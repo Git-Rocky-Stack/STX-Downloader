@@ -44,7 +44,8 @@ public sealed partial class PlayerPanel : ContentControl
     Rotary? _audioPicker, _subtitlePicker, _chapterPicker;
     bool _wasFullScreen;
 
-    public PlayerPanel(PlayerViewModel player, LibVlcEngine engine)
+    /// <param name="enhance">The ENHANCE knob and its readout (Phase 6). The screenshot galleries leave it out.</param>
+    public PlayerPanel(PlayerViewModel player, LibVlcEngine engine, EnhanceViewModel? enhance = null)
     {
         _player = player;
         _transport = [_previous, _playPause, _next, _stop, _full];
@@ -93,6 +94,7 @@ public sealed partial class PlayerPanel : ContentControl
         _strip.Children.Add(_time);
         _strip.Children.Add(_volumeDial);
         _strip.Children.Add(_pickers);
+        if (enhance is not null) _pickers.Children.Add(EnhanceDial(enhance));
         Layout(fullScreen: false);
 
         _stage.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -151,6 +153,20 @@ public sealed partial class PlayerPanel : ContentControl
         _subtitlePicker = Picker(_subtitlePicker, "Subtitles", _player.SubtitleTracks, _player.SelectSubtitle);
         _chapterPicker = Picker(_chapterPicker, "Chapter", _player.Chapters, _player.SelectChapter);
         if (_player.IsFullScreen != _wasFullScreen) SetFullScreen(_player.IsFullScreen);
+    }
+
+    // ENHANCE: the knob, and under it what's actually on the picture, as VLC confirmed it, or why not.
+    static StackPanel EnhanceDial(EnhanceViewModel enhance)
+    {
+        var knob = new Rotary { Label = "Enhance", Items = EnhanceViewModel.Labels, SelectedIndex = (int)enhance.Wanted };
+        knob.SelectionChanged += (_, index) => { if (index >= 0) enhance.Wanted = (EnhanceLevel)index; };
+        var status = new GlowText { Tone = DisplayTone.Cyan, Dimmed = true, TextSize = 12, Text = enhance.Status };
+        AutomationProperties.SetName(status, "Enhance status");
+        enhance.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EnhanceViewModel.Status)) status.Text = enhance.Status; };
+        var dial = new StackPanel { Spacing = 4 };
+        dial.Children.Add(knob.Captioned());
+        dial.Children.Add(status);
+        return dial;
     }
 
     // A knob appears only when the file offers more than one choice.

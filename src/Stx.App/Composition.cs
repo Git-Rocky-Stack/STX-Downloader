@@ -70,6 +70,10 @@ public sealed class Composition : IDisposable
         PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect())) { Passthrough = Settings.Current.BitPerfect };
         Player = new PlayerViewModel(new RoutingEngine(PlayerEngine, () => Settings.Current.BitPerfect, () => Tools.Paths.Ffmpeg, () => Tools.FfprobePath), OnUi);
         Opened = new OpenedFiles(catalog, Library);
+        // ENHANCE: set on the engine before its swap chain arrives, so the first LibVLC already has it.
+        Enhance = new EnhanceViewModel(Settings, () => PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect()), HardwareProbe.Gpu(),
+            level => PlayerEngine.Enhance = level, () => PlayerEngine.EnhanceSeen);
+        Player.PropertyChanged += (_, _) => Enhance.Refresh();
         _streams = new StreamOpener(_http);
         // The watched folders. The downloads folder is left to the queue, which records each download itself.
         _watcher = new CollectionWatcher(catalog, path => FolderScan.IsUnder(path, Settings.Current.OutputFolder));
@@ -117,6 +121,7 @@ public sealed class Composition : IDisposable
     /// <summary>The engine the PLAYER plate draws from. Its profile follows the PERFORMANCE setting from the next file on.</summary>
     public LibVlcEngine PlayerEngine { get; }
     public OpenedFiles Opened { get; }
+    public EnhanceViewModel Enhance { get; }
     public SettingsViewModel Settings { get; }
     public FirstRunViewModel FirstRun { get; }
     /// <summary>STX as the default player: asked once at first run, and a pad and LED in Settings.</summary>
@@ -346,6 +351,8 @@ public sealed class Composition : IDisposable
         Engine.Tick();
         // PERFORMANCE applies from the next file played; nothing is rebuilt and nothing playing is interrupted.
         PlayerEngine.Profile = PerformanceProfile.For(settings.Performance, HardwareProbe.Detect());
+        // PERFORMANCE sets ENHANCE's ceiling, so a change there can change what runs.
+        Enhance.Reapply();
     }
 
     void UpdateRetryTimer()

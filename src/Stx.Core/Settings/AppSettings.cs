@@ -30,6 +30,8 @@ public sealed record AppSettings
     public bool GuideShown { get; init; }
     /// <summary>How hard playback may work. Auto picks from the PC's hardware.</summary>
     public PlaybackPerformance Performance { get; init; } = PlaybackPerformance.Auto;
+    /// <summary>ENHANCE: OFF, SHARPEN or UPSCALE, for the picture on screen only.</summary>
+    public EnhanceLevel Enhance { get; init; } = EnhanceLevel.Off;
     /// <summary>BIT-PERFECT: lossless music holds the sound device exclusively at the file's own format, and films pass
     /// their compressed soundtracks to the receiver. Off by default, because while it's on other apps can't make sound.</summary>
     public bool BitPerfect { get; init; }
@@ -54,6 +56,7 @@ public sealed record AppSettings
             OutputFolder = string.IsNullOrWhiteSpace(OutputFolder) ? defaults.OutputFolder : OutputFolder,
             FilenameTemplate = string.IsNullOrWhiteSpace(FilenameTemplate) ? defaults.FilenameTemplate : FilenameTemplate,
             Performance = Enum.IsDefined(Performance) ? Performance : PlaybackPerformance.Auto,
+            Enhance = Enum.IsDefined(Enhance) ? Enhance : EnhanceLevel.Off,
             WatchedFolders = CleanFolders(WatchedFolders),
         };
     }

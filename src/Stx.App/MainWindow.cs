@@ -55,7 +55,7 @@ public sealed partial class MainWindow : Window
         var left = new StackPanel { Spacing = 8 };
         left.Children.Add(new QueuePanel(_app.Queue));
         left.Children.Add(new LibraryPanel(_app.Library, _app.Select));
-        _player = new PlayerPanel(_app.Player, _app.PlayerEngine);
+        _player = new PlayerPanel(_app.Player, _app.PlayerEngine, _app.Enhance);
         var right = new StackPanel { Spacing = 8 };
         right.Children.Add(_player);
         right.Children.Add(truth);
