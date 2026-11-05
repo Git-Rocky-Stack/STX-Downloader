@@ -11,6 +11,8 @@ public interface IPlaybackEngine : IDisposable
     TimeSpan Position { get; }
     TimeSpan Length { get; }
     bool HasVideo { get; }
+
+    /// <summary>A plain message for the plate when the engine refuses or fails a file, or null to use the console's own.</summary>
     string? Error { get; }
 
     /// <summary>0 to 100.</summary>

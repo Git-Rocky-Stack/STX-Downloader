@@ -31,6 +31,16 @@ public static class ScreenshotDiff
         return new DiffResult(ratio <= MaxChangedRatio, ratio);
     }
 
+    /// <summary>True when every pixel is pure black: what PrintWindow returns for a window that hasn't drawn yet. Neither mode's background is pure black.</summary>
+    public static bool IsBlank(string png)
+    {
+        using var bmp = new Bitmap(png);
+        var p = Read(bmp);
+        for (int i = 0; i < p.Length; i += 4)
+            if (p[i] != 0 || p[i + 1] != 0 || p[i + 2] != 0) return false;
+        return true;
+    }
+
     static byte[] Read(Bitmap bmp)
     {
         var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);

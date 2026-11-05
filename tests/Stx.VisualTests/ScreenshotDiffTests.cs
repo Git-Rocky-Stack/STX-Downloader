@@ -19,6 +19,25 @@ public sealed class ScreenshotDiffTests : IDisposable
     }
 
     [Fact]
+    public void Pure_black_is_blank()
+    {
+        Assert.True(ScreenshotDiff.IsBlank(Png("black", b => { using var g = Graphics.FromImage(b); g.Clear(Color.Black); })));
+    }
+
+    [Theory]
+    [InlineData(1, 0, 0)]
+    [InlineData(0, 1, 0)]
+    [InlineData(0, 0, 1)]
+    public void One_lit_pixel_in_any_channel_is_not_blank(int r, int g, int b)
+    {
+        Assert.False(ScreenshotDiff.IsBlank(Png($"lit{r}{g}{b}", bmp =>
+        {
+            using (var gfx = Graphics.FromImage(bmp)) gfx.Clear(Color.Black);
+            bmp.SetPixel(99, 99, Color.FromArgb(255, r, g, b));
+        })));
+    }
+
+    [Fact]
     public void Identical_images_pass()
     {
         var r = ScreenshotDiff.Compare(Png("a", _ => { }), Png("b", _ => { }));

@@ -5,8 +5,8 @@ using MediaTrack = Stx.Core.Playback.MediaTrack;
 
 namespace Stx.Playback;
 
-/// <summary>Pictures and audio blocks LibVLC has decoded for the open file.</summary>
-public readonly record struct Decoded(int Pictures, int AudioBlocks);
+/// <summary>LibVLC's counts for the open file: pictures and audio blocks decoded, pictures shown, and pictures lost for being late.</summary>
+public readonly record struct Decoded(int Pictures, int AudioBlocks, int Shown = 0, int Lost = 0);
 
 /// <summary>
 /// The player on VLC's engine. A headless engine starts LibVLC at once with dummy outputs. An engine with a
@@ -49,6 +49,9 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (headless) Start(null);
     }
 
+    /// <summary>Opens files paused at their start (LibVLC's start-paused). No picture is drawn until the player steps a frame; the screenshot galleries do that so every capture shows the same first frame.</summary>
+    public bool StartPaused { get; set; }
+
     /// <summary>The PERFORMANCE profile. A change applies from the next <see cref="Open"/>.</summary>
     public PerformanceProfile Profile { get; set; }
 
@@ -61,10 +64,17 @@ public sealed class LibVlcEngine : IPlaybackEngine
     public event EventHandler? Changed;
 
     /// <summary>"d3d11va" or "software" once a picture is being decoded; empty before that, and for sound only.</summary>
-    public string Decoder => _sawHardwareDecoder ? "d3d11va" : _sawVideoDecoder ? "software" : "";
+    // LibVLC picks a hardware decoder, if any, before the first picture, so a decoded picture with no hardware
+    // decoder named means software.
+    public string Decoder => _sawHardwareDecoder ? "d3d11va" : _sawVideoDecoder && Decoded.Pictures > 0 ? "software" : "";
+
+    // LibVLC 3.0 logs this once for every output it doesn't own a window for: display.c:1171-1173 always asks the new
+    // display for its window state, and win32/common.c:697-699 refuses that for external rendering (a swap chain or
+    // memory). It changes nothing and no option avoids it, so it isn't counted as an error.
+    static readonly string[] Harmless = ["main: Failed to set on top"];
 
     /// <summary>How much of the open file has been decoded so far, from LibVLC's own statistics.</summary>
-    public Decoded Decoded => _media?.Statistics is { } st ? new Decoded(st.DecodedVideo, st.DecodedAudio) : default;
+    public Decoded Decoded => _media?.Statistics is { } st ? new Decoded(st.DecodedVideo, st.DecodedAudio, st.DisplayedPictures, st.LostPictures) : default;
 
     /// <summary>The format the sound leaves in, as LibVLC logs it, for example "'f32l' 48000 Hz 3F2R/LFE". Empty before sound starts.</summary>
     public string AudioOutput { get; private set; } = "";
@@ -137,16 +147,18 @@ public sealed class LibVlcEngine : IPlaybackEngine
     }
 
     // Off the caller's thread: the file's tracks are read first, which takes a moment.
+    Task _opening = Task.CompletedTask;
+
     void Play(string path)
     {
         int generation = _generation;
-        _ = Task.Run(() =>
+        _opening = Task.Run(() =>
         {
             Media media;
             lock (_gate)
             {
                 if (_disposed || _vlc is null || generation != _generation) return;
-                media = new Media(_vlc, path, FromType.FromPath, LibVlcOptions.ForMedia(Profile));
+                media = new Media(_vlc, path, FromType.FromPath, [.. LibVlcOptions.ForMedia(Profile), .. StartPaused ? [":start-paused"] : Array.Empty<string>()]);
             }
             var (mono, dirac) = Inspect(media);
             if (dirac)
@@ -213,6 +225,24 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (_player is { } p && p.IsSeekable) p.Time = (long)Math.Max(0, to.TotalMilliseconds);
     }
 
+    int _hiddenVideoTrack = -1;
+
+    /// <summary>Stops decoding pictures, for a window hidden in the tray. The sound carries on.</summary>
+    public void HideVideo()
+    {
+        if (_player is not { } p || p.VideoTrack < 0) return;
+        _hiddenVideoTrack = p.VideoTrack;
+        p.SetVideoTrack(-1);
+    }
+
+    /// <summary>Starts decoding pictures again after <see cref="HideVideo"/>.</summary>
+    public void ShowVideo()
+    {
+        if (_player is not { } p || _hiddenVideoTrack < 0) return;
+        p.SetVideoTrack(_hiddenVideoTrack);
+        _hiddenVideoTrack = -1;
+    }
+
     public void SelectAudio(int id) => _player?.SetAudioTrack(id);
     public void SelectSubtitle(int id) => _player?.SetSpu(id);
     public void SelectChapter(int id) { if (_player is { } p) p.Chapter = id; }
@@ -258,13 +288,14 @@ public sealed class LibVlcEngine : IPlaybackEngine
 
     void OnLog(object? sender, LogEventArgs e)
     {
-        if (e.Level == LogLevel.Error)
+        if (e.Level == LogLevel.Error && !Harmless.Contains($"{e.Module}: {e.Message}"))
         {
             _errors.Enqueue($"{e.Module}: {e.Message}");
             while (_errors.Count > 200) _errors.TryDequeue(out _);
         }
         if (e.Module == "main")
         {
+            if (e.Message.StartsWith("using video decoder module", StringComparison.Ordinal)) _sawVideoDecoder = true;
             const string Output = "output '", Stream = "using aout stream module \"";
             if (e.Message.StartsWith(Output, StringComparison.Ordinal) && e.Message.IndexOf(" frame=", StringComparison.Ordinal) is > 0 and var end)
                 AudioOutput = e.Message[(Output.Length - 1)..end];
@@ -277,8 +308,6 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (e.Module == "avcodec")
         {
             if (e.Message.Contains("for hardware decoding", StringComparison.Ordinal)) _sawHardwareDecoder = true;
-            // Only the video side of avcodec opens a picture decoder with threads.
-            if (e.Message.StartsWith("allowing", StringComparison.Ordinal) && e.Message.Contains("decoder", StringComparison.Ordinal)) _sawVideoDecoder = true;
         }
     }
 
@@ -290,16 +319,17 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (stream == "directsound" && !_monoRestarted)
         {
             _monoRestarted = true;
-            Task.Run(() => player.SetChannel(AudioOutputChannel.Stereo));
+            Task.Run(() => { lock (_gate) { if (!_disposed && ReferenceEquals(player, _player)) player.SetChannel(AudioOutputChannel.Stereo); } });
             return;
         }
         _monoRecovery = false;
-        Task.Run(() => player.Mute = false);
+        Task.Run(() => { lock (_gate) { if (!_disposed && ReferenceEquals(player, _player)) player.Mute = false; } });
     }
 
+    // LibVLC's own words stay in LoggedErrors; the plate gets the console's plain message.
     void Fail()
     {
-        _error = _errors.LastOrDefault() is { } last ? $"This file could not be played ({last})" : "This file could not be played";
+        _error = null;
         Set(PlaybackState.Failed);
     }
 
@@ -328,6 +358,8 @@ public sealed class LibVlcEngine : IPlaybackEngine
             _media = null;
             _state = PlaybackState.Idle;
         }
+        // An open still reading the file's tracks uses LibVLC; let it see _disposed and finish before LibVLC goes.
+        try { _opening.Wait(TimeSpan.FromSeconds(6)); } catch (AggregateException) { }
         player?.Stop();
         player?.Dispose();
         media?.Dispose();

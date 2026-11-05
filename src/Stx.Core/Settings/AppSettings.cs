@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Stx.Core.Files;
+using Stx.Core.Playback;
 using Stx.Look;
 
 namespace Stx.Core.Settings;
@@ -27,6 +28,8 @@ public sealed record AppSettings
     public string FilenameTemplate { get; init; } = Files.FilenameTemplate.Default;
     /// <summary>The guide opens by itself once, on the first launch.</summary>
     public bool GuideShown { get; init; }
+    /// <summary>How hard playback may work. Auto picks from the PC's hardware.</summary>
+    public PlaybackPerformance Performance { get; init; } = PlaybackPerformance.Auto;
 
     /// <summary>Brings anything out of range back in, so a hand-edited file can't stop the app.</summary>
     public AppSettings Sanitized()
@@ -37,6 +40,7 @@ public sealed record AppSettings
             MaxParallel = Math.Clamp(MaxParallel, 1, MostParallel),
             OutputFolder = string.IsNullOrWhiteSpace(OutputFolder) ? defaults.OutputFolder : OutputFolder,
             FilenameTemplate = string.IsNullOrWhiteSpace(FilenameTemplate) ? defaults.FilenameTemplate : FilenameTemplate,
+            Performance = Enum.IsDefined(Performance) ? Performance : PlaybackPerformance.Auto,
         };
     }
 }

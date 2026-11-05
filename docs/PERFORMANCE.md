@@ -6,6 +6,8 @@ Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, every run exiting 
 
 **Budgets:** with no work running, 0% CPU over 30 seconds (the script fails at 0.05% or more). While animating or running a job, under 2% of total CPU and under 5% GPU. Private memory under 150 MB.
 
+**These budgets apply when nothing is playing.** Playback has no fixed limits: it uses what the file needs, within the PERFORMANCE setting (AUTO, ECO, BALANCED, MAX; `src/Stx.Core/Playback/PerformanceProfile.cs:16`). The PLAYER plate sits in the rack whether or not anything plays, so the idle budgets are measured with it there.
+
 `cpuPct` is a share of all 8 cores. Each row is 10 samples over 30 seconds, after settling. `toolSamples` is how many samples had a tool running under the app.
 
 ## The real app
@@ -29,6 +31,21 @@ The job is a real YouTube webinar. `after job` is measured once it had finished 
 while scrolling: cpu 1.436% of total, gpu3d 3.35% over about 20 s
 after coming to rest: cpu 0.000% of total, gpu3d 0.00% over about 20 s
 ```
+
+## With the player in the rack, nothing playing
+
+Measured 2026-11-04 with `tools/Measure-Budgets.ps1 -Assert`, every run exiting 0, after the PLAYER plate joined the rack. LibVLC is ready on the plate, which costs about 19 MB of private memory over the 79 MB measured on 2026-11-01. It uses no CPU or GPU while nothing plays.
+
+```
+scenario mode   wsMB   privateMB privateMaxMB cpuPct gpu3dPct toolSamples exited
+idle     dark   207.60     97.90        99.00   0.01     0.00 0/10        False
+idle     light  209.40     99.00        99.20   0.01     0.00 0/10        False
+hidden   dark   208.70     98.70        99.00   0.01     0.00 0/10        False
+```
+
+## Playback
+
+Playback has no budget, but it is measured. `tests/Stx.VisualTests/PlayerPlaybackTests.cs` plays a 4K60 HEVC file (39 Mb/s, made by FFmpeg) full screen for 60 seconds on this machine. LibVLC's lost pictures and the compositor's dropped and missed frames each have to stay under 1%. The run on 2026-11-04 passed: 3,891 pictures shown by the end, 12 lost in the whole run (all at the start, outside the measured minute), hardware decoding on the UHD 620 (D3D11VA).
 
 ## Every primitive at once
 

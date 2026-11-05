@@ -1,6 +1,23 @@
-# Third-party tools
+# Third-party software
 
-STX Downloader is MIT licensed. It does not include any of the tools below. When its tool setup runs, it downloads each one directly from the publisher to your own machine (`src/Stx.Tools/ToolManager.cs`), and it runs them as separate programs.
+STX Downloader's own code is MIT licensed. Some third-party software ships inside the app; other tools are downloaded on first run.
+
+## Shipped inside the app
+
+The player uses VLC's engine. The build fetches each item below from its publisher and checks it against the sha256 pinned in `tools/vlc/engine.json`; a download with any other hash is thrown away (`tools/vlc/Get-Engine.ps1`).
+
+| Component | Used for | Source | License |
+|---|---|---|---|
+| VLC 3.0.24 engine (libvlc, libvlccore and plugins) | Playing media | The official [VLC 3.0.24 win64 zip](https://download.videolan.org/vlc/3.0.24/win64/) from VideoLAN | [LGPL-2.1-or-later](https://code.videolan.org/videolan/vlc/-/blob/3.0.x/COPYING.LIB), dynamically linked. Some plugins are GPL, as in VLC itself. |
+| LibVLCSharp and LibVLCSharp.WinUI 3.10.2 | .NET access to LibVLC, and the video view the player draws into | NuGet ([LibVLCSharp](https://www.nuget.org/packages/LibVLCSharp/3.10.2), [LibVLCSharp.WinUI](https://www.nuget.org/packages/LibVLCSharp.WinUI/3.10.2)) | [LGPL-2.1-or-later](https://code.videolan.org/videolan/LibVLCSharp/-/blob/3.x/LICENSE) |
+| SharpDX 4.2.0 | Direct3D access for LibVLCSharp.WinUI's video view | NuGet, as a dependency of LibVLCSharp.WinUI | [MIT](https://github.com/sharpdx/SharpDX/blob/master/LICENSE). SharpDX has been unmaintained since 2019. STX uses it only through LibVLCSharp.WinUI's video view. |
+| FluidR3_GM SoundFont, by Frank Wen | Playing MIDI files | Debian's [fluid-soundfont-gm 3.1-5.3](https://packages.debian.org/source/sid/fluid-soundfont) package | MIT. The copyright file ships beside it (`libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt`). |
+
+Some of VLC's plugins aren't shipped, each with its reason in `tools/vlc/engine.json`: the ones that would open network ports, run site scripts or show VLC's own windows. VLC's two DVD plugins (`libdvdnav`, `libdvdread`) are left out as well, because they have libdvdcss built in, which decrypts CSS-protected DVDs. STX can't decrypt a DVD; the README's no-DRM rule applies to playback too.
+
+## Downloaded on first run
+
+None of these are included in the app. When its tool setup runs, it downloads each one directly from the publisher to your own machine (`src/Stx.Tools/ToolManager.cs`), and it runs them as separate programs.
 
 | Tool | Used for | Source | License |
 |---|---|---|---|
@@ -9,18 +26,6 @@ STX Downloader is MIT licensed. It does not include any of the tools below. When
 | FFmpeg and FFprobe | Merging streams, converting, and measuring audio | [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) release branch 9.0, `win64-gpl` (`src/Stx.Tools/FfmpegSource.cs:9`) | [GPL](https://ffmpeg.org/legal.html), because this build enables GPL components |
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php), under [its own license](https://jrsoftware.org/files/is/license.txt).
-
-## Coming with the media player (in development, not in any release yet)
-
-The player in development (`docs/PLAYBACK.md`) will ship these inside the app. Unlike the tools above, they won't be downloaded on first run. The build fetches them from their publishers and checks each against the sha256 pinned in `tools/vlc/engine.json`.
-
-| Component | Used for | Source | License |
-|---|---|---|---|
-| VLC 3.0.24 engine (libvlc, libvlccore and plugins) | Playing media | The official [VLC 3.0.24 win64 zip](https://download.videolan.org/vlc/3.0.24/win64/) from VideoLAN | [LGPL-2.1-or-later](https://code.videolan.org/videolan/vlc/-/blob/3.0.x/COPYING.LIB), dynamically linked. Some plugins are GPL, as in VLC itself. |
-| LibVLCSharp 3.10.2 | .NET access to LibVLC | [NuGet](https://www.nuget.org/packages/LibVLCSharp/3.10.2) (`src/Stx.Playback/Stx.Playback.csproj`) | [LGPL-2.1-or-later](https://code.videolan.org/videolan/LibVLCSharp/-/blob/3.x/LICENSE) |
-| FluidR3_GM SoundFont, by Frank Wen | Playing MIDI files | Debian's [fluid-soundfont-gm 3.1-5.3](https://packages.debian.org/source/sid/fluid-soundfont) package | MIT. The copyright file ships beside it. |
-
-VLC's two DVD plugins (`libdvdnav`, `libdvdread`) have libdvdcss built in, which decrypts CSS-protected DVDs. STX leaves both plugins out of the engine it ships (`tools/vlc/engine.json`), so it can't decrypt a DVD. The README's no-DRM rule applies to playback too.
 
 ## Why the GPL build of FFmpeg
 

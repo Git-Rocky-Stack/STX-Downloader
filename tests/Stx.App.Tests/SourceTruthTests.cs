@@ -224,11 +224,12 @@ public class LibraryTests
     readonly HandRunner _runner = new();
     readonly ShellSpy _shell = new();
     readonly HashSet<string> _files = new();
+    readonly List<LibraryRowViewModel> _played = new();
 
     LibraryViewModel Library()
     {
         var engine = new QueueEngine(_jobs, _runner, new QueuePolicy(), new SystemClock(), new CaptureVault());
-        return new LibraryViewModel(_catalog, engine, _shell, _files.Contains);
+        return new LibraryViewModel(_catalog, engine, _shell, _files.Contains, _played.Add);
     }
 
     void Add(string title, string path, string format = SourceViewModel.OriginalFormat, bool onDisk = true)
@@ -310,24 +311,36 @@ public class LibraryTests
         Assert.False(row.CanConvert);
     }
 
+    // OPEN plays the file on the PLAYER plate; it never hands the file to another app.
     [Fact]
-    public void Open_and_reveal_go_to_the_file()
+    public void Open_plays_inside_STX_and_never_hands_off()
     {
         Add("Song", @"D:\m\song.mp4");
         var library = Library();
         library.Refresh();
         library.OpenCommand.Execute(library.Rows[0]);
-        library.RevealCommand.Execute(library.Rows[0]);
-        Assert.Equal([@"open:D:\m\song.mp4", @"reveal:D:\m\song.mp4"], _shell.FileActions);
+        Assert.Equal([library.Rows[0]], _played);
+        Assert.Empty(_shell.FileActions);
     }
 
     [Fact]
-    public void A_missing_file_cannot_be_opened()
+    public void Find_file_still_shows_it_in_its_folder()
+    {
+        Add("Song", @"D:\m\song.mp4");
+        var library = Library();
+        library.Refresh();
+        library.RevealCommand.Execute(library.Rows[0]);
+        Assert.Equal([@"reveal:D:\m\song.mp4"], _shell.FileActions);
+    }
+
+    [Fact]
+    public void Open_is_disabled_for_a_missing_file()
     {
         Add("Song", @"D:\moved\song.mp4", onDisk: false);
         var library = Library();
         library.Refresh();
         library.OpenCommand.Execute(library.Rows[0]);
+        Assert.Empty(_played);
         Assert.Empty(_shell.FileActions);
     }
 

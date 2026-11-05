@@ -26,7 +26,7 @@ public class BaselineTests
     public void Every_primitive_has_an_approved_image_in_both_modes()
     {
         string baselines = Path.Combine(Root(), "tests", "baselines");
-        foreach (string gallery in new[] { "faceplate", "display", "led", "bargraph", "sevenseg", "pad", "pushswitch", "rotary", "label", "list", "textbox", "dialog", "states", "all-primitives", "console", "sourcetruth", "library", "settings", "firstrun" })
+        foreach (string gallery in new[] { "faceplate", "display", "led", "bargraph", "sevenseg", "pad", "pushswitch", "rotary", "label", "list", "textbox", "dialog", "states", "all-primitives", "console", "sourcetruth", "library", "settings", "firstrun", "player", "player-audio" })
             foreach (string mode in new[] { "dark", "light" })
                 Assert.True(File.Exists(Path.Combine(baselines, $"{gallery}-{mode}.png")), $"No approved image for {gallery} {mode}");
     }
@@ -51,8 +51,10 @@ public class BaselineTests
         string fresh = Path.Combine(root, "tests", "Stx.VisualTests", "output", $"{gallery}-{mode}.png");
         Directory.CreateDirectory(Path.GetDirectoryName(fresh)!);
 
+        // The player's galleries start VLC's engine and hold on the first picture, which takes longer than a still plate.
+        int settle = gallery.StartsWith("player", StringComparison.Ordinal) ? 6 : 3;
         var capture = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("pwsh",
-            $"-NoProfile -File \"{Path.Combine(root, "tools", "Capture-Gallery.ps1")}\" -Name {gallery} -Mode {mode} -Out \"{fresh}\"")
+            $"-NoProfile -File \"{Path.Combine(root, "tools", "Capture-Gallery.ps1")}\" -Name {gallery} -Mode {mode} -Out \"{fresh}\" -SettleSeconds {settle}")
         { UseShellExecute = false, RedirectStandardOutput = true })!;
         capture.StandardOutput.ReadToEnd();
         capture.WaitForExit();
@@ -60,5 +62,30 @@ public class BaselineTests
 
         var result = ScreenshotDiff.Compare(fresh, Path.Combine(root, "tests", "baselines", $"{gallery}-{mode}.png"));
         Assert.True(result.Pass, $"{gallery} {mode}: {result.ChangedRatio:P2} of pixels changed");
+    }
+
+    // Seen 2026-11-04: PrintWindow answers pure black for a window that hasn't presented a frame, and the content a few
+    // hundred milliseconds later. That happened after the 3 s settle too: 3 of 15 console captures, and 3 baseline failures.
+    // Capturing the moment the window appears makes it happen every time, so that is what this test does.
+    [Fact]
+    public void A_capture_is_never_a_window_that_has_not_drawn_yet()
+    {
+        string root = Root();
+        string dir = Directory.CreateTempSubdirectory("stx-capture").FullName;
+        try
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                string file = Path.Combine(dir, $"console-{i}.png");
+                var capture = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("pwsh",
+                    $"-NoProfile -File \"{Path.Combine(root, "tools", "Capture-Gallery.ps1")}\" -Name console -Mode dark -Out \"{file}\" -SettleSeconds 0")
+                { UseShellExecute = false, RedirectStandardOutput = true })!;
+                capture.StandardOutput.ReadToEnd();
+                capture.WaitForExit();
+                Assert.Equal(0, capture.ExitCode);
+                Assert.False(ScreenshotDiff.IsBlank(file), $"Capture {i + 1} of 3 is pure black");
+            }
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 }

@@ -41,6 +41,11 @@ public sealed partial class SettingsPanel : ContentControl
         parallel.SelectedIndex = settings.MaxParallel - 1;
         parallel.SelectionChanged += (_, index) => settings.MaxParallel = index + 1;
 
+        // How hard playback may work: AUTO picks from the PC, then ECO, BALANCED and MAX.
+        var performance = new Rotary { Label = "Performance", Items = SettingsViewModel.PerformanceLabels };
+        performance.SelectedIndex = (int)settings.Performance;
+        performance.SelectionChanged += (_, index) => settings.Performance = (Stx.Core.Playback.PlaybackPerformance)index;
+
         var folder = new DisplayTextBox { Label = "Output folder", Text = settings.OutputFolder, Tone = DisplayTone.Amber };
         folder.LostFocus += (_, _) => { settings.OutputFolder = folder.Text; folder.Text = settings.OutputFolder; };
         var template = new DisplayTextBox { Label = "Filename template", Text = settings.FilenameTemplate, Tone = DisplayTone.Amber };
@@ -95,7 +100,16 @@ public sealed partial class SettingsPanel : ContentControl
         var rows = new StackPanel { Spacing = 16 };
         rows.Children.Add(switches);
         rows.Children.Add(secondRow);
-        rows.Children.Add(fields);
+        // Playback's knob sits beside the fields, which are about as tall as a knob; the left column holds the download knobs.
+        var fieldsRow = new Grid { ColumnSpacing = 24 };
+        fieldsRow.ColumnDefinitions.Add(new ColumnDefinition());
+        fieldsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var playback = performance.Captioned();
+        playback.VerticalAlignment = VerticalAlignment.Top;
+        Grid.SetColumn(playback, 1);
+        fieldsRow.Children.Add(fields);
+        fieldsRow.Children.Add(playback);
+        rows.Children.Add(fieldsRow);
         Grid.SetColumn(rows, 1);
         top.Children.Add(dials);
         top.Children.Add(rows);

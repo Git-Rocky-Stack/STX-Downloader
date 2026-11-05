@@ -34,7 +34,7 @@ public class LibVlcEngineTests
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("truncated.mp4"));
         Assert.True(Fixture.Within(Five, () => engine.State is PlaybackState.Failed or PlaybackState.Ended), $"state {engine.State}");
-        if (engine.State == PlaybackState.Failed) Assert.False(string.IsNullOrWhiteSpace(engine.Error));
+        if (engine.State == PlaybackState.Failed) Assert.NotEmpty(engine.LoggedErrors);
     }
 
     [Fact]
@@ -78,6 +78,57 @@ public class LibVlcEngineTests
         Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
         Assert.Equal(LibVlcEngine.DiracRefused, engine.Error);
         Assert.Equal(0, engine.Decoded.Pictures);
+    }
+
+    // A window hidden in the tray stops decoding pictures; the sound carries on (Review Focus 5).
+    [Fact]
+    public void Hidden_video_stops_decoding_pictures_but_not_sound()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(Fixture.File("moving.mp4"));
+        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > 10), "no pictures");
+        engine.HideVideo();
+        Thread.Sleep(800);
+        var hidden = engine.Decoded;
+        Thread.Sleep(1500);
+        Assert.Equal(hidden.Pictures, engine.Decoded.Pictures);
+        Assert.True(engine.Decoded.AudioBlocks > hidden.AudioBlocks, "the sound stopped too");
+        engine.ShowVideo();
+        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > hidden.Pictures), "pictures didn't come back");
+    }
+
+    [Fact]
+    public void The_hardware_probe_counts_this_pc_s_cores()
+    {
+        var facts = HardwareProbe.Detect();
+        Assert.Equal(Environment.ProcessorCount, facts.LogicalCores);
+        Assert.False(facts.GpuSuperResolution);
+    }
+
+    // Closing STX just after opening a file: the engine must not free LibVLC while the file's tracks are still being read.
+    [Fact]
+    public void Dispose_right_after_open_is_safe()
+    {
+        for (int i = 0; i < 40; i++)
+        {
+            var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+            engine.Open(Fixture.File(i % 2 == 0 ? "moving.mp4" : "tiny-audio.flac"));
+            Thread.Sleep(i % 8);
+            engine.Dispose();
+            Assert.Equal(PlaybackState.Idle, engine.State);
+        }
+    }
+
+    [Fact]
+    // LibVLC 3.0.24's start-paused stops before the first picture is decoded; the gallery steps one frame from there.
+    public void Start_paused_opens_and_waits_at_the_start()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true) { StartPaused = true };
+        engine.Open(Fixture.File("moving.mp4"));
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Paused), $"state {engine.State}");
+        Thread.Sleep(1000);
+        Assert.Equal(PlaybackState.Paused, engine.State);
+        Assert.True(engine.Position < TimeSpan.FromMilliseconds(100), $"position {engine.Position}");
     }
 
     [Fact]

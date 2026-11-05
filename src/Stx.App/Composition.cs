@@ -6,6 +6,8 @@ using Stx.Audio;
 using Stx.Bridge;
 using Stx.App.Platform;
 using Stx.Core.Files;
+using Stx.Core.Playback;
+using Stx.Playback;
 using Stx.Core.Queue;
 using Stx.Core.Settings;
 using Stx.Data;
@@ -60,7 +62,10 @@ public sealed class Composition : IDisposable
         Queue = new QueueViewModel(Engine, catalog, shell, OnUi);
         SourceTruth = new SourceTruthViewModel(() => LookState.ReduceMotion);
         Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine, () => SourceTruth.SelectedOutput);
-        Library = new LibraryViewModel(catalog, Engine, shell, File.Exists);
+        Library = new LibraryViewModel(catalog, Engine, shell, File.Exists, Play);
+        PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect()));
+        Player = new PlayerViewModel(PlayerEngine, OnUi);
+        Opened = new OpenedFiles(catalog, Library);
 
         FirstRun = new FirstRunViewModel(Tools, Status, () => Settings.Current.ToolUpdates);
         Clipboard = new ClipboardOfferViewModel(() => Settings.Current.ClipboardDetect);
@@ -97,6 +102,10 @@ public sealed class Composition : IDisposable
     public SourceViewModel Source { get; }
     public SourceTruthViewModel SourceTruth { get; }
     public LibraryViewModel Library { get; }
+    public PlayerViewModel Player { get; }
+    /// <summary>The engine the PLAYER plate draws from. Its profile follows the PERFORMANCE setting from the next file on.</summary>
+    public LibVlcEngine PlayerEngine { get; }
+    public OpenedFiles Opened { get; }
     public SettingsViewModel Settings { get; }
     public FirstRunViewModel FirstRun { get; }
     public ClipboardOfferViewModel Clipboard { get; }
@@ -154,6 +163,17 @@ public sealed class Composition : IDisposable
         else if (!row.IsMissing) _ = MeasureAsync(new SavedMedia(row.MediaId, row.FileId, row.Path, row.Title));
         else SourceTruth.Clear();
     }
+
+    /// <summary>Plays a Library row on the PLAYER plate. PREV and NEXT walk the Library in its order.</summary>
+    public void Play(LibraryRowViewModel row)
+    {
+        Select(row);
+        var list = Library.Rows.Where(r => r.CanOpen).Select(r => (r.Path, r.Title)).ToList();
+        Player.Play(row.Path, row.Title, list);
+    }
+
+    /// <summary>A file opened from outside STX joins the Library and plays.</summary>
+    public void OpenFromOutside(string path) => Play(Opened.Adopt(path));
 
     /// <summary>Converts the selected file to the output chosen on the rotary.</summary>
     public void ConvertSelected()
@@ -222,6 +242,8 @@ public sealed class Composition : IDisposable
     {
         _closing.Cancel();
         _bridge?.Dispose();
+        // Stops playback and lets the decoder go before anything else closes.
+        Player.Dispose();
         // Tools end and their credential files go now, not at the next launch. Dispose isn't on a thread the jobs need.
         Engine.StopAllAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         _retryTimer.Stop();
@@ -255,6 +277,8 @@ public sealed class Composition : IDisposable
         Tools.Options = new ToolOptions(settings.ToolUpdates);
         Engine.Policy = new QueuePolicy { MaxParallel = settings.MaxParallel };
         Engine.Tick();
+        // PERFORMANCE applies from the next file played; nothing is rebuilt and nothing playing is interrupted.
+        PlayerEngine.Profile = PerformanceProfile.For(settings.Performance, HardwareProbe.Detect());
     }
 
     void UpdateRetryTimer()

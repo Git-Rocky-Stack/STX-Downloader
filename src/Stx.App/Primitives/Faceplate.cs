@@ -21,6 +21,25 @@ public sealed partial class Faceplate : ContentControl
         Unloaded += (_, _) => LookState.Changed -= Redraw;
     }
 
+    bool _bare;
+
+    /// <summary>
+    /// Full screen only: the plate's metal and screws step aside so a picture can fill the screen edge to edge.
+    /// The content stays where it is; nothing moves to another parent.
+    /// </summary>
+    public bool Bare
+    {
+        get => _bare;
+        set { _bare = value; ShowMetal(); }
+    }
+
+    void ShowMetal()
+    {
+        var shown = _bare ? Visibility.Collapsed : Visibility.Visible;
+        if (_plate is not null) _plate.Visibility = shown;
+        if (_screws is not null) _screws.Visibility = shown;
+    }
+
     /// <summary>Gives this panel's screws their own stable seat angles.</summary>
     public string PanelName { get; set; } = "panel";
 
@@ -29,6 +48,7 @@ public sealed partial class Faceplate : ContentControl
         base.OnApplyTemplate();
         _plate = GetTemplateChild("PART_Plate") as Image;
         _screws = GetTemplateChild("PART_Screws") as Canvas;
+        ShowMetal();
         Redraw();
     }
 

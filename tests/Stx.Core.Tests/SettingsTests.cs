@@ -80,6 +80,16 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void Performance_defaults_to_auto_and_survives_a_bad_value()
+    {
+        Assert.Equal(Stx.Core.Playback.PlaybackPerformance.Auto, new AppSettings().Performance);
+        File.WriteAllText(Path_, """{"Performance":99}""");
+        Assert.Equal(Stx.Core.Playback.PlaybackPerformance.Auto, new SettingsStore(Path_).Load().Performance);
+        File.WriteAllText(Path_, """{"Performance":3}""");
+        Assert.Equal(Stx.Core.Playback.PlaybackPerformance.Max, new SettingsStore(Path_).Load().Performance);
+    }
+
+    [Fact]
     public void A_blank_output_folder_and_template_fall_back()
     {
         File.WriteAllText(Path_, """{"OutputFolder":"  ","FilenameTemplate":""}""");

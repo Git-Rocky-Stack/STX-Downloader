@@ -18,6 +18,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- The VideoView that LibVLC draws into (spike S1). Its LibVLCSharp.dll carries the core API too, with the same
+         identity (3.10.2.0) as the core package Stx.Playback uses, so that package's own copy is left out here. -->
+    <PackageReference Include="LibVLCSharp.WinUI" Version="3.10.2" />
+    <PackageReference Include="LibVLCSharp" Version="3.10.2" ExcludeAssets="compile;runtime" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Stx.Look\Stx.Look.csproj" />
@@ -25,6 +29,7 @@
     <ProjectReference Include="..\Stx.ViewModels\Stx.ViewModels.csproj" />
     <ProjectReference Include="..\Stx.Data\Stx.Data.csproj" />
     <ProjectReference Include="..\Stx.Bridge\Stx.Bridge.csproj" />
+    <ProjectReference Include="..\Stx.Playback\Stx.Playback.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\badge.png" CopyToOutputDirectory="PreserveNewest" />
