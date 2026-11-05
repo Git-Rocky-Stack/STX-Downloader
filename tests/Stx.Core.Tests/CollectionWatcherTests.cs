@@ -188,7 +188,7 @@ public sealed class CollectionWatcherTests : IDisposable
 
     // Done when: a scan of a large folder doesn't block the UI.
     [Fact]
-    public void A_big_first_scan_runs_in_the_background_below_normal_priority()
+    public async Task A_big_first_scan_runs_in_the_background_below_normal_priority()
     {
         for (int n = 0; n < 3000; n++) Make(Path.Combine($"Artist {n / 30}", $"Track {n}.mp3"), 1);
         ThreadPriority? priority = null;
@@ -200,7 +200,7 @@ public sealed class CollectionWatcherTests : IDisposable
         var returned = clock.Elapsed;
 
         Assert.True(returned < TimeSpan.FromMilliseconds(250), $"Watch held its caller for {returned}.");
-        Assert.True(watcher.Scanning.Wait(TimeSpan.FromSeconds(30)));
+        await watcher.Scanning.WaitAsync(TimeSpan.FromSeconds(30));
         Assert.Equal(3000, _catalog.IndexedFiles().Count);
         Assert.Equal(ThreadPriority.BelowNormal, priority);
         Assert.True(_catalog.AddCalls >= 6, "Adds should come in batches, so rows appear as the scan goes.");
@@ -297,12 +297,12 @@ public sealed class CollectionWatcherTests : IDisposable
     }
 
     [Fact]
-    public void A_folder_that_isnt_there_does_not_stop_the_others()
+    public async Task A_folder_that_isnt_there_does_not_stop_the_others()
     {
         Make("a.mp4");
         using var watcher = new CollectionWatcher(_catalog, _ => false, Settle);
         watcher.Watch([Path.Combine(_root, "no such folder"), _root]);
-        Assert.True(watcher.Scanning.Wait(TimeSpan.FromSeconds(10)));
+        await watcher.Scanning.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.Single(_catalog.IndexedFiles());
     }
 }

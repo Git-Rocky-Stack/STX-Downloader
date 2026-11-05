@@ -115,7 +115,7 @@ public sealed class CollectionTests : IDisposable
         Assert.Equal(2, repo.ForgetWatchedUnder(P("Music", "")));
 
         var left = repo.Library().Select(i => i.Files.Single().Path).Order(StringComparer.Ordinal).ToList();
-        Assert.Equal([P("Music", "opened.mp3"), P("Music", "saved.mp3"), P("Music2", "c.mp3")], left);
+        Assert.Equal(new[] { P("Music", "opened.mp3"), P("Music", "saved.mp3"), P("Music2", "c.mp3") }.Order(StringComparer.Ordinal), left);
     }
 
     [Fact]
