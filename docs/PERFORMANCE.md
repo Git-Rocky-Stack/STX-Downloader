@@ -8,6 +8,8 @@ Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, every run exiting 
 
 **These budgets apply when nothing is playing.** Playback has no fixed limits: it uses what the file needs, within the PERFORMANCE setting (AUTO, ECO, BALANCED, MAX; `src/Stx.Core/Playback/PerformanceProfile.cs:16`). The PLAYER plate sits in the rack whether or not anything plays, so the idle budgets are measured with it there.
 
+**Watched folders (Phase 2).** The first scan of Videos and Music is work, like a download: it runs on its own thread below normal priority (`src/Stx.Core/Library/CollectionWatcher.cs:94`), so the idle budget applies once it has finished. Watching costs nothing until a file changes. **Not re-measured:** Phases 2 to 7 were built without a Windows machine, so these numbers predate them. In particular, private memory with a very large collection hasn't been measured: every Library row is held in memory for search, and 50,000 rows may take the app past the 150 MB budget. That needs a run of `tools/Measure-Budgets.ps1` on the reference PC with a large watched folder.
+
 `cpuPct` is a share of all 8 cores. Each row is 10 samples over 30 seconds, after settling. `toolSamples` is how many samples had a tool running under the app.
 
 ## The real app
