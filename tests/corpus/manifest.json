@@ -1,0 +1,1118 @@
+{
+  "entries": [
+    {
+      "file": "mpeg1-es.m1v",
+      "features": [
+        "MPEG ES",
+        "MPEG-1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mpeg1video -f mpeg1video {out}"
+    },
+    {
+      "file": "mpeg2-ps.mpg",
+      "features": [
+        "MPEG PS",
+        "MPEG-1/2",
+        "MPEG Layer 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v mpeg2video -c:a mp2 -f vob {out}"
+    },
+    {
+      "file": "h264-aac.ts",
+      "features": [
+        "MPEG TS",
+        "H.264 / MPEG-4 AVC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -f mpegts {out}"
+    },
+    {
+      "file": "mp3.mp3",
+      "features": [
+        "MP3",
+        "MP3 - MPEG Layer 3"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a libmp3lame {out}"
+    },
+    {
+      "file": "mp2.mp2",
+      "features": [
+        "MPEG Layer 1/2"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a mp2 -f mp2 {out}"
+    },
+    {
+      "file": "divx5.avi",
+      "features": [
+        "AVI",
+        "DivX (1/2/3/4/5/6)",
+        "MPEG-4 ASP"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v mpeg4 -vtag DX50 -c:a libmp3lame {out}"
+    },
+    {
+      "file": "divx3.avi",
+      "features": [
+        "DivX (1/2/3/4/5/6)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v msmpeg4 -vtag DIV3 {out}"
+    },
+    {
+      "file": "msmpeg4v2.avi",
+      "features": [
+        "DivX (1/2/3/4/5/6)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v msmpeg4v2 {out}"
+    },
+    {
+      "file": "xvid.avi",
+      "features": [
+        "XviD",
+        "MPEG-4 ASP"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mpeg4 -vtag XVID {out}"
+    },
+    {
+      "file": "3ivx.mov",
+      "features": [
+        "3ivX D4"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mpeg4 -vtag 3IV2 {out}"
+    },
+    {
+      "file": "wmv2-wma2.wmv",
+      "features": [
+        "ASF / WMV / WMA",
+        "WMV 1/2",
+        "WMA 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v wmv2 -c:a wmav2 {out}"
+    },
+    {
+      "file": "wmv1-wma1.wmv",
+      "features": [
+        "WMV 1/2",
+        "WMA 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v wmv1 -c:a wmav1 {out}"
+    },
+    {
+      "file": "mpeg4-aac.mp4",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "MPEG-4 ASP",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v mpeg4 -c:a aac {out}"
+    },
+    {
+      "file": "h263-amr.3gp",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "H.263 / H.263i",
+        "AMR (3GPP)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=sample_rate=8000 -t 4 -c:v h263 -c:a libopencore_amrnb -ar 8000 -ac 1 -b:a 12.2k {out}"
+    },
+    {
+      "file": "svq1.mov",
+      "features": [
+        "Sorenson 1/3",
+        "MP4 / MOV / 3GP"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v svq1 {out}"
+    },
+    {
+      "file": "theora-vorbis.ogv",
+      "features": [
+        "OGG",
+        "Theora",
+        "Vorbis"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libtheora -c:a libvorbis {out}"
+    },
+    {
+      "file": "speex.spx",
+      "features": [
+        "Speex"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=16000 -t 4 -c:a libspeex -f ogg {out}"
+    },
+    {
+      "file": "h264-ac3.mkv",
+      "features": [
+        "Matroska (MKV)",
+        "H.264 / MPEG-4 AVC",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a ac3 {out}"
+    },
+    {
+      "file": "rv20-ra144.rm",
+      "features": [
+        "Real",
+        "Real Video (1/2/3/4)",
+        "Real Audio"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=sample_rate=8000 -t 4 -c:v rv20 -c:a real_144 -ar 8000 -ac 1 {out}"
+    },
+    {
+      "file": "rv10.rm",
+      "features": [
+        "Real",
+        "Real Video (1/2/3/4)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v rv10 {out}"
+    },
+    {
+      "file": "pcm.wav",
+      "features": [
+        "WAV",
+        "LPCM"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a pcm_s16le {out}"
+    },
+    {
+      "file": "adpcm.wav",
+      "features": [
+        "ADPCM"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a adpcm_ms {out}"
+    },
+    {
+      "file": "alaw.wav",
+      "features": [
+        "Alaw/µlaw"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=8000 -t 4 -c:a pcm_alaw {out}"
+    },
+    {
+      "file": "mulaw.wav",
+      "features": [
+        "Alaw/µlaw"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=8000 -t 4 -c:a pcm_mulaw {out}"
+    },
+    {
+      "file": "raw.dts",
+      "features": [
+        "Raw DTS",
+        "DTS"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -ac 2 -c:a dca -strict -2 -f dts {out}"
+    },
+    {
+      "file": "raw.aac",
+      "features": [
+        "Raw AAC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a aac -f adts {out}"
+    },
+    {
+      "file": "raw.ac3",
+      "features": [
+        "Raw AC3/A52",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a ac3 -f ac3 {out}"
+    },
+    {
+      "file": "raw.eac3",
+      "features": [
+        "E-AC-3"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a eac3 -f eac3 {out}"
+    },
+    {
+      "file": "raw.thd",
+      "features": [
+        "MLP / TrueHD"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -ac 2 -c:a truehd -strict -2 -f truehd {out}"
+    },
+    {
+      "file": "raw.mlp",
+      "features": [
+        "MLP / TrueHD"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -ac 2 -c:a mlp -strict -2 -f mlp {out}"
+    },
+    {
+      "file": "raw.dv",
+      "features": [
+        "Raw DV",
+        "DV",
+        "DV Audio"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=720x480:rate=30000/1001 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v dvvideo -pix_fmt yuv411p -c:a pcm_s16le -ac 2 -f dv {out}"
+    },
+    {
+      "file": "flac.flac",
+      "features": [
+        "FLAC",
+        "FLAC (file)"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a flac {out}"
+    },
+    {
+      "file": "h264-aac.flv",
+      "features": [
+        "FLV (Flash)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}"
+    },
+    {
+      "file": "mpeg2-pcm.mxf",
+      "features": [
+        "MXF",
+        "MPEG-1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=720x576:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a pcm_s16le {out}"
+    },
+    {
+      "file": "mpeg4-vorbis.nut",
+      "features": [
+        "Nut"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v mpeg4 -c:a libvorbis {out}"
+    },
+    {
+      "file": "creative.voc",
+      "features": [
+        "Creative Voice"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=22050 -t 4 -c:a pcm_u8 -f voc {out}"
+    },
+    {
+      "file": "h261.avi",
+      "features": [
+        "H.261"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v h261 {out}"
+    },
+    {
+      "file": "cinepak.avi",
+      "features": [
+        "Cinepak"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v cinepak {out}"
+    },
+    {
+      "file": "vc2.mkv",
+      "features": [
+        "Dirac / VC-2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v vc2 {out}",
+      "expect": "refused",
+      "note": "VLC 3.0.24's engine (the official desktop build too) crashes the process on Dirac / VC-2, so STX refuses it with a plain message (LibVlcEngine.DiracRefused)."
+    },
+    {
+      "file": "mjpeg.avi",
+      "features": [
+        "MJPEG (A/B)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mjpeg -pix_fmt yuvj420p {out}"
+    },
+    {
+      "file": "alac.m4a",
+      "features": [
+        "ALAC"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a alac {out}"
+    },
+    {
+      "file": "wavpack.wv",
+      "features": [
+        "Wavpack"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a wavpack {out}"
+    },
+    {
+      "file": "trueaudio.tta",
+      "features": [
+        "TrueAudio"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a tta {out}"
+    },
+    {
+      "file": "wma2.wma",
+      "features": [
+        "WMA 1/2",
+        "ASF / WMV / WMA"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a wmav2 {out}"
+    },
+    {
+      "file": "lpcm.vob",
+      "features": [
+        "LPCM",
+        "MPEG PS"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a pcm_dvd -ac 2 -f vob {out}"
+    },
+    {
+      "file": "hevc-main10.mkv",
+      "features": [
+        "HEVC Main10"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libx265 -pix_fmt yuv420p10le -profile:v main10 {out}"
+    },
+    {
+      "file": "hevc-hdr10.mkv",
+      "features": [
+        "HDR10 (PQ, BT.2020)",
+        "HEVC Main10"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libx265 -pix_fmt yuv420p10le -profile:v main10 -color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc -x265-params hdr10=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1):max-cll=1000,400 {out}"
+    },
+    {
+      "file": "av1-opus.webm",
+      "features": [
+        "AV1"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=sample_rate=48000 -t 4 -c:v libsvtav1 -c:a libopus {out}"
+    },
+    {
+      "file": "vp9-opus.webm",
+      "features": [
+        "VP9"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=sample_rate=48000 -t 4 -c:v libvpx-vp9 -c:a libopus {out}"
+    },
+    {
+      "file": "id3-tag.mp3",
+      "features": [
+        "ID3 tags"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a libmp3lame -id3v2_version 3 -metadata title=\"STX corpus\" {out}",
+      "expect": "title"
+    },
+    {
+      "file": "apev2-tag.wv",
+      "features": [
+        "APEv2"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a wavpack -metadata title=\"STX corpus\" {out}",
+      "expect": "title"
+    },
+    {
+      "file": "vorbis-comment.ogg",
+      "features": [
+        "Vorbis comment"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a libvorbis -metadata title=\"STX corpus\" {out}",
+      "expect": "title"
+    },
+    {
+      "file": "sine.mod",
+      "features": [
+        "Mod"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/sine.mod (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "arpeggio.mid",
+      "features": [
+        "Standard MIDI / SMF",
+        "MIDI"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/arpeggio.mid (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "kate.ogv",
+      "features": [
+        "Kate",
+        "OGG",
+        "Theora"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "copy own/kate.ogv (made by tools/corpus/make-kate.sh from own/kate-source.srt)",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-subrip.mp4",
+      "features": [
+        "SubRIP"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-subrip.srt",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": false,
+      "make": "copy own/sub-subrip.srt",
+      "expect": "companion"
+    },
+    {
+      "file": "sub-microdvd.mp4",
+      "features": [
+        "MicroDVD"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-microdvd.sub",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": false,
+      "make": "copy own/sub-microdvd.sub",
+      "expect": "companion"
+    },
+    {
+      "file": "sub-subviewer.mp4",
+      "features": [
+        "SubViewer"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-subviewer.sub",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": false,
+      "make": "copy own/sub-subviewer.sub",
+      "expect": "companion"
+    },
+    {
+      "file": "sub-sami.mp4",
+      "features": [
+        "SAMI"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-sami.smi",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": false,
+      "make": "copy own/sub-sami.smi",
+      "expect": "companion"
+    },
+    {
+      "file": "sub-vplayer.mp4",
+      "features": [
+        "VPlayer"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-vplayer.sub",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": false,
+      "make": "copy own/sub-vplayer.txt (VLC 3 loads subtitles beside a video only with its known extensions, and .txt is not one; it recognises VPlayer from the content)",
+      "expect": "companion"
+    },
+    {
+      "file": "sub-ssa.mp4",
+      "features": [
+        "SSA1-5"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-ssa.ssa",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": false,
+      "make": "ffmpeg -i {own}/sub-subrip.srt -c:s ssa {out}",
+      "expect": "companion"
+    },
+    {
+      "file": "sub-vobsub.mp4",
+      "features": [
+        "Vobsub"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac {out}",
+      "expect": "subtitle"
+    },
+    {
+      "file": "sub-vobsub.idx",
+      "features": [],
+      "source": "fetched",
+      "video": false,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/sub/VOB/X.The.Movie.DVDivX-SChiZO.idx",
+      "sha256": "07feb87437a346c145d4af410399a35196189f677193b689810812335fa2d12b",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "expect": "companion"
+    },
+    {
+      "file": "sub-vobsub.sub",
+      "features": [],
+      "source": "fetched",
+      "video": false,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/sub/VOB/X.The.Movie.DVDivX-SChiZO.sub",
+      "sha256": "f6365fb7b00e43281c158832c1a12e36f564913d889eb7f426c4f34cf17393d7",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "expect": "companion"
+    },
+    {
+      "file": "wmv3-wma2.wmv",
+      "features": [
+        "WMV 3 / WMV-9 / VC-1"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/archive/all/asf%2Bwmv3%2Bwmav2%2B%2Baudio_stutter.wmv",
+      "sha256": "d78ced7c5a5574b81903fc1829e6508aefa0f07228a410d8e6bea0ed3ea03798",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "wmapro.wma",
+      "features": [
+        "WMA 3"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/WMA9/WMAPro_5dot1/ambient3_192_mulitchannel.wma",
+      "sha256": "55ff0b58a241f3dc4b82216eb046cfe3fc358161f50f6c96d9b77b82da65a7e0",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "svq3.mov",
+      "features": [
+        "Sorenson 1/3"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/archive/all/mov%2Bsvq3%2Bmp3%2B%2Bsvq3_mediakey.mov",
+      "sha256": "f70e229044d8804a79c85a0da44a89003165b39735e8e9506f8401cb07a0e29c",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "vp3.mov",
+      "features": [
+        "On2 VP3/VP5/VP6"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/V-codecs/VP3/enya_et_mib_vp3.mov",
+      "sha256": "25a166db0cf9e85037a36383d3f38ef0738d79295bacad1969a122f268e72fcf",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "vp5.avi",
+      "features": [
+        "On2 VP3/VP5/VP6"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/V-codecs/VP5/Cell-140.vp5",
+      "sha256": "4f8f00b3ca86ab8a0efd86228858cfee3e3a7319b9c19a25fc1b0cc3882bbb31",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "vp6-nellymoser.flv",
+      "features": [
+        "On2 VP3/VP5/VP6",
+        "FLV (Flash)"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/archive/all/flv%2Bvp6f%2Bnellymoser%2B%2Bnellymosertag.flv",
+      "sha256": "53e000da3a86eaa181978417b545abfe59b196cd178727714d29b3fcfdbe5b27",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "indeo3.avi",
+      "features": [
+        "Indeo Video v3 (IV32)"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/archive/all/avi%2Bindeo3%2B%2B%2B1-dog.avi",
+      "sha256": "8575e49e843c7421e56c2ab42a0294310eba48a2d086d66468599f824c7bb1e7",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "rv30.rm",
+      "features": [
+        "Real Video (1/2/3/4)",
+        "Real"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/real/VC-RV30/eiqu-56k.rm",
+      "sha256": "d9151839e74019a08bb6614924d6e04cc00fecb164678f439768cebebe4eaa5b",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "rv40-cook.rmvb",
+      "features": [
+        "Real Video (1/2/3/4)",
+        "Real Audio"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/archive/all/rm%2Brv40%2Bcook%2B%2Bmplayer_segfault_test.rmvb",
+      "sha256": "4263ccfb5bae2733d0befebf82ca7bf4a50f3dd14050af9888a05308ff95aa97",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "musepack-sv8.mpc",
+      "features": [
+        "Musepack / MPC"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/musepack/sv8/Choral.mpc",
+      "sha256": "2178ba4192b85bd102c433a6f994a5d8ccb63bf76ca50fb9a958a8eca3bd43bd",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "atrac3.wav",
+      "features": [
+        "ATRAC 3"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/ATRAC3/sample.ATRAC3.66kbps.44100Hz.Stereo.wav",
+      "sha256": "2c6395135bc767ad3070b2d488686ad6cc30d29d2d8f9415d89684bf5df5327d",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "luckynight.ape",
+      "features": [
+        "APE"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/lossless/luckynight.ape",
+      "sha256": "6a7b79a6d530e9847c18119d627bd43c8d27dcefb3ec7ec979b9b6306e34ac15",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "qcelp.qcp",
+      "features": [
+        "QCELP"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/qcp/qcpclip.qcp",
+      "sha256": "0324867ad29715d2c9e5fb0419fbe9e42a63cddf09296a80dba005d78893d442",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "qdm2.mov",
+      "features": [
+        "QDM2/QDMC"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/QDM2/fft8/resurrection.mov",
+      "sha256": "63281635e74b8b414957a90cf326dd6998f7eb7fa0a91e9427fb16eb002d1263",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "qdmc.mov",
+      "features": [
+        "QDM2/QDMC"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/QDMC/slick.mov",
+      "sha256": "86491a3b8e6acf5a2062af11a367accd65fce0397090e9e107e3940f7bf52467",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "mace6.aiff",
+      "features": [
+        "MACE"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/MACE/mac6/Bach6-1.aiff",
+      "sha256": "799e368f885049d2bca2f3efaa77ab3b27006f6045cfd657b744336c12c0368c",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "mace3.aiff",
+      "features": [
+        "MACE"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/MACE/mac3/Bach3-1.aiff",
+      "sha256": "4450d377ab074de23bca6c87b198058289072009417fb2a0eaa0a74c29536082",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "test.pva",
+      "features": [
+        "PVA"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/PVA/PVA_test.pva",
+      "sha256": "710341a8a7de21000e087d4ccd32cc5afdb1e0efb2077e6f0130c3122405534f",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "remux.ogm",
+      "features": [
+        "OGM",
+        "OGG",
+        "OGM (subtitles)"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/archive/all/ogg%2Bmpeg4%2Bvorbis%2B0x0000%2Bogm_remux.ogm",
+      "sha256": "987d13aac0ca9fad38efb75d5d260e61f24eb186447a8dbfba9b2661cfd6b9ca",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "expect": "subtitle"
+    },
+    {
+      "file": "skeleton-cmml.ogv",
+      "features": [
+        "Annodex",
+        "OGG",
+        "Theora"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/V-codecs/Theora/theora_testsuite/320x240.skeleton%2Bcmml.ogv",
+      "sha256": "acb21b6f024d9f9de5f330d97f26ea75c1d7df0ba2522771cdb733292998b062",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "closedcaption.m2v",
+      "features": [
+        "Closed captions",
+        "MPEG ES"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://fate-suite.ffmpeg.org/sub/Closedcaption_rollup.m2v",
+      "sha256": "d03cfbc04957d8672ffb4910de0f3fcee22e2b204d76b848d1473f1ba9ae9afa",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "expect": "subtitle"
+    },
+    {
+      "file": "dvbsub.ts",
+      "features": [
+        "DVB",
+        "MPEG TS"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/archive/all/mpegts%2Bh264%2B%2Bdvbsub%2Bdvbtnorway_1.ts",
+      "sha256": "55eebf6f376282fc302fda49ff7e996a5e2a957914e25eed32dd99d940381230",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "expect": "subtitle"
+    },
+    {
+      "file": "dvdsub.mkv",
+      "features": [
+        "DVD",
+        "Matroska (MKV)"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/archive/all/matroska%2Bh264%2Bac3%2B0x0000-dvdsub%2Bdsmux.mkv",
+      "sha256": "58dfd6bdf317c1a0fb0f6c9d1efb65341886739364e7a7583a5945441ee477f1",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "expect": "subtitle"
+    },
+    {
+      "file": "mjpega.mov",
+      "features": [
+        "MJPEG (A/B)"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/V-codecs/MJPEGs/mjpa-b.mov/mjpega.mov",
+      "sha256": "58cd4648de82efa347c4c0d09a63ebdca351967a6112ac8c7b47af3a99e6f678",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "mjpegb.mov",
+      "features": [
+        "MJPEG (A/B)"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/V-codecs/MJPEGs/mjpa-b.mov/mjpegb.mov",
+      "sha256": "b47e572313213284df8336257964b0b04a0f9dd64d7f4809dc23bbde94a8415f",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "i263.avi",
+      "features": [
+        "H.263 / H.263i"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": false,
+      "url": "https://samples.ffmpeg.org/testsuite/i263.avi",
+      "sha256": "3459f42ae6bfbfcf5d3d0c74a5dc3da14fd50a98cb5c967a4c95df429a56675c",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "dts.wav",
+      "features": [
+        "WAV (DTS)",
+        "DTS"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/DTS/Fire__VooDoo_Studio_30_sec.wav",
+      "sha256": "61e40e7c51ceb9e7514e933c63269de5bfb6457c639e58e8687a64d969e79c50",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "svcd-image.bin",
+      "features": [
+        "MPEG-1/2"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/MPEG-VOB/SVCD-bug/Signs%201cd%20SCVD.bin",
+      "sha256": "cb4e5f0e98038b0460b23ae67e0c3ec7b6fbe65e6d91f58b03d6f1dfaf249e2a",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "note": "The only public SVCD image found; it plays, but it carries no subtitle stream (ffprobe: two MPEG-2 video streams and MP2 audio), so it cannot prove SVCD / CVD subtitles."
+    },
+    {
+      "file": "usf.mkv",
+      "features": [
+        "Universal Subtitle Format (USF)",
+        "Matroska (MKV)"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "expect": "subtitle",
+      "url": "https://samples.ffmpeg.org/sub/usf/usf.mkv",
+      "sha256": "3aa9d463b6ae836d445dd8e2f45d4aeaa3c1a60e2d31b2c64f02255e70cd8443",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "note": "VLC 3.0.24 reads USF only inside Matroska; its subtitle demuxer has no standalone USF type."
+    }
+  ]
+}

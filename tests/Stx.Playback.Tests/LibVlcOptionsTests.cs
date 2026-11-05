@@ -43,6 +43,13 @@ public class LibVlcOptionsTests
     }
 
     [Fact]
+    public void The_soundfont_is_passed_when_given()
+    {
+        Assert.Contains(@"--soundfont=C:\STX\libvlc\soundfonts\FluidR3_GM.sf2", LibVlcOptions.For(headless: false, soundFont: @"C:\STX\libvlc\soundfonts\FluidR3_GM.sf2"));
+        Assert.DoesNotContain(LibVlcOptions.For(headless: false), o => o.StartsWith("--soundfont", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Swap_chain_options_are_appended()
     {
         string[] swapChain = ["--winrt-d3dcontext=0x1", "--winrt-swapchain=0x2"];

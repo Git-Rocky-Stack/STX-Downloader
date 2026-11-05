@@ -5,13 +5,26 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The engine STX ships: the official VLC build and the FluidR3_GM SoundFont, pinned in tools/vlc/engine.json. -->
+    <StxEngineVersion>3.0.24</StxEngineVersion>
+    <StxEngineDir>$(MSBuildThisFileDirectory)..\..\.engine\$(StxEngineVersion)\</StxEngineDir>
   </PropertyGroup>
   <ItemGroup>
     <!-- The core API only. The app takes LibVLCSharp.WinUI, whose LibVLCSharp.dll has the same identity (3.10.2.0) plus the VideoView. -->
     <PackageReference Include="LibVLCSharp" Version="3.10.2" />
-    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Stx.Core\Stx.Core.csproj" />
   </ItemGroup>
+  <!-- Fetches and checks the engine once (into .engine/, git-ignored), then copies it beside every app and test that
+       references this project, under libvlc\, where LibVLCSharp's Core.Initialize() looks for it. -->
+  <Target Name="StxPrepareEngine" BeforeTargets="GetCopyToOutputDirectoryItems;CopyFilesToOutputDirectory" Condition="!Exists('$(StxEngineDir)ready.stamp')">
+    <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\vlc\Get-Engine.ps1&quot;" />
+  </Target>
+  <Target Name="StxEngineFiles" BeforeTargets="GetCopyToOutputDirectoryItems" DependsOnTargets="StxPrepareEngine">
+    <ItemGroup>
+      <_StxEngine Include="$(StxEngineDir)libvlc\**\*" />
+      <ContentWithTargetPath Include="@(_StxEngine)" TargetPath="libvlc\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 </Project>

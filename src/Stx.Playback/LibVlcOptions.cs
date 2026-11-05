@@ -14,10 +14,12 @@ public static class LibVlcOptions
     /// memory buffer the engine sets up, never to LibVLC's dummy video output, which crashes when an H.264 file ends.</param>
     /// <param name="swapChain">The options the video view hands over once its swap chain exists (spike S1).</param>
     /// <param name="realAudio">With <paramref name="headless"/>, keep the real sound output.</param>
-    public static string[] For(bool headless, IReadOnlyList<string>? swapChain = null, bool realAudio = false)
+    /// <param name="soundFont">The SoundFont FluidSynth plays MIDI with; MIDI can't play without one.</param>
+    public static string[] For(bool headless, IReadOnlyList<string>? swapChain = null, bool realAudio = false, string? soundFont = null)
     {
         var options = new List<string> { "--no-lua" };
         if (headless && !realAudio) options.Add("--aout=dummy");
+        if (soundFont is not null) options.Add("--soundfont=" + soundFont);
         if (swapChain is not null) options.AddRange(swapChain);
         return [.. options];
     }

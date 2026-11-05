@@ -1,0 +1,7 @@
+1
+00:00:00,200 --> 00:00:02,500
+STX corpus: Kate subtitle line one
+
+2
+00:00:02,600 --> 00:00:04,800
+STX corpus: Kate subtitle line two

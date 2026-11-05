@@ -15,6 +15,7 @@ public class LibVlcEngineTests
             $"state {engine.State}, position {engine.Position}, error {engine.Error}");
         Assert.True(engine.HasVideo);
         Assert.Equal(2, engine.Length.TotalSeconds, 0.2);
+        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > 0 && engine.Decoded.AudioBlocks > 0), $"decoded {engine.Decoded}");
     }
 
     [Fact]
@@ -66,6 +67,17 @@ public class LibVlcEngineTests
         Thread.Sleep(500);
         engine.Dispose();
         Assert.Equal(PlaybackState.Idle, engine.State);
+    }
+
+    // VLC 3.0.24's engine crashes the whole process on Dirac / VC-2 (the official desktop build too), so STX refuses it.
+    [Fact]
+    public void Dirac_is_refused_without_a_crash()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(Fixture.File("tiny-dirac.mkv"));
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+        Assert.Equal(LibVlcEngine.DiracRefused, engine.Error);
+        Assert.Equal(0, engine.Decoded.Pictures);
     }
 
     [Fact]

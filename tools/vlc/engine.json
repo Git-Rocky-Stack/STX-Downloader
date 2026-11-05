@@ -1,0 +1,28 @@
+{
+  "version": "3.0.24",
+  "vlc": {
+    "url": "https://download.videolan.org/vlc/3.0.24/win64/vlc-3.0.24-win64.zip",
+    "sha256": "fcf30850371ad10c9373cc4f0f4501e7dee49e3e9ae9f20c72fb2661a1ca6323",
+    "root": "vlc-3.0.24",
+    "note": "The official VLC 3.0.24 build for 64-bit Windows. Its sha256 matches VideoLAN's own vlc-3.0.24-win64.zip.sha256. STX ships libvlc.dll, libvlccore.dll and the plugins below, nothing else from the zip."
+  },
+  "excludePlugins": {
+    "gui": "VLC's own windows; STX has its own console",
+    "control": "remote control, hotkeys and the Windows service: STX drives LibVLC itself",
+    "lua": "site scripts and extensions stay off (--no-lua); web links use STX's capture path",
+    "services_discovery": "network and media discovery would open ports and browse the network",
+    "stream_out": "streaming out would open network ports",
+    "access_output": "writes streams out to the network or files",
+    "misc/libaudioscrobbler_plugin.dll": "sends what you play to Last.fm",
+    "misc/libvod_rtsp_plugin.dll": "an RTSP server",
+    "access/libdvdnav_plugin.dll": "has libdvdcss built in, which decrypts CSS-protected DVDs; STX doesn't do DRM",
+    "access/libdvdread_plugin.dll": "has libdvdcss built in, which decrypts CSS-protected DVDs; STX doesn't do DRM"
+  },
+  "soundFont": {
+    "url": "https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont-gm_3.1-5.3_all.deb",
+    "sha256": "6f531493ac4e4d9772fd96b2488ea1790af81c196135fbdd25997da0781fc60e",
+    "file": "usr/share/sounds/sf2/FluidR3_GM.sf2",
+    "copyright": "usr/share/doc/fluid-soundfont-gm/copyright",
+    "note": "FluidR3_GM by Frank Wen, MIT license (see the copyright file shipped beside it). LibVLC's FluidSynth needs a SoundFont to play MIDI."
+  }
+}

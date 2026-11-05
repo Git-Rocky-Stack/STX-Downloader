@@ -5,6 +5,9 @@ using MediaTrack = Stx.Core.Playback.MediaTrack;
 
 namespace Stx.Playback;
 
+/// <summary>Pictures and audio blocks LibVLC has decoded for the open file.</summary>
+public readonly record struct Decoded(int Pictures, int AudioBlocks);
+
 /// <summary>
 /// The player on VLC's engine. A headless engine starts LibVLC at once with dummy outputs. An engine with a
 /// screen waits for the video view's swap chain (spike S1): LibVLC can only draw into it if it starts with it,
@@ -12,6 +15,12 @@ namespace Stx.Playback;
 /// </summary>
 public sealed class LibVlcEngine : IPlaybackEngine
 {
+    /// <summary>What the plate says for Dirac / VC-2, which crashes VLC 3.0.24's engine (the official desktop build too).</summary>
+    public const string DiracRefused = "DIRAC VIDEO CAN'T BE PLAYED SAFELY";
+
+    /// <summary>The General MIDI SoundFont shipped beside the engine (tools/vlc/engine.json).</summary>
+    public static string ShippedSoundFont => Path.Combine(AppContext.BaseDirectory, "libvlc", "soundfonts", "FluidR3_GM.sf2");
+
     static readonly Lazy<bool> NativeReady = new(() => { LibVLCSharp.Shared.Core.Initialize(); return true; });
 
     readonly bool _headless;
@@ -53,6 +62,9 @@ public sealed class LibVlcEngine : IPlaybackEngine
 
     /// <summary>"d3d11va" or "software" once a picture is being decoded; empty before that, and for sound only.</summary>
     public string Decoder => _sawHardwareDecoder ? "d3d11va" : _sawVideoDecoder ? "software" : "";
+
+    /// <summary>How much of the open file has been decoded so far, from LibVLC's own statistics.</summary>
+    public Decoded Decoded => _media?.Statistics is { } st ? new Decoded(st.DecodedVideo, st.DecodedAudio) : default;
 
     /// <summary>The format the sound leaves in, as LibVLC logs it, for example "'f32l' 48000 Hz 3F2R/LFE". Empty before sound starts.</summary>
     public string AudioOutput { get; private set; } = "";
@@ -136,7 +148,14 @@ public sealed class LibVlcEngine : IPlaybackEngine
                 if (_disposed || _vlc is null || generation != _generation) return;
                 media = new Media(_vlc, path, FromType.FromPath, LibVlcOptions.ForMedia(Profile));
             }
-            bool mono = IsMono(media);
+            var (mono, dirac) = Inspect(media);
+            if (dirac)
+            {
+                media.Dispose();
+                lock (_gate) { if (_disposed || generation != _generation) return; _error = DiracRefused; }
+                Set(PlaybackState.Failed);
+                return;
+            }
             lock (_gate)
             {
                 if (_disposed || _player is null || generation != _generation) { media.Dispose(); return; }
@@ -156,16 +175,23 @@ public sealed class LibVlcEngine : IPlaybackEngine
         });
     }
 
-    static bool IsMono(Media media)
+    // 'drac', as LibVLC names Dirac and VC-2.
+    const uint Dirac = 'd' | 'r' << 8 | 'a' << 16 | 'c' << 24;
+
+    // Reads the file's tracks before anything is decoded: mono sound needs the stereo path, and Dirac must never reach
+    // the decoder, because VLC 3.0.24 crashes the process on it.
+    static (bool Mono, bool Dirac) Inspect(Media media)
     {
         try
         {
             media.Parse(MediaParseOptions.ParseLocal, timeout: 3000).Wait(4000);
-            var audio = media.Tracks.Where(t => t.TrackType == TrackType.Audio).ToList();
-            return audio.Count > 0 && audio.All(t => t.Data.Audio.Channels == 1);
+            var tracks = media.Tracks;
+            var audio = tracks.Where(t => t.TrackType == TrackType.Audio).ToList();
+            return (audio.Count > 0 && audio.All(t => t.Data.Audio.Channels == 1),
+                    tracks.Any(t => t.TrackType == TrackType.Video && t.Codec == Dirac));
         }
-        catch (AggregateException) { return false; }
-        catch (VLCException) { return false; }
+        catch (AggregateException) { return (false, false); }
+        catch (VLCException) { return (false, false); }
     }
 
     public void TogglePause()
@@ -195,7 +221,8 @@ public sealed class LibVlcEngine : IPlaybackEngine
     {
         _ = NativeReady.Value;
         // Debug level, so the decoder LibVLC picks can be read from its log.
-        var vlc = new LibVLC(enableDebugLogs: true, LibVlcOptions.For(_headless, swapChain, _realAudio));
+        string? soundFont = File.Exists(ShippedSoundFont) ? ShippedSoundFont : null;
+        var vlc = new LibVLC(enableDebugLogs: true, LibVlcOptions.For(_headless, swapChain, _realAudio, soundFont));
         vlc.Log += OnLog;
         var player = new MediaPlayer(vlc) { Volume = _volume };
         if (_headless) DrawIntoMemory(player);
