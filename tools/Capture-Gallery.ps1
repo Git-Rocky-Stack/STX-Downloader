@@ -3,7 +3,9 @@ param(
     [ValidateSet('dark', 'light')] [string] $Mode = 'dark',
     [Parameter(Mandatory)] [string] $Out,
     [int] $SettleSeconds = 3,
-    [switch] $ReduceMotion
+    [switch] $ReduceMotion,
+    # Without --hold, so a playing picture keeps moving (the player's playback tests).
+    [switch] $Live
 )
 # Asks the window to draw itself, rather than copying the screen. So the image holds only the app's content:
 # no title bar, nothing from the desktop, nothing from windows on top, and it never takes focus from you.
@@ -22,7 +24,8 @@ if (-not ('StxCaptureWindow.Native' -as [type])) {
 '@
 }
 
-$arguments = @("--gallery=$Name", "--mode=$Mode", '--hold')
+$arguments = @("--gallery=$Name", "--mode=$Mode")
+if (-not $Live) { $arguments += '--hold' }
 if ($ReduceMotion) { $arguments += '--reduce-motion' }
 $p = Start-Process $exe -ArgumentList $arguments -PassThru
 try {

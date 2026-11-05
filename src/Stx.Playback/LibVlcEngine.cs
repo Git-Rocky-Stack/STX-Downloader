@@ -5,8 +5,8 @@ using MediaTrack = Stx.Core.Playback.MediaTrack;
 
 namespace Stx.Playback;
 
-/// <summary>Pictures and audio blocks LibVLC has decoded for the open file.</summary>
-public readonly record struct Decoded(int Pictures, int AudioBlocks);
+/// <summary>LibVLC's counts for the open file: pictures and audio blocks decoded, pictures shown, and pictures lost for being late.</summary>
+public readonly record struct Decoded(int Pictures, int AudioBlocks, int Shown = 0, int Lost = 0);
 
 /// <summary>
 /// The player on VLC's engine. A headless engine starts LibVLC at once with dummy outputs. An engine with a
@@ -61,10 +61,17 @@ public sealed class LibVlcEngine : IPlaybackEngine
     public event EventHandler? Changed;
 
     /// <summary>"d3d11va" or "software" once a picture is being decoded; empty before that, and for sound only.</summary>
-    public string Decoder => _sawHardwareDecoder ? "d3d11va" : _sawVideoDecoder ? "software" : "";
+    // LibVLC picks a hardware decoder, if any, before the first picture, so a decoded picture with no hardware
+    // decoder named means software.
+    public string Decoder => _sawHardwareDecoder ? "d3d11va" : _sawVideoDecoder && Decoded.Pictures > 0 ? "software" : "";
+
+    // LibVLC 3.0 logs this once for every output it doesn't own a window for: display.c:1171-1173 always asks the new
+    // display for its window state, and win32/common.c:697-699 refuses that for external rendering (a swap chain or
+    // memory). It changes nothing and no option avoids it, so it isn't counted as an error.
+    static readonly string[] Harmless = ["main: Failed to set on top"];
 
     /// <summary>How much of the open file has been decoded so far, from LibVLC's own statistics.</summary>
-    public Decoded Decoded => _media?.Statistics is { } st ? new Decoded(st.DecodedVideo, st.DecodedAudio) : default;
+    public Decoded Decoded => _media?.Statistics is { } st ? new Decoded(st.DecodedVideo, st.DecodedAudio, st.DisplayedPictures, st.LostPictures) : default;
 
     /// <summary>The format the sound leaves in, as LibVLC logs it, for example "'f32l' 48000 Hz 3F2R/LFE". Empty before sound starts.</summary>
     public string AudioOutput { get; private set; } = "";
@@ -258,13 +265,14 @@ public sealed class LibVlcEngine : IPlaybackEngine
 
     void OnLog(object? sender, LogEventArgs e)
     {
-        if (e.Level == LogLevel.Error)
+        if (e.Level == LogLevel.Error && !Harmless.Contains($"{e.Module}: {e.Message}"))
         {
             _errors.Enqueue($"{e.Module}: {e.Message}");
             while (_errors.Count > 200) _errors.TryDequeue(out _);
         }
         if (e.Module == "main")
         {
+            if (e.Message.StartsWith("using video decoder module", StringComparison.Ordinal)) _sawVideoDecoder = true;
             const string Output = "output '", Stream = "using aout stream module \"";
             if (e.Message.StartsWith(Output, StringComparison.Ordinal) && e.Message.IndexOf(" frame=", StringComparison.Ordinal) is > 0 and var end)
                 AudioOutput = e.Message[(Output.Length - 1)..end];
@@ -277,8 +285,6 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (e.Module == "avcodec")
         {
             if (e.Message.Contains("for hardware decoding", StringComparison.Ordinal)) _sawHardwareDecoder = true;
-            // Only the video side of avcodec opens a picture decoder with threads.
-            if (e.Message.StartsWith("allowing", StringComparison.Ordinal) && e.Message.Contains("decoder", StringComparison.Ordinal)) _sawVideoDecoder = true;
         }
     }
 
