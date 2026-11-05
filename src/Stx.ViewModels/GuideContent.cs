@@ -117,9 +117,11 @@ public static class GuideContent
                 "TAGS, COVER ART and CHAPTERS choose what gets embedded in the file.",
                 // SettingsPanel.cs:44-49 and :73, AppSettings.cs OutputFolder
                 "Saves go to the output folder, named by the filename template.",
+                // SettingsPanel.cs BitPerfectRow, BitPerfect.cs Route, RoutingEngine.cs AudioReadout
+                "BIT-PERFECT sends lossless music to your sound device exactly as it is, and the Player shows what arrives, such as 24/96 BIT-PERFECT. While it's on, other apps can't make sound, and VOLUME is fixed. A file that can't go that way plays shared, and the Player says why.",
                 // SettingsPanel.cs WatchedFolders, AppSettings.cs DefaultWatched, MediaRepo.cs ForgetWatchedUnder
                 "Videos and Music are watched to begin with. ADD FOLDER and REMOVE FOLDER change the list. Removing a folder takes its files out of the Library, never off your disk.",
-            ], ["SETTINGS", "TRAY", "CLIPBOARD", "TAGS", "COVER ART", "CHAPTERS", "ADD FOLDER", "REMOVE FOLDER"]),
+            ], ["SETTINGS", "TRAY", "CLIPBOARD", "TAGS", "COVER ART", "CHAPTERS", "ADD FOLDER", "REMOVE FOLDER", "BIT-PERFECT"]),
             new("Good to know",
             [
                 // README.md:5

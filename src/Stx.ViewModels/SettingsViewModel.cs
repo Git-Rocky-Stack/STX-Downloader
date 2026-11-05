@@ -29,6 +29,7 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
     public bool ToolUpdates { get => _settings.ToolUpdates; set => Apply(_settings with { ToolUpdates = value }); }
     public bool ReduceMotion { get => _settings.ReduceMotion; set => Apply(_settings with { ReduceMotion = value }); }
     public DownloadChoice Download { get => _settings.Download; set => Apply(_settings with { Download = value }); }
+    public bool BitPerfect { get => _settings.BitPerfect; set => Apply(_settings with { BitPerfect = value }); }
     public bool EmbedTags { get => _settings.EmbedTags; set => Apply(_settings with { EmbedTags = value }); }
     public bool EmbedCoverArt { get => _settings.EmbedCoverArt; set => Apply(_settings with { EmbedCoverArt = value }); }
     public bool EmbedChapters { get => _settings.EmbedChapters; set => Apply(_settings with { EmbedChapters = value }); }

@@ -140,7 +140,9 @@ public sealed partial class PlayerPanel : ContentControl
         _time.Text = _player.TimeText;
         int volumeStep = Math.Clamp((int)Math.Round(_player.Volume / 10.0), 0, 10);
         if (_volume.SelectedIndex != volumeStep) _volume.SelectedIndex = volumeStep;
-        _nowPlaying.Text = _player.Title.ToUpperInvariant();
+        _nowPlaying.Text = _player.AudioReadout.Length > 0 ? $"{_player.Title.ToUpperInvariant()} · {_player.AudioReadout}" : _player.Title.ToUpperInvariant();
+        // A bit-perfect stream goes out at full scale: turn the amplifier down instead.
+        _volume.IsEnabled = !_player.VolumeFixed;
         _audioTitle.Text = _player.Title.ToUpperInvariant();
         _audioOnly.Visibility = _player.IsAudioOnly ? Visibility.Visible : Visibility.Collapsed;
         _problem.Message = _player.Problem;

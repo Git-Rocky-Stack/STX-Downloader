@@ -30,6 +30,9 @@ public sealed record AppSettings
     public bool GuideShown { get; init; }
     /// <summary>How hard playback may work. Auto picks from the PC's hardware.</summary>
     public PlaybackPerformance Performance { get; init; } = PlaybackPerformance.Auto;
+    /// <summary>BIT-PERFECT: lossless music holds the sound device exclusively at the file's own format, and films pass
+    /// their compressed soundtracks to the receiver. Off by default, because while it's on other apps can't make sound.</summary>
+    public bool BitPerfect { get; init; }
     /// <summary>First-run setup asks once whether STX should be the player for videos and music. Yes or Not now, it never asks again.</summary>
     public bool DefaultPlayerAsked { get; init; }
     /// <summary>Folders whose media joins the Library. Null means never chosen: Videos and Music.</summary>

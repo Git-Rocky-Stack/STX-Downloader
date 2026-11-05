@@ -66,8 +66,9 @@ public sealed class Composition : IDisposable
         SourceTruth = new SourceTruthViewModel(() => LookState.ReduceMotion);
         Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine, () => SourceTruth.SelectedOutput);
         Library = new LibraryViewModel(catalog, Engine, shell, File.Exists, Play);
-        PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect()));
-        Player = new PlayerViewModel(PlayerEngine, OnUi);
+        // BIT-PERFECT's film route is fixed when LibVLC starts; its music route follows the setting from the next file.
+        PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect())) { Passthrough = Settings.Current.BitPerfect };
+        Player = new PlayerViewModel(new RoutingEngine(PlayerEngine, () => Settings.Current.BitPerfect, () => Tools.Paths.Ffmpeg, () => Tools.FfprobePath), OnUi);
         Opened = new OpenedFiles(catalog, Library);
         _streams = new StreamOpener(_http);
         // The watched folders. The downloads folder is left to the queue, which records each download itself.

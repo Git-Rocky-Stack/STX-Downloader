@@ -52,6 +52,15 @@ public sealed class LibVlcEngine : IPlaybackEngine
     /// <summary>Opens files paused at their start (LibVLC's start-paused). No picture is drawn until the player steps a frame; the screenshot galleries do that so every capture shows the same first frame.</summary>
     public bool StartPaused { get; set; }
 
+    /// <summary>Whether LibVLC starts with bitstream passthrough (BIT-PERFECT's film route). Set before the swap chain arrives; read once.</summary>
+    public bool Passthrough { get; set; }
+
+    /// <summary>Whether a logged output format is a bitstream sent to a receiver rather than PCM: 'spdi'/'spdb' (S/PDIF), or E-AC3, DTS or TrueHD over HDMI.</summary>
+    public static bool IsBitstream(string audioOutput) =>
+        audioOutput.StartsWith("'spd", StringComparison.Ordinal) || audioOutput.StartsWith("'eac3'", StringComparison.Ordinal)
+        || audioOutput.StartsWith("'dts ", StringComparison.Ordinal) || audioOutput.StartsWith("'mlp ", StringComparison.Ordinal)
+        || audioOutput.StartsWith("'trhd'", StringComparison.Ordinal) || audioOutput.StartsWith("'a52 '", StringComparison.Ordinal);
+
     /// <summary>The PERFORMANCE profile. A change applies from the next <see cref="Open"/>.</summary>
     public PerformanceProfile Profile { get; set; }
 
@@ -268,7 +277,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
         _ = NativeReady.Value;
         // Debug level, so the decoder LibVLC picks can be read from its log.
         string? soundFont = File.Exists(ShippedSoundFont) ? ShippedSoundFont : null;
-        var vlc = new LibVLC(enableDebugLogs: true, LibVlcOptions.For(_headless, swapChain, _realAudio, soundFont));
+        var vlc = new LibVLC(enableDebugLogs: true, LibVlcOptions.For(_headless, swapChain, _realAudio, soundFont, Passthrough));
         vlc.Log += OnLog;
         var player = new MediaPlayer(vlc) { Volume = _volume };
         if (_headless) DrawIntoMemory(player);
