@@ -297,9 +297,10 @@ public sealed class LibVlcEngine : IPlaybackEngine
         Task.Run(() => player.Mute = false);
     }
 
+    // LibVLC's own words stay in LoggedErrors; the plate gets the console's plain message.
     void Fail()
     {
-        _error = _errors.LastOrDefault() is { } last ? $"This file could not be played ({last})" : "This file could not be played";
+        _error = null;
         Set(PlaybackState.Failed);
     }
 

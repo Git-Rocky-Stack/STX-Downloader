@@ -34,7 +34,7 @@ public class LibVlcEngineTests
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("truncated.mp4"));
         Assert.True(Fixture.Within(Five, () => engine.State is PlaybackState.Failed or PlaybackState.Ended), $"state {engine.State}");
-        if (engine.State == PlaybackState.Failed) Assert.False(string.IsNullOrWhiteSpace(engine.Error));
+        if (engine.State == PlaybackState.Failed) Assert.NotEmpty(engine.LoggedErrors);
     }
 
     [Fact]

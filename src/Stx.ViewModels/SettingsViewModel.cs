@@ -33,6 +33,11 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
     public bool EmbedCoverArt { get => _settings.EmbedCoverArt; set => Apply(_settings with { EmbedCoverArt = value }); }
     public bool EmbedChapters { get => _settings.EmbedChapters; set => Apply(_settings with { EmbedChapters = value }); }
 
+    public Stx.Core.Playback.PlaybackPerformance Performance { get => _settings.Performance; set => Apply(_settings with { Performance = value }); }
+
+    /// <summary>In the order of PlaybackPerformance.</summary>
+    public static IReadOnlyList<string> PerformanceLabels { get; } = ["AUTO", "ECO", "BALANCED", "MAX"];
+
     /// <summary>In the order of DownloadChoice.</summary>
     public static IReadOnlyList<string> DownloadLabels { get; } = ["BEST", "1080P", "720P", "VIDEO", "AUDIO"];
     public string OutputFolder { get => _settings.OutputFolder; set => Apply(_settings with { OutputFolder = value }); }
