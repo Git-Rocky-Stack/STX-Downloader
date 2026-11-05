@@ -23,15 +23,25 @@ public class EngineFilesTests
         Assert.False(Directory.Exists(Engine("win-x86")) || Directory.Exists(Engine("win-arm64")), "a non-x64 engine ships");
     }
 
-    // VLC's DVD plugins have libdvdcss built in, which decrypts CSS-protected DVDs. STX doesn't do DRM.
+    // Phase 4 (Rocky): VLC's DVD plugins ship for unencrypted DVDs. They have libdvdcss built in, which decrypts CSS,
+    // so STX checks every disc itself first (DiscCheck) and refuses an encrypted one. Nothing else may carry libdvdcss.
     [Fact]
-    public void Nothing_that_decrypts_dvds_ships()
+    public void The_dvd_plugins_ship_and_are_the_only_ones_with_libdvdcss()
     {
-        foreach (var plugin in new[] { "access/libdvdnav_plugin.dll", "access/libdvdread_plugin.dll" })
-            Assert.False(File.Exists(Engine("win-x64", "plugins", plugin)), plugin + " ships");
+        string[] dvd = ["libdvdnav_plugin.dll", "libdvdread_plugin.dll"];
+        foreach (var plugin in dvd) Assert.True(File.Exists(Engine("win-x64", "plugins", "access", plugin)), plugin + " is missing");
         var withCss = Directory.EnumerateFiles(Engine("win-x64", "plugins"), "*.dll", SearchOption.AllDirectories)
-            .Where(f => File.ReadAllBytes(f).AsSpan().IndexOf("libdvdcss"u8) >= 0).Select(Path.GetFileName).ToList();
-        Assert.True(withCss.Count == 0, "Plugins with libdvdcss inside: " + string.Join(", ", withCss));
+            .Where(f => File.ReadAllBytes(f).AsSpan().IndexOf("libdvdcss"u8) >= 0).Select(f => Path.GetFileName(f)!).Order(StringComparer.Ordinal).ToList();
+        Assert.Equal(dvd, withCss);
+    }
+
+    // Blu-ray plays only unencrypted discs: no AACS or BD+ library ships, and libbluray finds none to load.
+    [Fact]
+    public void Blu_ray_ships_without_any_aacs_library()
+    {
+        Assert.True(File.Exists(Engine("win-x64", "plugins", "access", "liblibbluray_plugin.dll")) || Directory.EnumerateFiles(Engine("win-x64", "plugins", "access"), "*bluray*").Any(), "no Blu-ray plugin");
+        Assert.Empty(Directory.EnumerateFiles(Engine("win-x64"), "*aacs*", SearchOption.AllDirectories));
+        Assert.Empty(Directory.EnumerateFiles(Engine("win-x64"), "*bdplus*", SearchOption.AllDirectories));
     }
 
     [Fact]

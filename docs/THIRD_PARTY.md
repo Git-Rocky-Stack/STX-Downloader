@@ -13,7 +13,7 @@ The player uses VLC's engine. The build fetches each item below from its publish
 | SharpDX 4.2.0 | Direct3D access for LibVLCSharp.WinUI's video view | NuGet, as a dependency of LibVLCSharp.WinUI | [MIT](https://github.com/sharpdx/SharpDX/blob/master/LICENSE). SharpDX has been unmaintained since 2019. STX uses it only through LibVLCSharp.WinUI's video view. |
 | FluidR3_GM SoundFont, by Frank Wen | Playing MIDI files | Debian's [fluid-soundfont-gm 3.1-5.3](https://packages.debian.org/source/sid/fluid-soundfont) package | MIT. The copyright file ships beside it (`libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt`). |
 
-Some of VLC's plugins aren't shipped, each with its reason in `tools/vlc/engine.json`: the ones that would open network ports, run site scripts or show VLC's own windows. VLC's two DVD plugins (`libdvdnav`, `libdvdread`) are left out as well, because they have libdvdcss built in, which decrypts CSS-protected DVDs. STX can't decrypt a DVD; the README's no-DRM rule applies to playback too.
+Some of VLC's plugins aren't shipped, each with its reason in `tools/vlc/engine.json`: the ones that would open network ports, run site scripts or show VLC's own windows. VLC's two DVD plugins (`libdvdnav`, `libdvdread`) do ship, for unencrypted DVDs (Rocky's decision for Phase 4). Both have libdvdcss built in, which can decrypt CSS-protected DVDs. **STX doesn't use it**: before any disc, disc folder or disc image reaches LibVLC, STX reads the disc's own CSS and AACS markings and refuses an encrypted one (`src/Stx.Core/Playback/DiscCheck.cs`). The README's no-DRM rule applies to playback too. No AACS or BD+ library ships, so libbluray reads only unencrypted Blu-ray discs.
 
 ## Downloaded on first run
 

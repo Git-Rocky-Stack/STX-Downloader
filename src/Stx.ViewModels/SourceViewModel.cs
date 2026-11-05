@@ -174,6 +174,9 @@ public sealed class SourceViewModel : ObservableObject
         else _engine.Enqueue(media, JobKind.Link, preset);
     }
 
+    /// <summary>A plain line on the Source plate from elsewhere, such as why a pasted stream can't play. Empty clears it.</summary>
+    public void Report(string message) => Say(message, "");
+
     void Say(string message, string next)
     {
         Message = message;

@@ -48,7 +48,7 @@ Each line points at the code that does it.
 
 **Playing**
 
-- STX plays media with VLC's engine: the official VLC 3.0.24 build for Windows, pinned by sha256 (`tools/vlc/engine.json`). The parts that would open network ports, run site scripts or decrypt DVDs are left out (`tools/vlc/engine.json`, `src/Stx.Playback/LibVlcOptions.cs:20`).
+- STX plays media with VLC's engine: the official VLC 3.0.24 build for Windows, pinned by sha256 (`tools/vlc/engine.json`). The parts that would open network ports or run site scripts are left out (`tools/vlc/engine.json`, `src/Stx.Playback/LibVlcOptions.cs:20`). VLC's DVD plugins ship for unencrypted DVDs. They contain libdvdcss, which can decrypt CSS, so STX checks every disc itself and never hands an encrypted one to them (`src/Stx.Core/Playback/DiscCheck.cs:14`, `src/Stx.Playback/LibVlcEngine.cs:162`).
 - A PLAYER plate sits beside the Library, above Source Truth (`src/Stx.App/MainWindow.cs:57`). OPEN in the Library plays the file there and never hands it to another app (`src/Stx.ViewModels/LibraryViewModel.cs:48`, `src/Stx.App/Composition.cs:168`).
 - A file opened from File Explorer joins the Library and plays (`src/Stx.App/App.xaml.cs:27`, `src/Stx.App/Composition.cs:176`). A second launch with a file hands it to the copy already running, over a named pipe only your account can open (`src/Stx.App/Platform/SingleInstance.cs:26`, `src/Stx.Bridge/OpenRequests.cs`).
 - FULL fills the screen and Esc brings the console back. The video keeps playing through it (`src/Stx.App/Panels/PlayerPanel.cs:194`, `src/Stx.App/Panels/PlayerPanel.cs:117`, `src/Stx.App/MainWindow.cs:73`).

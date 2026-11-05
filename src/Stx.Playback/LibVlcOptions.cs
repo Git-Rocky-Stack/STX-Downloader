@@ -24,6 +24,17 @@ public static class LibVlcOptions
         return [.. options];
     }
 
+    /// <summary>
+    /// Options for what's being opened. Discs start at their main title: their menus need a pointer on the picture,
+    /// which a swap chain doesn't pass back. RTSP runs over its one TCP connection, so no port is opened for RTP.
+    /// </summary>
+    public static string[] ForTarget(TargetKind kind) => kind switch
+    {
+        TargetKind.Disc => [":no-dvdnav-menu", ":no-bluray-menu"],
+        TargetKind.Stream => [":rtsp-tcp"],
+        _ => [],
+    };
+
     /// <summary>The PERFORMANCE profile, carried by each media so it can change without a new LibVLC.</summary>
     public static string[] ForMedia(PerformanceProfile profile) =>
     [

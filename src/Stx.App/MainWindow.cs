@@ -46,7 +46,7 @@ public sealed partial class MainWindow : Window
         rack.Children.Add(_tutorial);
         rack.Children.Add(first);
         rack.Children.Add(new DefaultPlayerOfferPanel(_app.DefaultPlayer));
-        rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard));
+        rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard, () => _app.PlayStreamAsync(_app.Source.Link), PickDiscAsync));
 
         // The deck: QUEUE and LIBRARY on the left; the PLAYER, with SOURCE TRUTH under it reading the same file, on the right.
         var deck = new Grid { ColumnSpacing = 8 };
@@ -159,6 +159,17 @@ public sealed partial class MainWindow : Window
     {
         ShowFromTray();
         _app.OpenFromOutside(path);
+        _player.StartBringIntoView();
+    }
+
+    // A drive or a disc folder. Windows' folder picker lists DVD and Blu-ray drives like any other.
+    async Task PickDiscAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        if (await picker.PickSingleFolderAsync() is not { } chosen) return;
+        _app.PlayDisc(chosen.Path);
         _player.StartBringIntoView();
     }
 

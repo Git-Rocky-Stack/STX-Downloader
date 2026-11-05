@@ -14,9 +14,11 @@
     "stream_out": "streaming out would open network ports",
     "access_output": "writes streams out to the network or files",
     "misc/libaudioscrobbler_plugin.dll": "sends what you play to Last.fm",
-    "misc/libvod_rtsp_plugin.dll": "an RTSP server",
-    "access/libdvdnav_plugin.dll": "has libdvdcss built in, which decrypts CSS-protected DVDs; STX doesn't do DRM",
-    "access/libdvdread_plugin.dll": "has libdvdcss built in, which decrypts CSS-protected DVDs; STX doesn't do DRM"
+    "misc/libvod_rtsp_plugin.dll": "an RTSP server"
+  },
+  "dvdPlugins": {
+    "plugins": ["access/libdvdnav_plugin.dll", "access/libdvdread_plugin.dll"],
+    "note": "Shipped for unencrypted DVDs (Rocky, Phase 4; spec assumption A5). Both have libdvdcss built in, which decrypts CSS. STX never lets them see an encrypted disc: Stx.Core.Playback.DiscCheck refuses one before LibVLC is given it."
   },
   "soundFont": {
     "url": "https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont-gm_3.1-5.3_all.deb",

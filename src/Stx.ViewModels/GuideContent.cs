@@ -81,11 +81,15 @@ public static class GuideContent
                 "PERFORMANCE in Settings sets how hard playback may work. AUTO picks from your PC.",
                 // LibVlcEngine.cs DiracRefused and Inspect; docs/PLAYBACK.md
                 "Dirac and VC-2 video crash VLC's engine, so STX refuses them and shows DIRAC VIDEO CAN'T BE PLAYED SAFELY instead.",
+                // SourcePanel.cs PLAY STREAM, Composition.cs PlayStreamAsync, StreamOpener.cs
+                "PLAY STREAM plays the address in the Source box: a stream, or an internet radio station or its playlist. A web page goes to ANALYZE instead. UDP and RTP need a listening port, so STX refuses them.",
+                // SourcePanel.cs PLAY DISC, Composition.cs PlayDisc, DiscCheck.cs
+                "PLAY DISC plays a DVD or Blu-ray drive or disc folder from its main title. An encrypted disc is refused with THIS DISC IS ENCRYPTED, SO IT CAN'T BE PLAYED.",
                 // DefaultPlayerOfferPanel.cs, DefaultPlayerViewModel.cs YesCommand and NotNowCommand
                 "The first time, STX asks once whether it should be your player for videos and music. YES opens Windows' Default Apps, where you choose STX. NOT NOW never asks again.",
                 // SettingsPanel.cs DefaultPlayer, FileAssociations.cs Read
                 "DEFAULT PLAYER in Settings opens that page any time. Its light shows what Windows really does: green for every type, amber for some.",
-            ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "FULL", "EXIT", "YES", "NOT NOW", "DEFAULT PLAYER"]),
+            ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "FULL", "EXIT", "YES", "NOT NOW", "DEFAULT PLAYER", "PLAY STREAM", "PLAY DISC"]),
             new("Source truth",
             [
                 // README.md:38, Stx.Audio/AudioMeasurer.cs:8

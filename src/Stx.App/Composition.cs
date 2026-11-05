@@ -32,6 +32,7 @@ public sealed class Composition : IDisposable
     readonly SemaphoreSlim _measuring = new(1, 1);
     readonly IdenticalFileCheck _identical;
     readonly CollectionWatcher _watcher;
+    readonly StreamOpener _streams;
     PipeServer? _bridge;
     LibraryRowViewModel? _selectedRow;
 
@@ -68,6 +69,7 @@ public sealed class Composition : IDisposable
         PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect()));
         Player = new PlayerViewModel(PlayerEngine, OnUi);
         Opened = new OpenedFiles(catalog, Library);
+        _streams = new StreamOpener(_http);
         // The watched folders. The downloads folder is left to the queue, which records each download itself.
         _watcher = new CollectionWatcher(catalog, path => FolderScan.IsUnder(path, Settings.Current.OutputFolder));
         _watcher.Changed += (_, _) => OnUi(() => _ = Library.RefreshAsync());
@@ -199,6 +201,39 @@ public sealed class Composition : IDisposable
         Select(row);
         var list = Library.Rows.Where(r => r.CanOpen).Select(r => (r.Path, r.Title)).ToList();
         Player.Play(row.Path, row.Title, list);
+    }
+
+    /// <summary>
+    /// PLAY STREAM: a stream address or a radio station plays on the PLAYER plate, without saving anything. A web page
+    /// is sent to ANALYZE, and an address that would need a listening port is refused, both with a plain line.
+    /// </summary>
+    public async Task PlayStreamAsync(string text)
+    {
+        using var patience = CancellationTokenSource.CreateLinkedTokenSource(_closing.Token);
+        patience.CancelAfter(TimeSpan.FromSeconds(15));
+        StreamChoice choice;
+        try { choice = await _streams.ResolveAsync(text, patience.Token); }
+        catch (OperationCanceledException) { choice = new(null, "", [], StreamOpener.Unreachable); }
+        Source.Report(choice.Message);
+        if (!choice.CanPlay) return;
+        var list = new List<(string Path, string Title)> { (choice.Url!, choice.Title) };
+        list.AddRange(choice.Fallbacks.Select(f => (f, StreamOpener.TitleOf(f))));
+        Player.Play(choice.Url!, choice.Title, list);
+    }
+
+    /// <summary>PLAY DISC: a DVD or Blu-ray drive, disc folder or image. The engine checks it again and refuses an encrypted one.</summary>
+    public void PlayDisc(string path)
+    {
+        var verdict = DiscCheck.Inspect(path);
+        if (verdict.Kind == DiscKind.None)
+        {
+            Source.Report("THAT ISN'T A DVD OR BLU-RAY. PICK THE DRIVE, OR THE FOLDER THAT HOLDS VIDEO_TS OR BDMV.");
+            return;
+        }
+        Source.Report(verdict.Encrypted ? DiscCheck.Refused : "");
+        string name = Path.GetFileName(Path.TrimEndingDirectorySeparator(path));
+        string title = $"{(verdict.Kind == DiscKind.BluRay ? "BLU-RAY" : "DVD")} · {(name.Length > 0 ? name : path)}";
+        Player.Play(path, title, [(path, title)]);
     }
 
     /// <summary>A file opened from outside STX joins the Library and plays.</summary>

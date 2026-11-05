@@ -82,6 +82,9 @@ public sealed class LibVlcEngine : IPlaybackEngine
     /// <summary>Which Windows audio path carries the sound: "wasapi" or "directsound". Empty before sound starts.</summary>
     public string AudioStream { get; private set; } = "";
 
+    /// <summary>The last path or address LibVLC was given, or null if it has been given nothing. A refused disc never gets here.</summary>
+    public string? HandedToLibVlc { get; private set; }
+
     /// <summary>Errors LibVLC logged since the last <see cref="Open"/>, newest last.</summary>
     public IReadOnlyList<string> LoggedErrors => [.. _errors];
 
@@ -154,11 +157,24 @@ public sealed class LibVlcEngine : IPlaybackEngine
         int generation = _generation;
         _opening = Task.Run(() =>
         {
+            // STX decides what this is before LibVLC sees it. An encrypted disc, or an address that would need a
+            // listening port, is refused here and never opened (Phase 4).
+            var target = PlaybackTarget.For(path);
+            if (target.IsRefused)
+            {
+                lock (_gate) { if (_disposed || generation != _generation) return; _error = target.Refusal; }
+                Set(PlaybackState.Failed);
+                return;
+            }
             Media media;
             lock (_gate)
             {
                 if (_disposed || _vlc is null || generation != _generation) return;
-                media = new Media(_vlc, path, FromType.FromPath, [.. LibVlcOptions.ForMedia(Profile), .. StartPaused ? [":start-paused"] : Array.Empty<string>()]);
+                string[] options = [.. LibVlcOptions.ForMedia(Profile), .. LibVlcOptions.ForTarget(target.Kind), .. StartPaused ? [":start-paused"] : Array.Empty<string>()];
+                media = target.Kind == TargetKind.File
+                    ? new Media(_vlc, path, FromType.FromPath, options)
+                    : new Media(_vlc, target.Location, FromType.FromLocation, options);
+                HandedToLibVlc = target.Location;
             }
             var (mono, dirac) = Inspect(media);
             if (dirac)
