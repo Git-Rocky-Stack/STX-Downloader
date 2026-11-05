@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-04. **Result:** all seven checks passed on route (a). **Recommended route:** VideoLAN's `LibVLCSharp.WinUI` `VideoView`.
 
-**Branch:** `spike/s1-libvlc-winui`, commit `87cdb82`. It is local and will never be merged. The code is `src/Stx.App/Gallery/PlayerSpike.cs`. Every screenshot and statistics log quoted below is in `docs/superpowers/spikes/s1-evidence/` on that branch.
+**Tag:** `spike/s1-evidence`, commit `87cdb82`, made on the branch `spike/s1-libvlc-winui`. The branch was never merged and has been deleted; the tag keeps the commit and is pushed to `origin`. The code is `src/Stx.App/Gallery/PlayerSpike.cs`. Every screenshot and statistics log quoted below is in `docs/superpowers/spikes/s1-evidence/` at that tag (`git show spike/s1-evidence:docs/superpowers/spikes/s1-evidence/<file>`).
 
 **Machine:** the reference laptop: Intel Core i5-8350U, 8 logical cores, Intel UHD Graphics 620, Windows 11 Pro 10.0.26300. The app is the Release build, unpackaged and self-contained (`src/Stx.App/Stx.App.csproj:9-10`).
 
