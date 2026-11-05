@@ -81,7 +81,11 @@ public static class GuideContent
                 "PERFORMANCE in Settings sets how hard playback may work. AUTO picks from your PC.",
                 // LibVlcEngine.cs DiracRefused and Inspect; docs/PLAYBACK.md
                 "Dirac and VC-2 video crash VLC's engine, so STX refuses them and shows DIRAC VIDEO CAN'T BE PLAYED SAFELY instead.",
-            ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "FULL", "EXIT"]),
+                // DefaultPlayerOfferPanel.cs, DefaultPlayerViewModel.cs YesCommand and NotNowCommand
+                "The first time, STX asks once whether it should be your player for videos and music. YES opens Windows' Default Apps, where you choose STX. NOT NOW never asks again.",
+                // SettingsPanel.cs DefaultPlayer, FileAssociations.cs Read
+                "DEFAULT PLAYER in Settings opens that page any time. Its light shows what Windows really does: green for every type, amber for some.",
+            ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "FULL", "EXIT", "YES", "NOT NOW", "DEFAULT PLAYER"]),
             new("Source truth",
             [
                 // README.md:38, Stx.Audio/AudioMeasurer.cs:8

@@ -73,6 +73,8 @@ public sealed class Composition : IDisposable
         _watcher.Changed += (_, _) => OnUi(() => _ = Library.RefreshAsync());
         _watcher.Progress += (_, progress) => OnUi(() => Library.ShowScan(progress));
 
+        DefaultPlayer = new DefaultPlayerViewModel(new UserRegistry(), link => Process.Start(new ProcessStartInfo(link) { UseShellExecute = true }),
+            Settings, Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "STXDownloader.exe"), Environment.OSVersion.Version.Build, UserRegistry.AssociationsChanged);
         FirstRun = new FirstRunViewModel(Tools, Status, () => Settings.Current.ToolUpdates);
         Clipboard = new ClipboardOfferViewModel(() => Settings.Current.ClipboardDetect);
         Source.ToolsReady = false;
@@ -114,6 +116,8 @@ public sealed class Composition : IDisposable
     public OpenedFiles Opened { get; }
     public SettingsViewModel Settings { get; }
     public FirstRunViewModel FirstRun { get; }
+    /// <summary>STX as the default player: asked once at first run, and a pad and LED in Settings.</summary>
+    public DefaultPlayerViewModel DefaultPlayer { get; }
     public ClipboardOfferViewModel Clipboard { get; }
     public WindowActivity Activity { get; } = new();
     public EngineStatusViewModel Status { get; } = new();

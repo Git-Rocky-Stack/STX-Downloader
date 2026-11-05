@@ -30,6 +30,8 @@ public sealed record AppSettings
     public bool GuideShown { get; init; }
     /// <summary>How hard playback may work. Auto picks from the PC's hardware.</summary>
     public PlaybackPerformance Performance { get; init; } = PlaybackPerformance.Auto;
+    /// <summary>First-run setup asks once whether STX should be the player for videos and music. Yes or Not now, it never asks again.</summary>
+    public bool DefaultPlayerAsked { get; init; }
     /// <summary>Folders whose media joins the Library. Null means never chosen: Videos and Music.</summary>
     public IReadOnlyList<string>? WatchedFolders { get; init; }
 

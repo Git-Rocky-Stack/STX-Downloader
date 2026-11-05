@@ -13,7 +13,7 @@ namespace Stx.App.Panels;
 /// <summary>Settings, as switches on a plate. Every change applies and saves at once.</summary>
 public sealed partial class SettingsPanel : ContentControl
 {
-    public SettingsPanel(SettingsViewModel settings, Window? owner, Action? openGuide = null, Action? openTutorial = null)
+    public SettingsPanel(SettingsViewModel settings, Window? owner, Action? openGuide = null, Action? openTutorial = null, DefaultPlayerViewModel? defaultPlayer = null)
     {
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
@@ -119,6 +119,7 @@ public sealed partial class SettingsPanel : ContentControl
         column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Settings" });
         column.Children.Add(top);
         column.Children.Add(WatchedFolders(settings, owner));
+        if (defaultPlayer is not null) column.Children.Add(DefaultPlayer(defaultPlayer));
         Content = new Faceplate { PanelName = "settings", Padding = new Thickness(36, 28, 36, 28), Content = column };
     }
 
@@ -173,6 +174,31 @@ public sealed partial class SettingsPanel : ContentControl
         section.Children.Add(new EngravedLabel { Kind = LabelKind.Label, Text = "Watched folders: their media joins the Library" });
         section.Children.Add(row);
         return section;
+    }
+
+    // Windows doesn't let an app make itself the default, so this is a pad that opens Windows' page for choosing STX.
+    // The LED is what Windows actually does: green for every type, amber for some, dark for none.
+    static FrameworkElement DefaultPlayer(DefaultPlayerViewModel player)
+    {
+        var choose = new Pad { Content = "DEFAULT PLAYER", VerticalAlignment = VerticalAlignment.Center };
+        choose.Click += (_, _) => player.ChooseCommand.Execute(null);
+        var led = new Led { VerticalAlignment = VerticalAlignment.Center };
+        var readout = new GlowText { Tone = DisplayTone.Cyan, VerticalAlignment = VerticalAlignment.Center };
+        void Paint()
+        {
+            led.Color = player.State.IsAll ? LedColor.Green : LedColor.Amber;
+            led.State = player.State.IsNone ? LedState.Off : LedState.On;
+            readout.Text = player.StateText;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(choose, "Default player: " + player.StateText.ToLowerInvariant());
+        }
+        player.PropertyChanged += (_, _) => Paint();
+        Paint();
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
+        row.Children.Add(choose);
+        row.Children.Add(led);
+        row.Children.Add(new Display { Tone = DisplayTone.Cyan, Padding = new Thickness(12, 8, 12, 8), Content = readout });
+        return row;
     }
 
     static Pad HelpPad(string text, Action open)

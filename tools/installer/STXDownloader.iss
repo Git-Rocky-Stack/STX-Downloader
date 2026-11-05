@@ -49,6 +49,8 @@ SetupIconFile=..\..\src\Stx.App\Assets\stx.ico
 UninstallDisplayIcon={app}\STXDownloader.exe
 UninstallDisplayName=STX Downloader
 CloseApplications=force
+; STX registers as a player for the types its corpus proves (associations.iss). The user chooses it in Windows.
+ChangesAssociations=yes
 RestartApplications=no
 ; The look of the rack: the dark faceplate color from src\Stx.Look\LookTokens.cs, with no stock artwork or lines.
 ; Behind the panel picture, the same black it's laid on in tools\make_brand.py.
@@ -84,6 +86,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Edge\NativeMessagingHosts\{#HostName}"; 
 Root: HKCU; Subkey: "Software\Chromium\NativeMessagingHosts\{#HostName}"; ValueType: string; ValueData: "{app}\{#HostName}.json"; Flags: uninsdeletekey
 ; The app adds this itself when Start with Windows is on. Uninstalling mustn't leave it pointing at nothing.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "STXDownloader"; ValueType: none; Flags: dontcreatekey uninsdeletevalue
+; STX as a player for videos and music, for this user only. Windows lists it in Default Apps; it's never made the default here.
+#include "associations.iss"
 
 [Run]
 Filename: "{app}\STXDownloader.exe"; Description: "Start STX Downloader"; Flags: nowait postinstall skipifsilent

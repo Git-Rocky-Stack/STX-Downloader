@@ -35,7 +35,7 @@ public sealed partial class MainWindow : Window
         _tutorial = new TutorialPanel(() => ShowHelp(null)) { Visibility = Visibility.Collapsed };
         var settings = new SettingsPanel(_app.Settings, this,
             () => ShowHelp(_guide.Visibility == Visibility.Visible ? null : _guide),
-            () => ShowHelp(_tutorial.Visibility == Visibility.Visible ? null : _tutorial)) { Visibility = Visibility.Collapsed };
+            () => ShowHelp(_tutorial.Visibility == Visibility.Visible ? null : _tutorial), _app.DefaultPlayer) { Visibility = Visibility.Collapsed };
         var first = new FirstRunPanel(_app.FirstRun);
         var truth = new SourceTruthPanel(_app.SourceTruth, _app.ConvertSelected);
 
@@ -45,6 +45,7 @@ public sealed partial class MainWindow : Window
         rack.Children.Add(_guide);
         rack.Children.Add(_tutorial);
         rack.Children.Add(first);
+        rack.Children.Add(new DefaultPlayerOfferPanel(_app.DefaultPlayer));
         rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard));
 
         // The deck: QUEUE and LIBRARY on the left; the PLAYER, with SOURCE TRUTH under it reading the same file, on the right.
@@ -98,6 +99,8 @@ public sealed partial class MainWindow : Window
         _app.Settings.Changed += (_, current) => ApplyBackgroundChoices(current);
         if (_app.Settings.TakeFirstLaunchGuide()) ShowHelp(_guide);
 
+        // Coming back from Windows' Default Apps page: the LED reads what Windows now does.
+        Activated += (_, e) => { if (e.WindowActivationState != WindowActivationState.Deactivated) _app.DefaultPlayer.Refresh(); };
         AppWindow.Closing += OnClosing;
         Closed += (_, _) => Shutdown();
         _ = _app.StartAsync();

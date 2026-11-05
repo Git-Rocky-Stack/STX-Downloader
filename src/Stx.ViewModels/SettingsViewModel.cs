@@ -67,6 +67,9 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
         }
     }
 
+    /// <summary>Records that the default-player question was answered, so it's never asked again.</summary>
+    public void MarkDefaultPlayerAsked() => Apply(_settings with { DefaultPlayerAsked = true });
+
     /// <summary>True on the first launch only. Saved straight away, so the guide never opens by itself twice.</summary>
     public bool TakeFirstLaunchGuide()
     {
