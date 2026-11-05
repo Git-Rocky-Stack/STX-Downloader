@@ -192,15 +192,19 @@ public sealed class CollectionWatcherTests : IDisposable
     {
         for (int n = 0; n < 3000; n++) Make(Path.Combine($"Artist {n / 30}", $"Track {n}.mp3"), 1);
         ThreadPriority? priority = null;
+        int caller = Environment.CurrentManagedThreadId;
+        bool onCaller = false;
         using var watcher = new CollectionWatcher(_catalog, _ => false, Settle);
-        watcher.Progress += (_, _) => priority ??= Thread.CurrentThread.Priority;
+        watcher.Progress += (_, _) => { priority ??= Thread.CurrentThread.Priority; onCaller |= Environment.CurrentManagedThreadId == caller; };
 
-        var clock = Stopwatch.StartNew();
         watcher.Watch([_root]);
-        var returned = clock.Elapsed;
+        // Measured by what happened, not by the clock: Watch hands back while the scan is still going, and none of the
+        // scan's work ever runs on the thread that called it (the UI thread, in the app).
+        bool stillScanning = !watcher.Scanning.IsCompleted;
 
-        Assert.True(returned < TimeSpan.FromMilliseconds(250), $"Watch held its caller for {returned}.");
         await watcher.Scanning.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.True(stillScanning, "Watch returned only after the scan had finished.");
+        Assert.False(onCaller, "Part of the scan ran on the caller's thread.");
         Assert.Equal(3000, _catalog.IndexedFiles().Count);
         Assert.Equal(ThreadPriority.BelowNormal, priority);
         Assert.True(_catalog.AddCalls >= 6, "Adds should come in batches, so rows appear as the scan goes.");
