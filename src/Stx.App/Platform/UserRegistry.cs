@@ -5,7 +5,7 @@ using Stx.Core.Library;
 namespace Stx.App.Platform;
 
 /// <summary>The current user's own registry hive. STX never writes outside it, so it never needs an administrator.</summary>
-public sealed partial class UserRegistry : IUserRegistry
+public sealed class UserRegistry : IUserRegistry
 {
     public string? Read(string key, string? name)
     {
@@ -25,6 +25,6 @@ public sealed partial class UserRegistry : IUserRegistry
     const int SHCNE_ASSOCCHANGED = 0x08000000;
     const uint SHCNF_IDLIST = 0;
 
-    [LibraryImport("shell32.dll")]
-    private static partial void SHChangeNotify(int eventId, uint flags, IntPtr item1, IntPtr item2);
+    [DllImport("shell32.dll")]
+    static extern void SHChangeNotify(int eventId, uint flags, IntPtr item1, IntPtr item2);
 }
