@@ -54,7 +54,7 @@ public sealed partial class MainWindow : Window
         deck.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var left = new StackPanel { Spacing = 8 };
         left.Children.Add(new QueuePanel(_app.Queue));
-        left.Children.Add(new LibraryPanel(_app.Library, _app.Select));
+        left.Children.Add(new LibraryPanel(_app.Library, _app.Select, PickShrinkFolderAsync));
         _player = new PlayerPanel(_app.Player, _app.PlayerEngine, _app.Enhance);
         var right = new StackPanel { Spacing = 8 };
         right.Children.Add(_player);
@@ -160,6 +160,15 @@ public sealed partial class MainWindow : Window
         ShowFromTray();
         _app.OpenFromOutside(path);
         _player.StartBringIntoView();
+    }
+
+    // SHRINK FOLDER: the copies are written beside the originals, inside the folder picked.
+    async Task PickShrinkFolderAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        if (await picker.PickSingleFolderAsync() is { } chosen) await _app.Shrink.QueueAsync(chosen.Path);
     }
 
     // A drive or a disc folder. Windows' folder picker lists DVD and Blu-ray drives like any other.

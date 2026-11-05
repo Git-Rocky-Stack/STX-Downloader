@@ -15,8 +15,13 @@ public sealed record ConvertResult(bool IsSuccess, ErrorKind? Error, string? Out
 /// Runs one conversion. It writes to a temporary name and renames only on success, so a failed or canceled
 /// job never leaves a broken file that looks finished, and the original is never touched.
 /// </summary>
-public sealed partial class FfmpegRunner(IProcessRunner process, string ffmpegPath, Func<Task<string>>? h264Encoder = null)
+/// <param name="check">Checks a shrink copy before it's kept (Phase 7). A copy that fails is deleted, never marked done.</param>
+/// <param name="hasEncoder">Whether this FFmpeg has an encoder, asked before a shrink starts.</param>
+public sealed partial class FfmpegRunner(IProcessRunner process, string ffmpegPath, Func<Task<string>>? h264Encoder = null, CopyCheck? check = null, Func<string, Task<bool>>? hasEncoder = null)
 {
+    /// <summary>What a copy is called while it's being written. Watched folders ignore it; it's renamed only once it checks out.</summary>
+    public const string PartialPrefix = "stx.partial-";
+
     const int LinesKeptForDiagnosis = 200;
     const string ProgressKey = "out_time_ms=";
 
@@ -34,9 +39,11 @@ public sealed partial class FfmpegRunner(IProcessRunner process, string ffmpegPa
 
         string extension = FfmpegArgs.Extension(request.Output);
         if (extension.Length == 0) extension = Path.GetExtension(request.InputPath);
-        string stem = Path.GetFileNameWithoutExtension(request.InputPath);
+        string stem = Path.GetFileNameWithoutExtension(request.InputPath) + request.Suffix;
+        if (request.Shrink is { } codec && hasEncoder is not null && !await hasEncoder(FfmpegArgs.Encoder(codec)).ConfigureAwait(false))
+            return ConvertResult.Failed(ErrorKind.EncoderMissing);
         // A short, fixed name, because a long title plus a suffix could pass the path limit before the real name is chosen.
-        string partial = Path.Combine(request.OutputFolder, $"stx.partial-{Guid.NewGuid():N}{extension}");
+        string partial = Path.Combine(request.OutputFolder, $"{PartialPrefix}{Guid.NewGuid():N}{extension}");
         string encoder = request.Reencode && h264Encoder is not null ? await h264Encoder().ConfigureAwait(false) : "libx264";
 
         var recent = new Queue<string>();
@@ -49,6 +56,12 @@ public sealed partial class FfmpegRunner(IProcessRunner process, string ffmpegPa
                 string evidence;
                 lock (recent) evidence = string.Join('\n', recent);
                 return ConvertResult.Failed(ErrorClassifier.Classify(evidence, exit));
+            }
+
+            if (request.Shrink is not null && check is not null && await check.ProblemAsync(request.InputPath, partial, cancel).ConfigureAwait(false) is { } problem)
+            {
+                onLog?.Invoke("The copy was checked and not kept: " + problem + ".");
+                return ConvertResult.Failed(ErrorKind.CopyFailedCheck);
             }
 
             string target = Filename.Safe(stem, extension, request.OutputFolder, File.Exists);

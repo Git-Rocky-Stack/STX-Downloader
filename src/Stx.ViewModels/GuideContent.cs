@@ -68,7 +68,11 @@ public static class GuideContent
                 "Select a file, then press OPEN to play it on the Player plate, or FIND FILE to show it in its folder.",
                 // LibraryPanel.cs:34-36, README.md:21
                 "CAR USB, PHONE and ARCHIVE convert the selected file for that use.",
-            ], ["OPEN", "FIND FILE", "CAR USB", "PHONE", "ARCHIVE"]),
+                // LibraryPanel.cs shrink row, LibraryViewModel.cs QueueShrink, FfmpegRunner.cs check, CopyCheck.cs
+                "SHRINK makes a smaller copy beside the selected file: AV1 or HEVC for video, as the Shrink to knob says, and Opus for sound alone. It's lossy, and the copy is checked before it's kept.",
+                // ShrinkFolder.cs QueueAsync, LibraryViewModel.cs SpaceText
+                "SHRINK FOLDER does the same for every file in a folder. The Library shows how much deleting the originals would free. STX never deletes them.",
+            ], ["OPEN", "FIND FILE", "CAR USB", "PHONE", "ARCHIVE", "SHRINK", "SHRINK FOLDER"]),
             new("Player",
             [
                 // LibraryViewModel.cs OpenCommand, Composition.cs Play, MainWindow.cs OpenFromOutside

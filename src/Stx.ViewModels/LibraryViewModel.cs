@@ -12,8 +12,13 @@ public sealed record ConvertAsk(LibraryRowViewModel Row, OutputChoice Output);
 public sealed record PresetAsk(LibraryRowViewModel Row, string PresetName);
 
 /// <summary>One file in the collection. A file that's gone from disk stays listed and says so.</summary>
-public sealed class LibraryRowViewModel(LibraryItem item, LibraryFile file, bool onDisk)
+public sealed class LibraryRowViewModel(LibraryItem item, LibraryFile file, bool onDisk, long? savedBytes = null, int? savedPercent = null)
 {
+    /// <summary>For a shrink copy: how many bytes smaller than its original it is (negative if larger), when both are on disk.</summary>
+    public long? SavedBytes { get; } = savedBytes;
+    public int? SavedPercent { get; } = savedPercent;
+    public bool IsShrinkCopy => Format.StartsWith("Shrink ", StringComparison.Ordinal);
+
     public long MediaId { get; } = item.Id;
     public long FileId { get; } = file.Id;
     public string Title { get; } = item.Title ?? item.PageUrl ?? "Untitled";
@@ -28,7 +33,14 @@ public sealed class LibraryRowViewModel(LibraryItem item, LibraryFile file, bool
 
     public string Status => IsMissing
         ? "FILE MISSING"
-        : $"{System.IO.Path.GetExtension(Path).TrimStart('.').ToUpperInvariant()} · {Describe()}";
+        : $"{System.IO.Path.GetExtension(Path).TrimStart('.').ToUpperInvariant()} · {Describe()}{Saving()}";
+
+    string Saving() => SavedPercent switch
+    {
+        null => "",
+        >= 0 and var p => $" · {p}% SMALLER",
+        var p => $" · {-p}% LARGER",
+    };
 
     // What search looks through: the title, the file's name and the folder it's in.
     readonly string _haystack = $"{item.Title}\n{System.IO.Path.GetFileName(file.Path)}\n{System.IO.Path.GetDirectoryName(file.Path)}".ToLowerInvariant();
@@ -39,7 +51,8 @@ public sealed class LibraryRowViewModel(LibraryItem item, LibraryFile file, bool
     /// <summary>Whether the other row shows exactly what this one does, so this one can stay on screen.</summary>
     public bool SameAs(LibraryRowViewModel other) =>
         FileId == other.FileId && MediaId == other.MediaId && Title == other.Title && Path == other.Path && Format == other.Format
-        && Origin == other.Origin && IsMissing == other.IsMissing && SiblingFormats.SequenceEqual(other.SiblingFormats);
+        && Origin == other.Origin && IsMissing == other.IsMissing && SiblingFormats.SequenceEqual(other.SiblingFormats)
+        && SavedBytes == other.SavedBytes && SavedPercent == other.SavedPercent;
 
     string Describe()
     {
@@ -78,14 +91,17 @@ public sealed class LibraryViewModel : ObservableObject
     readonly QueueEngine _engine;
     readonly IShell _shell;
     readonly Func<string, bool> _exists;
+    readonly Func<string, long?> _size;
     /// <summary>More changes than this at once and the list is reset instead of edited row by row.</summary>
     const int ResetAbove = 400;
     List<LibraryRowViewModel> _all = [];
     string _message = "", _query = "", _scan = "";
 
     /// <param name="play">OPEN plays the row on the PLAYER plate. It never hands the file to another app.</param>
-    public LibraryViewModel(ILibraryCatalog catalog, QueueEngine engine, IShell shell, Func<string, bool> exists, Action<LibraryRowViewModel> play)
+    /// <param name="size">A file's size, for what shrinking saved. Read off the UI thread.</param>
+    public LibraryViewModel(ILibraryCatalog catalog, QueueEngine engine, IShell shell, Func<string, bool> exists, Action<LibraryRowViewModel> play, Func<string, long?>? size = null)
     {
+        _size = size ?? (path => { try { var info = new FileInfo(path); return info.Exists ? info.Length : null; } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; } });
         _catalog = catalog;
         _engine = engine;
         _shell = shell;
@@ -94,7 +110,46 @@ public sealed class LibraryViewModel : ObservableObject
         RevealCommand = new RelayCommand<LibraryRowViewModel>(row => { if (row is { CanOpen: true }) _shell.RevealFile(row.Path); });
         ConvertCommand = new RelayCommand<ConvertAsk>(ask => { if (ask is not null) Convert(ask.Row, ask.Output, null, ask.Output.ToString()); });
         ConvertPresetCommand = new RelayCommand<PresetAsk>(ConvertPreset);
+        ShrinkCommand = new RelayCommand<LibraryRowViewModel>(Shrink);
     }
+
+    /// <summary>SHRINK: a smaller copy beside the file, in the video codec chosen on the knob, or Opus for sound alone.</summary>
+    public IRelayCommand<LibraryRowViewModel> ShrinkCommand { get; }
+
+    /// <summary>The video codec SHRINK and SHRINK FOLDER use. Sound alone always goes to Opus.</summary>
+    public ShrinkCodec ShrinkVideo { get; set; } = ShrinkCodec.Av1;
+
+    /// <summary>What deleting the originals of shrunk files would free. STX never deletes them; this only says how much.</summary>
+    public string SpaceText { get => _space; private set => SetProperty(ref _space, value); }
+    string _space = "";
+
+    /// <summary>Queues a shrink copy of the row. False, with a plain message, when it can't or needn't be made.</summary>
+    public bool QueueShrink(LibraryRowViewModel row, bool quiet = false)
+    {
+        if (!row.CanConvert) return false;
+        if (row.IsShrinkCopy)
+        {
+            if (!quiet) Message = "That file is already a shrink copy.";
+            return false;
+        }
+        var preset = PresetCatalog.ShrinkFor(Stx.Core.Library.MediaTypes.KindOf(row.Path) != Stx.Core.Library.MediaKind.Audio, ShrinkVideo);
+        if (row.SiblingFormats.Contains(preset.Name))
+        {
+            if (!quiet) Message = "This file already has that shrink copy.";
+            return false;
+        }
+        if (!quiet) Message = "";
+        _engine.Enqueue(row.MediaId, JobKind.Convert, new ConversionPlan(preset.Output, row.FileId, preset.Name).ToString());
+        return true;
+    }
+
+    void Shrink(LibraryRowViewModel? row)
+    {
+        if (row is not null) QueueShrink(row);
+    }
+
+    /// <summary>Shows a plain line on the Library plate.</summary>
+    public void Say(string message) => Message = message;
 
     /// <summary>The rows shown: all of them, or those the search matches, newest first.</summary>
     public RowCollection Rows { get; } = [];
@@ -171,12 +226,24 @@ public sealed class LibraryViewModel : ObservableObject
         foreach (var row in known) previous[row.FileId] = row;
         var all = new List<LibraryRowViewModel>(firstRow.Count);
         foreach (var item in items)
+        {
+            // A shrink copy is measured against its item's original, when both are on disk.
+            long? original = item.Files.Any(f => f.Format.StartsWith("Shrink ", StringComparison.Ordinal))
+                && item.Files.FirstOrDefault(f => f.Format == "Original") is { } o ? _size(o.Path) : null;
             foreach (var file in item.Files)
             {
                 if (firstRow[file.Path] != file.Id) continue;
-                var row = new LibraryRowViewModel(item, file, _exists(file.Path));
+                long? saved = null;
+                int? percent = null;
+                if (original is > 0 && file.Format.StartsWith("Shrink ", StringComparison.Ordinal) && _size(file.Path) is { } copy)
+                {
+                    saved = original.Value - copy;
+                    percent = (int)Math.Round(saved.Value * 100.0 / original.Value);
+                }
+                var row = new LibraryRowViewModel(item, file, _exists(file.Path), saved, percent);
                 all.Add(previous.TryGetValue(file.Id, out var old) && old.SameAs(row) ? old : row);
             }
+        }
         return all;
     }
 
@@ -184,9 +251,16 @@ public sealed class LibraryViewModel : ObservableObject
     {
         bool wasEmpty = IsEmpty;
         _all = all;
+        var freed = all.Where(r => r is { IsShrinkCopy: true, SavedBytes: > 0 }).ToList();
+        SpaceText = freed.Count == 0 ? ""
+            : $"DELETING {freed.Count} ORIGINAL{(freed.Count == 1 ? "" : "S")} WOULD FREE {Bytes(freed.Sum(r => r.SavedBytes!.Value))}. STX NEVER DELETES THEM.";
         Show();
         if (wasEmpty != IsEmpty) OnPropertyChanged(nameof(IsEmpty));
     }
+
+    static string Bytes(long bytes) => bytes >= 1L << 30
+        ? (bytes / (double)(1L << 30)).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " GB"
+        : (bytes / (double)(1L << 20)).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " MB";
 
     /// <summary>The row for a path, searched or not. Case doesn't matter.</summary>
     public LibraryRowViewModel? Find(string path) =>

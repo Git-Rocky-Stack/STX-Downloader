@@ -57,7 +57,9 @@ public sealed class Composition : IDisposable
         var runner = new YtDlpRunner(process, Tools, job => RequestFor(job, catalog), vault);
         var probe = new Lazy<EncoderProbe>(() => new EncoderProbe(process, Tools.Paths.Ffmpeg ?? ""));
         var converter = new ConversionRunner(
-            new FfmpegRunner(process, Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), () => probe.Value.BestH264Async()),
+            new FfmpegRunner(process, Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), () => probe.Value.BestH264Async(),
+                new CopyCheck(new ProcessRunner(ProcessPriorityClass.BelowNormal), Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), Path.Combine(ToolManager.DefaultRoot(), "ffprobe.exe")),
+                encoder => probe.Value.HasAsync(encoder)),
             catalog.FilePath,
             (media, path, format) => catalog.AddFile(media, path, null, format));
         Engine = new QueueEngine(new JobRepo(_db), new OffThreadRunner(new JobRouter(runner, converter)), new QueuePolicy { MaxParallel = Settings.Current.MaxParallel }, new SystemClock(), vault);
@@ -75,8 +77,11 @@ public sealed class Composition : IDisposable
             level => PlayerEngine.Enhance = level, () => PlayerEngine.EnhanceSeen);
         Player.PropertyChanged += (_, _) => Enhance.Refresh();
         _streams = new StreamOpener(_http);
+        Shrink = new ShrinkFolder(catalog, Library, path => Path.GetFileName(path).StartsWith(FfmpegRunner.PartialPrefix, StringComparison.Ordinal));
         // The watched folders. The downloads folder is left to the queue, which records each download itself.
-        _watcher = new CollectionWatcher(catalog, path => FolderScan.IsUnder(path, Settings.Current.OutputFolder));
+        // Copies being written (shrink, convert) carry a temporary name and are recorded by the queue once they're done.
+        _watcher = new CollectionWatcher(catalog, path => FolderScan.IsUnder(path, Settings.Current.OutputFolder)
+            || Path.GetFileName(path).StartsWith(FfmpegRunner.PartialPrefix, StringComparison.Ordinal));
         _watcher.Changed += (_, _) => OnUi(() => _ = Library.RefreshAsync());
         _watcher.Progress += (_, progress) => OnUi(() => Library.ShowScan(progress));
 
@@ -122,6 +127,8 @@ public sealed class Composition : IDisposable
     public LibVlcEngine PlayerEngine { get; }
     public OpenedFiles Opened { get; }
     public EnhanceViewModel Enhance { get; }
+    /// <summary>SHRINK FOLDER.</summary>
+    public ShrinkFolder Shrink { get; }
     public SettingsViewModel Settings { get; }
     public FirstRunViewModel FirstRun { get; }
     /// <summary>STX as the default player: asked once at first run, and a pad and LED in Settings.</summary>
