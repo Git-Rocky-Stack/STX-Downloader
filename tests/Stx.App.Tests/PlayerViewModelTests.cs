@@ -158,6 +158,30 @@ public class PlayerViewModelTests
         Assert.False(player.IsAudioOnly);
     }
 
+    // Seen in the real app: a music file that had ended showed the last picture of the video played before it.
+    [Fact]
+    public void Music_stays_marked_as_music_after_it_ends()
+    {
+        var (player, engine) = Make();
+        engine.HasVideo = false;
+        player.Play(@"D:\song.flac", "Song", [(@"D:\song.flac", "Song")]);
+        Assert.True(player.IsAudioOnly);
+        engine.State = PlaybackState.Ended;
+        engine.Raise();
+        Assert.True(player.IsAudioOnly);
+    }
+
+    [Fact]
+    public void A_video_that_ends_is_not_marked_as_music()
+    {
+        var (player, engine) = Make();
+        player.Play(@"D:\a.mkv", "A", List);
+        engine.State = PlaybackState.Ended;
+        engine.HasVideo = false;   // LibVLC lists no video track once the file has ended.
+        engine.Raise();
+        Assert.False(player.IsAudioOnly);
+    }
+
     [Fact]
     public void Dispose_stops_the_engine()
     {

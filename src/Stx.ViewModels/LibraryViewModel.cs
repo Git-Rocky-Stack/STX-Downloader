@@ -38,13 +38,14 @@ public sealed class LibraryViewModel : ObservableObject
     readonly Func<string, bool> _exists;
     string _message = "";
 
-    public LibraryViewModel(ILibraryCatalog catalog, QueueEngine engine, IShell shell, Func<string, bool> exists)
+    /// <param name="play">OPEN plays the row on the PLAYER plate. It never hands the file to another app.</param>
+    public LibraryViewModel(ILibraryCatalog catalog, QueueEngine engine, IShell shell, Func<string, bool> exists, Action<LibraryRowViewModel> play)
     {
         _catalog = catalog;
         _engine = engine;
         _shell = shell;
         _exists = exists;
-        OpenCommand = new RelayCommand<LibraryRowViewModel>(row => { if (row is { CanOpen: true }) _shell.OpenFile(row.Path); });
+        OpenCommand = new RelayCommand<LibraryRowViewModel>(row => { if (row is { CanOpen: true }) play(row); });
         RevealCommand = new RelayCommand<LibraryRowViewModel>(row => { if (row is { CanOpen: true }) _shell.RevealFile(row.Path); });
         ConvertCommand = new RelayCommand<ConvertAsk>(ask => { if (ask is not null) Convert(ask.Row, ask.Output, null, ask.Output.ToString()); });
         ConvertPresetCommand = new RelayCommand<PresetAsk>(ConvertPreset);

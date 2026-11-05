@@ -42,7 +42,17 @@ public class GuideTests
     public void The_guide_covers_each_plate_on_the_console()
     {
         var titles = Sections().Select(section => section.Title).ToList();
-        foreach (string plate in new[] { "Queue", "Library", "Source truth", "Settings" }) Assert.Contains(plate, titles);
+        foreach (string plate in new[] { "Queue", "Library", "Source truth", "Settings", "Player" }) Assert.Contains(plate, titles);
+    }
+
+    // Rocky: Dirac being refused has to be said plainly, in the guide as in the docs.
+    [Fact]
+    public void The_guide_says_dirac_is_refused_and_why()
+    {
+        string player = string.Join(' ', Sections().Single(s => s.Title == "Player").Lines);
+        Assert.Contains("Dirac", player);
+        Assert.Contains("DIRAC VIDEO CAN'T BE PLAYED SAFELY", player);
+        Assert.Contains("crash", player);
     }
 
     [Fact]

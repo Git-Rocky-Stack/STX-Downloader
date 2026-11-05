@@ -22,6 +22,9 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     IReadOnlyList<(string Path, string Title)> _list = [];
     int _index = -1;
     bool _disposed;
+    // Whether the file playing has a picture, read while it plays. LibVLC lists no tracks once a file has ended, so
+    // the answer is kept: a finished song stays music, and a finished film isn't taken for one.
+    bool? _hasPicture;
 
     public PlayerViewModel(IPlaybackEngine engine, Action<Action> onUi)
     {
@@ -59,6 +62,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _list = list;
         _index = Enumerable.Range(0, list.Count).FirstOrDefault(i => string.Equals(list[i].Path, path, StringComparison.OrdinalIgnoreCase), -1);
         Title = title;
+        _hasPicture = null;
         _engine.Open(path);
         Refresh();
     }
@@ -108,6 +112,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     void PlayAt(int index)
     {
         _index = index;
+        _hasPicture = null;
         Title = _list[index].Title;
         _engine.Open(_list[index].Path);
     }
@@ -120,7 +125,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         var state = _engine.State;
         HasMedia = state is not PlaybackState.Idle;
         IsPlaying = state is PlaybackState.Playing;
-        IsAudioOnly = state is PlaybackState.Playing or PlaybackState.Paused && !_engine.HasVideo;
+        if (state is PlaybackState.Playing or PlaybackState.Paused) _hasPicture = _engine.HasVideo;
+        IsAudioOnly = HasMedia && _hasPicture == false;
         var position = _engine.Position;
         TimeText = ((int)position.TotalHours).ToString("00", CultureInfo.InvariantCulture) + position.ToString(@"\:mm\:ss", CultureInfo.InvariantCulture);
         var length = _engine.Length;

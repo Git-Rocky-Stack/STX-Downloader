@@ -70,7 +70,7 @@ internal static class ConsoleSample
     {
         var catalog = new Catalog();
         var jobs = new QueueEngine(new Memory(), new NeverRuns(), new QueuePolicy { MaxParallel = 0 }, new SystemClock(), new CaptureVault());
-        var library = new LibraryViewModel(new SampleLibrary(), jobs, new NoShell(), path => !path.Contains("moved"));
+        var library = new LibraryViewModel(new SampleLibrary(), jobs, new NoShell(), path => !path.Contains("moved"), _ => { });
         library.Refresh();
         return new LibraryPanel(library, _ => { });
     }

@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
     readonly ClipboardWatcher _clipboard;
     readonly GuidePanel _guide;
     readonly TutorialPanel _tutorial;
+    readonly PlayerPanel _player;
     bool _quitting;
 
     public MainWindow(bool startHidden = false, bool pointerLight = false)
@@ -46,24 +47,47 @@ public sealed partial class MainWindow : Window
         rack.Children.Add(first);
         rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard));
 
+        // The deck: QUEUE and LIBRARY on the left; the PLAYER, with SOURCE TRUTH under it reading the same file, on the right.
         var deck = new Grid { ColumnSpacing = 8 };
         deck.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
         deck.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(truth, 1);
         var left = new StackPanel { Spacing = 8 };
         left.Children.Add(new QueuePanel(_app.Queue));
         left.Children.Add(new LibraryPanel(_app.Library, _app.Select));
+        _player = new PlayerPanel(_app.Player, _app.PlayerEngine);
+        var right = new StackPanel { Spacing = 8 };
+        right.Children.Add(_player);
+        right.Children.Add(truth);
+        Grid.SetColumn(right, 1);
         deck.Children.Add(left);
-        deck.Children.Add(truth);
+        deck.Children.Add(right);
         rack.Children.Add(deck);
 
         // The display glass and rubber stay dark in both modes, so Windows' own theme never leaks in.
         var root = new Grid { RequestedTheme = ElementTheme.Dark, Background = new SolidColorBrush(ColorHelper.FromArgb(255, 8, 9, 10)) };
-        root.Children.Add(new ScrollViewer { Content = rack });
+        var scroller = new ScrollViewer { Content = rack };
+        root.Children.Add(scroller);
+
+        // Full screen in place: every other plate folds away and the player's column takes the window. The video
+        // never changes parent (spike S1, finding F1).
+        _player.FullScreenChanged += (_, on) =>
+        {
+            foreach (var plate in rack.Children) if (!ReferenceEquals(plate, deck)) plate.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+            left.Visibility = truth.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+            deck.ColumnDefinitions[0].Width = on ? new GridLength(0) : new GridLength(1.2, GridUnitType.Star);
+            deck.ColumnSpacing = on ? 0 : 8;
+            rack.Padding = new Thickness(on ? 0 : 8);
+            scroller.ChangeView(null, 0, null, disableAnimation: true);
+            scroller.VerticalScrollMode = on ? ScrollMode.Disabled : ScrollMode.Enabled;
+            scroller.VerticalScrollBarVisibility = on ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+            AppWindow.SetPresenter(on ? AppWindowPresenterKind.FullScreen : AppWindowPresenterKind.Default);
+        };
         Content = root;
         if (pointerLight) AddPointerLight(root);
 
         _app.Activity.Register(() => truth.SweepTimer.IsEnabled || _app.SourceTruth.IsSweeping, truth.SweepTimer.Start, truth.SweepTimer.Stop, keepRunningWhenHidden: false);
+        // Hidden in the tray, the player stops decoding pictures; the sound carries on.
+        _app.Activity.Register(() => _app.Player.HasMedia, _app.PlayerEngine.ShowVideo, _app.PlayerEngine.HideVideo, keepRunningWhenHidden: false);
 
         _app.Activity.SetVisible(!StartsHidden);
 
@@ -125,6 +149,14 @@ public sealed partial class MainWindow : Window
         _tutorial.Visibility = ReferenceEquals(plate, _tutorial) ? Visibility.Visible : Visibility.Collapsed;
         if (ReferenceEquals(plate, _tutorial)) _tutorial.Open();
         if (plate is not null) DispatcherQueue.TryEnqueue(() => plate.StartBringIntoView());
+    }
+
+    /// <summary>A file from File Explorer or a second launch: it joins the Library and plays, and the window comes forward.</summary>
+    public void OpenFromOutside(string path)
+    {
+        ShowFromTray();
+        _app.OpenFromOutside(path);
+        _player.StartBringIntoView();
     }
 
     /// <summary>Brings the window back, from the tray or from a second launch.</summary>

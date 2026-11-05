@@ -220,6 +220,24 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (_player is { } p && p.IsSeekable) p.Time = (long)Math.Max(0, to.TotalMilliseconds);
     }
 
+    int _hiddenVideoTrack = -1;
+
+    /// <summary>Stops decoding pictures, for a window hidden in the tray. The sound carries on.</summary>
+    public void HideVideo()
+    {
+        if (_player is not { } p || p.VideoTrack < 0) return;
+        _hiddenVideoTrack = p.VideoTrack;
+        p.SetVideoTrack(-1);
+    }
+
+    /// <summary>Starts decoding pictures again after <see cref="HideVideo"/>.</summary>
+    public void ShowVideo()
+    {
+        if (_player is not { } p || _hiddenVideoTrack < 0) return;
+        p.SetVideoTrack(_hiddenVideoTrack);
+        _hiddenVideoTrack = -1;
+    }
+
     public void SelectAudio(int id) => _player?.SetAudioTrack(id);
     public void SelectSubtitle(int id) => _player?.SetSpu(id);
     public void SelectChapter(int id) { if (_player is { } p) p.Chapter = id; }

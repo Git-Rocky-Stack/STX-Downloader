@@ -29,7 +29,7 @@ public class OpenedFilesTests
     (OpenedFiles Opened, LibraryViewModel Library) Make()
     {
         var engine = new QueueEngine(new MemoryJobs(), new HandRunner(), new QueuePolicy(), new SystemClock(), new CaptureVault());
-        var library = new LibraryViewModel(_catalog, engine, new ShellSpy(), _ => true);
+        var library = new LibraryViewModel(_catalog, engine, new ShellSpy(), _ => true, _ => { });
         library.Refresh();
         return (new OpenedFiles(_catalog, library), library);
     }

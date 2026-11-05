@@ -61,10 +61,23 @@ public static class GuideContent
                 // LibraryPanel.cs summary
                 "Everything you've saved is listed here.",
                 // LibraryPanel.cs:32-33
-                "Select a file, then press OPEN to play it or FIND FILE to show it in its folder.",
+                "Select a file, then press OPEN to play it on the Player plate, or FIND FILE to show it in its folder.",
                 // LibraryPanel.cs:34-36, README.md:21
                 "CAR USB, PHONE and ARCHIVE convert the selected file for that use.",
             ], ["OPEN", "FIND FILE", "CAR USB", "PHONE", "ARCHIVE"]),
+            new("Player",
+            [
+                // LibraryViewModel.cs OpenCommand, Composition.cs Play, MainWindow.cs OpenFromOutside
+                "OPEN in the Library plays the file here. So does a file opened from File Explorer with STX.",
+                // PlayerPanel.cs pads, PlayerViewModel.cs Previous
+                "PLAY and PAUSE share one pad. PREV goes back to the start, or to the file before if you're in the first 3 seconds. NEXT and STOP do what they say.",
+                // PlayerPanel.cs SetFullScreen, Esc accelerator
+                "FULL fills the screen. EXIT, or Esc, brings the console back.",
+                // SettingsPanel.cs PERFORMANCE, PerformanceProfile.cs For
+                "PERFORMANCE in Settings sets how hard playback may work. AUTO picks from your PC.",
+                // LibVlcEngine.cs DiracRefused and Inspect; docs/PLAYBACK.md
+                "Dirac and VC-2 video crash VLC's engine, so STX refuses them and shows DIRAC VIDEO CAN'T BE PLAYED SAFELY instead.",
+            ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "FULL", "EXIT"]),
             new("Source truth",
             [
                 // README.md:38, Stx.Audio/AudioMeasurer.cs:8
