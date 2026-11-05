@@ -8,18 +8,34 @@ jobs:
   test:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
       # The VLC engine and SoundFont the player ships (tools/vlc/engine.json), downloaded once and reused.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: .engine
           key: engine-${{ hashFiles('tools/vlc/engine.json', 'tools/vlc/Get-Engine.ps1') }}
+      # The FFmpeg tests (bit-perfect decoding, Phase 5; shrink copies, Phase 7) run the build STX itself downloads
+      # (src/Stx.Tools/FfmpegSource.cs), checked against its publisher's sha256, so they prove that build has the encoders.
+      - name: Install FFmpeg (the build STX downloads)
+        shell: pwsh
+        run: |
+          $base = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest'
+          $zip = 'ffmpeg-n9.0-latest-win64-gpl-9.0.zip'
+          $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg'
+          Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip)
+          # GitHub serves the checksum list as binary, so it's saved and read as lines rather than taken from .Content.
+          Invoke-WebRequest "$base/checksums.sha256" -OutFile (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256')
+          $want = (Get-Content (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256') | Where-Object { $_ -match [regex]::Escape($zip) } | Select-Object -First 1) -split '\s+' | Select-Object -First 1
+          $got = (Get-FileHash (Join-Path $env:RUNNER_TEMP $zip) -Algorithm SHA256).Hash
+          if (-not $want -or $got -ne $want) { throw "FFmpeg's sha256 is $got; its publisher says $want" }
+          Expand-Archive (Join-Path $env:RUNNER_TEMP $zip) -DestinationPath $dir
+          (Get-ChildItem $dir -Recurse -Filter ffmpeg.exe | Select-Object -First 1).DirectoryName | Add-Content $env:GITHUB_PATH
       - name: Build
         run: dotnet build src/Stx.App -c Release -p:Platform=x64 --nologo
       # The screenshot tests compare against pixels from one machine's GPU and fonts, so they run locally.
@@ -29,7 +45,7 @@ jobs:
         shell: pwsh
         run: |
           foreach ($project in 'Look', 'Art', 'Core', 'Data', 'Tools', 'Audio', 'Bridge', 'App', 'Playback') {
-            dotnet test "tests/Stx.$project.Tests" -c Release -p:Platform=x64 --nologo --filter "Category!=Device&Category!=Corpus"
+            dotnet test --project "tests/Stx.$project.Tests" -c Release -p:Platform=x64 --filter-not-trait "Category=Device" --filter-not-trait "Category=Corpus"
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
           }
       - name: Test extension

@@ -15,6 +15,12 @@ public sealed record ConvertRequest(string InputPath, string OutputFolder, Outpu
     public bool InputHasCoverArt { get; init; }
 
     public double? DurationSeconds { get; init; }
+
+    /// <summary>A shrink copy (Phase 7): the codec to make it with. Null for every other conversion.</summary>
+    public ShrinkCodec? Shrink { get; init; }
+
+    /// <summary>Added to the copy's file name, before its extension.</summary>
+    public string? Suffix { get; init; }
 }
 
 public static class FfmpegArgs
@@ -41,7 +47,8 @@ public static class FfmpegArgs
         args.AddRange(["-map_metadata", request.Metadata.Tags ? "0" : "-1"]);
         args.AddRange(["-map_chapters", request.Metadata.Chapters ? "0" : "-1"]);
 
-        if (request.Reencode) AddDeviceVideo(args, request, h264Encoder);
+        if (request.Shrink is { } codec) AddShrink(args, request, codec);
+        else if (request.Reencode) AddDeviceVideo(args, request, h264Encoder);
         else if (request.Output is OutputChoice.Mp4 or OutputChoice.Mkv or OutputChoice.Original) args.AddRange(["-map", "0", "-dn", "-c", "copy"]);
         else AddAudio(args, request);
 
@@ -57,6 +64,34 @@ public static class FfmpegArgs
         if (request.MaxHeight is int height) args.AddRange(["-vf", $"scale=-2:'min({height},ih)'"]);
         args.AddRange(["-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"]);
         if (request.LevelLoudness) args.AddRange(["-af", LevelFilter]);
+    }
+
+    /// <summary>The encoder each shrink codec needs, to check this FFmpeg has it first.</summary>
+    public static string Encoder(ShrinkCodec codec) => codec switch
+    {
+        ShrinkCodec.Av1 => "libsvtav1",
+        ShrinkCodec.Hevc => "libx265",
+        _ => "libopus",
+    };
+
+    // Picture and sound in modern codecs at settings that keep the look, every subtitle, chapter and attachment carried
+    // over. 10-bit output, so a 10-bit or HDR source isn't cut to 8 bits. Opus takes any layout up to 7.1.
+    static void AddShrink(List<string> args, ConvertRequest request, ShrinkCodec codec)
+    {
+        var opus = new[] { "-c:a", "libopus", "-b:a", codec == ShrinkCodec.Opus ? "128k" : "160k", "-mapping_family", "1" };
+        if (codec == ShrinkCodec.Opus)
+        {
+            args.AddRange(["-map", "0:a", "-vn", "-sn", .. opus]);
+            return;
+        }
+        // MP4's own subtitle format doesn't go into MKV; it's turned into SRT. Everything else is copied as it is.
+        bool mp4Text = Path.GetExtension(request.InputPath).ToLowerInvariant() is ".mp4" or ".m4v" or ".mov";
+        args.AddRange(["-map", "0:v:0", "-map", "0:a?", "-map", "0:s?", "-map", "0:t?"]);
+        args.AddRange(codec == ShrinkCodec.Av1
+            ? ["-c:v", "libsvtav1", "-preset", "6", "-crf", "30", "-pix_fmt", "yuv420p10le"]
+            : ["-c:v", "libx265", "-preset", "medium", "-crf", "24", "-pix_fmt", "yuv420p10le", "-x265-params", "log-level=error"]);
+        args.AddRange(opus);
+        args.AddRange(["-c:s", mp4Text ? "srt" : "copy", "-c:t", "copy"]);
     }
 
     static void AddAudio(List<string> args, ConvertRequest request)

@@ -15,14 +15,31 @@ public static class LibVlcOptions
     /// <param name="swapChain">The options the video view hands over once its swap chain exists (spike S1).</param>
     /// <param name="realAudio">With <paramref name="headless"/>, keep the real sound output.</param>
     /// <param name="soundFont">The SoundFont FluidSynth plays MIDI with; MIDI can't play without one.</param>
-    public static string[] For(bool headless, IReadOnlyList<string>? swapChain = null, bool realAudio = false, string? soundFont = null)
+    /// <param name="enhance">ENHANCE (Phase 6). VLC's video output is made under the player, so this is an engine option.</param>
+    /// <param name="passthrough">BIT-PERFECT's film route: AC3, E-AC3, DTS and TrueHD go to the receiver as they are, in
+    /// exclusive mode. VLC reads this once, when it starts (modules/audio_output/mmdevice.c), so it can't follow the
+    /// setting live.</param>
+    public static string[] For(bool headless, IReadOnlyList<string>? swapChain = null, bool realAudio = false, string? soundFont = null, bool passthrough = false, EnhanceLevel enhance = EnhanceLevel.Off)
     {
         var options = new List<string> { "--no-lua" };
+        options.AddRange(Enhance.Options(enhance));
+        if (passthrough) options.Add("--mmdevice-passthrough=2");
         if (headless && !realAudio) options.Add("--aout=dummy");
         if (soundFont is not null) options.Add("--soundfont=" + soundFont);
         if (swapChain is not null) options.AddRange(swapChain);
         return [.. options];
     }
+
+    /// <summary>
+    /// Options for what's being opened. Discs start at their main title: their menus need a pointer on the picture,
+    /// which a swap chain doesn't pass back. RTSP runs over its one TCP connection, so no port is opened for RTP.
+    /// </summary>
+    public static string[] ForTarget(TargetKind kind) => kind switch
+    {
+        TargetKind.Disc => [":no-dvdnav-menu", ":no-bluray-menu"],
+        TargetKind.Stream => [":rtsp-tcp"],
+        _ => [],
+    };
 
     /// <summary>The PERFORMANCE profile, carried by each media so it can change without a new LibVLC.</summary>
     public static string[] ForMedia(PerformanceProfile profile) =>

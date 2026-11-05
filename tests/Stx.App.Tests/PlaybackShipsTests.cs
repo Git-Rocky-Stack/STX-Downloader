@@ -32,13 +32,15 @@ public class PlaybackShipsTests
         Assert.True(File.Exists(Built("libvlc", "soundfonts", "FluidR3_GM.sf2")));
     }
 
-    // Spike S1, finding F3: only the x64 engine ships, and nothing that runs site scripts or decrypts DVDs.
+    // Spike S1, finding F3: only the x64 engine ships, and nothing that runs site scripts. Phase 4 (Rocky): the DVD
+    // plugins ship for unencrypted discs, and STX's own DiscCheck refuses encrypted ones before LibVLC sees them.
     [Fact]
     public void Only_x64_libvlc_ships_and_no_lua()
     {
         Assert.False(Directory.Exists(Built("libvlc", "win-x86")), "an x86 engine ships");
         Assert.False(Directory.Exists(Built("libvlc", "win-arm64")), "an ARM64 engine ships");
         Assert.False(Directory.Exists(Built("libvlc", "win-x64", "plugins", "lua")), "the Lua plugin ships");
-        Assert.False(File.Exists(Built("libvlc", "win-x64", "plugins", "access", "libdvdcss_plugin.dll")) || File.Exists(Built("libvlc", "win-x64", "plugins", "access", "libdvdnav_plugin.dll")), "a DVD plugin with libdvdcss ships");
+        Assert.False(File.Exists(Built("libvlc", "win-x64", "plugins", "access", "libdvdcss_plugin.dll")), "a separate libdvdcss plugin ships");
+        Assert.True(File.Exists(Built("libvlc", "win-x64", "plugins", "access", "libdvdnav_plugin.dll")), "the DVD plugin is missing");
     }
 }

@@ -26,7 +26,9 @@ public sealed partial class SourcePanel : ContentControl
     readonly Grid _clipRow = new() { Visibility = Visibility.Collapsed, ColumnSpacing = 16 };
     readonly TextBlock _clipText = new() { FontFamily = new FontFamily("Segoe UI"), FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
 
-    public SourcePanel(SourceViewModel source, ClipboardOfferViewModel? clipboard = null)
+    /// <param name="playStream">PLAY STREAM: plays the link in the box on the PLAYER plate, as a stream or radio station.</param>
+    /// <param name="playDisc">PLAY DISC: picks a DVD or Blu-ray drive, or a disc folder, and plays it.</param>
+    public SourcePanel(SourceViewModel source, ClipboardOfferViewModel? clipboard = null, Func<Task>? playStream = null, Func<Task>? playDisc = null)
     {
         _source = source;
         _clipboard = clipboard;
@@ -73,6 +75,24 @@ public sealed partial class SourcePanel : ContentControl
         var column = new StackPanel { Spacing = 12 };
         column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Source" });
         column.Children.Add(line);
+        if (playStream is not null || playDisc is not null)
+        {
+            // Playing straight from a stream or a disc, without saving anything. Web pages keep using ANALYZE.
+            var play = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+            if (playStream is not null)
+            {
+                var stream = new Pad { Content = "PLAY STREAM" };
+                stream.Click += async (_, _) => await playStream();
+                play.Children.Add(stream);
+            }
+            if (playDisc is not null)
+            {
+                var disc = new Pad { Content = "PLAY DISC" };
+                disc.Click += async (_, _) => await playDisc();
+                play.Children.Add(disc);
+            }
+            column.Children.Add(play);
+        }
         column.Children.Add(_state);
         column.Children.Add(_next);
         column.Children.Add(_offer);

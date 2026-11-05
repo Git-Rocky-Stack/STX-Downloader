@@ -23,6 +23,8 @@ public sealed class ConversionRunner(FfmpegRunner ffmpeg, Func<long, string?> fi
             Reencode = preset?.Reencodes == true,
             MaxHeight = preset?.MaxHeight,
             Metadata = preset?.Metadata ?? new MetadataOptions(true, false, true),
+            Shrink = preset?.Shrink,
+            Suffix = preset?.Suffix,
         };
 
         var result = await ffmpeg.ConvertAsync(

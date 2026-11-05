@@ -85,7 +85,10 @@ public class ErrorClassifierTests
     [Fact]
     public void Fixtures_cover_every_kind()
     {
-        foreach (var kind in Enum.GetValues<ErrorKind>()) Assert.Contains(Fixtures, f => f.Kind == kind);
+        // These two come from STX's own checks of a shrink copy and of FFmpeg's encoder list, never from reading a tool's output.
+        ErrorKind[] ownChecks = [ErrorKind.CopyFailedCheck, ErrorKind.EncoderMissing];
+        foreach (var kind in Enum.GetValues<ErrorKind>().Except(ownChecks)) Assert.Contains(Fixtures, f => f.Kind == kind);
+        foreach (var kind in ownChecks) Assert.DoesNotContain(Fixtures, f => ErrorClassifier.Classify(f.Output, 1) == kind);
     }
 
     [Theory]

@@ -58,13 +58,21 @@ public static class GuideContent
             ], ["PAUSE", "RESUME", "CANCEL", "RETRY", "COPY LOG", "OPEN PAGE"]),
             new("Library",
             [
-                // LibraryPanel.cs summary
-                "Everything you've saved is listed here.",
+                // LibraryPanel.cs summary, CollectionWatcher.cs, OpenedFiles.cs
+                "Everything you've saved, every file you've opened with STX, and the media in your watched folders is listed here. Each row says ORIGINAL, OPENED or WATCHED.",
+                // LibraryViewModel.cs Query, LibraryRowViewModel.Matches
+                "Type in the search box to find a file by its title, file name or folder. Every word you type has to match.",
+                // CollectionWatcher.cs Apply
+                "New files in a watched folder appear by themselves. A renamed file keeps its row; a deleted one stays listed as FILE MISSING.",
                 // LibraryPanel.cs:32-33
                 "Select a file, then press OPEN to play it on the Player plate, or FIND FILE to show it in its folder.",
                 // LibraryPanel.cs:34-36, README.md:21
                 "CAR USB, PHONE and ARCHIVE convert the selected file for that use.",
-            ], ["OPEN", "FIND FILE", "CAR USB", "PHONE", "ARCHIVE"]),
+                // LibraryPanel.cs shrink row, LibraryViewModel.cs QueueShrink, FfmpegRunner.cs check, CopyCheck.cs
+                "SHRINK makes a smaller copy beside the selected file: AV1 or HEVC for video, as the Shrink to knob says, and Opus for sound alone. It's lossy, and the copy is checked before it's kept.",
+                // ShrinkFolder.cs QueueAsync, LibraryViewModel.cs SpaceText
+                "SHRINK FOLDER does the same for every file in a folder. The Library shows how much deleting the originals would free. STX never deletes them.",
+            ], ["OPEN", "FIND FILE", "CAR USB", "PHONE", "ARCHIVE", "SHRINK", "SHRINK FOLDER"]),
             new("Player",
             [
                 // LibraryViewModel.cs OpenCommand, Composition.cs Play, MainWindow.cs OpenFromOutside
@@ -77,7 +85,17 @@ public static class GuideContent
                 "PERFORMANCE in Settings sets how hard playback may work. AUTO picks from your PC.",
                 // LibVlcEngine.cs DiracRefused and Inspect; docs/PLAYBACK.md
                 "Dirac and VC-2 video crash VLC's engine, so STX refuses them and shows DIRAC VIDEO CAN'T BE PLAYED SAFELY instead.",
-            ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "FULL", "EXIT"]),
+                // PlayerPanel.cs EnhanceDial, Enhance.cs Status, LibVlcEngine.cs EnhanceSeen
+                "The ENHANCE knob sharpens the picture, or upscales it on a GPU with super resolution. It changes only what's on screen, never the file. Under it, the Player says what's really running, or why not: a GPU without super resolution says UPSCALE UNAVAILABLE.",
+                // SourcePanel.cs PLAY STREAM, Composition.cs PlayStreamAsync, StreamOpener.cs
+                "PLAY STREAM plays the address in the Source box: a stream, or an internet radio station or its playlist. A web page goes to ANALYZE instead. UDP and RTP need a listening port, so STX refuses them.",
+                // SourcePanel.cs PLAY DISC, Composition.cs PlayDisc, DiscCheck.cs
+                "PLAY DISC plays a DVD or Blu-ray drive or disc folder from its main title. An encrypted disc is refused with THIS DISC IS ENCRYPTED, SO IT CAN'T BE PLAYED.",
+                // DefaultPlayerOfferPanel.cs, DefaultPlayerViewModel.cs YesCommand and NotNowCommand
+                "The first time, STX asks once whether it should be your player for videos and music. YES opens Windows' Default Apps, where you choose STX. NOT NOW never asks again.",
+                // SettingsPanel.cs DefaultPlayer, FileAssociations.cs Read
+                "DEFAULT PLAYER in Settings opens that page any time. Its light shows what Windows really does: green for every type, amber for some.",
+            ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "FULL", "EXIT", "YES", "NOT NOW", "DEFAULT PLAYER", "PLAY STREAM", "PLAY DISC"]),
             new("Source truth",
             [
                 // README.md:38, Stx.Audio/AudioMeasurer.cs:8
@@ -105,7 +123,11 @@ public static class GuideContent
                 "TAGS, COVER ART and CHAPTERS choose what gets embedded in the file.",
                 // SettingsPanel.cs:44-49 and :73, AppSettings.cs OutputFolder
                 "Saves go to the output folder, named by the filename template.",
-            ], ["SETTINGS", "TRAY", "CLIPBOARD", "TAGS", "COVER ART", "CHAPTERS"]),
+                // SettingsPanel.cs BitPerfectRow, BitPerfect.cs Route, RoutingEngine.cs AudioReadout
+                "BIT-PERFECT sends lossless music to your sound device exactly as it is, and the Player shows what arrives, such as 24/96 BIT-PERFECT. While it's on, other apps can't make sound, and VOLUME is fixed. A file that can't go that way plays shared, and the Player says why.",
+                // SettingsPanel.cs WatchedFolders, AppSettings.cs DefaultWatched, MediaRepo.cs ForgetWatchedUnder
+                "Videos and Music are watched to begin with. ADD FOLDER and REMOVE FOLDER change the list. Removing a folder takes its files out of the Library, never off your disk.",
+            ], ["SETTINGS", "TRAY", "CLIPBOARD", "TAGS", "COVER ART", "CHAPTERS", "ADD FOLDER", "REMOVE FOLDER", "BIT-PERFECT"]),
             new("Good to know",
             [
                 // README.md:5

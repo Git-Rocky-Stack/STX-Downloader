@@ -52,6 +52,69 @@ public sealed class LibVlcEngine : IPlaybackEngine
     /// <summary>Opens files paused at their start (LibVLC's start-paused). No picture is drawn until the player steps a frame; the screenshot galleries do that so every capture shows the same first frame.</summary>
     public bool StartPaused { get; set; }
 
+    /// <summary>
+    /// ENHANCE (Phase 6), already held to PERFORMANCE's ceiling and the GPU. A change restarts LibVLC in place: the
+    /// video view takes the new player, and whatever was playing carries on from where it was.
+    /// </summary>
+    public EnhanceLevel Enhance
+    {
+        get => _enhance;
+        set
+        {
+            if (value == _enhance) return;
+            _enhance = value;
+            Restart();
+        }
+    }
+
+    /// <summary>What VLC's own log says is running on the picture: SHARPEN once its filter loads, UPSCALE once the super
+    /// resolution scaler starts, OFF when VLC refused it. Null until VLC has said.</summary>
+    public EnhanceLevel? EnhanceSeen { get; private set; }
+
+    EnhanceLevel _enhance;
+    IReadOnlyList<string>? _swapChain;
+    string? _lastPath;
+    TimeSpan? _resumeAt;
+    bool _resumePaused;
+
+    void Restart()
+    {
+        string? path;
+        // An open still reading a file's tracks takes the lock; let it finish first, outside it.
+        try { _opening.Wait(TimeSpan.FromSeconds(6)); } catch (AggregateException) { }
+        lock (_gate)
+        {
+            if (_disposed || _vlc is null) return;
+            path = _state is PlaybackState.Playing or PlaybackState.Paused or PlaybackState.Opening ? _lastPath : null;
+            if (path is not null)
+            {
+                _resumeAt = Position;
+                _resumePaused = _state == PlaybackState.Paused;
+            }
+            var (player, vlc, media) = (_player, _vlc, _media);
+            _player = null;
+            _vlc = null;
+            _media = null;
+            player?.Stop();
+            player?.Dispose();
+            media?.Dispose();
+            if (vlc is not null) { vlc.Log -= OnLog; vlc.Dispose(); }
+            EnhanceSeen = null;
+            Start(_swapChain);
+        }
+        if (path is not null) Open(path);
+        else Raise();
+    }
+
+    /// <summary>Whether LibVLC starts with bitstream passthrough (BIT-PERFECT's film route). Set before the swap chain arrives; read once.</summary>
+    public bool Passthrough { get; set; }
+
+    /// <summary>Whether a logged output format is a bitstream sent to a receiver rather than PCM: 'spdi'/'spdb' (S/PDIF), or E-AC3, DTS or TrueHD over HDMI.</summary>
+    public static bool IsBitstream(string audioOutput) =>
+        audioOutput.StartsWith("'spd", StringComparison.Ordinal) || audioOutput.StartsWith("'eac3'", StringComparison.Ordinal)
+        || audioOutput.StartsWith("'dts ", StringComparison.Ordinal) || audioOutput.StartsWith("'mlp ", StringComparison.Ordinal)
+        || audioOutput.StartsWith("'trhd'", StringComparison.Ordinal) || audioOutput.StartsWith("'a52 '", StringComparison.Ordinal);
+
     /// <summary>The PERFORMANCE profile. A change applies from the next <see cref="Open"/>.</summary>
     public PerformanceProfile Profile { get; set; }
 
@@ -81,6 +144,9 @@ public sealed class LibVlcEngine : IPlaybackEngine
 
     /// <summary>Which Windows audio path carries the sound: "wasapi" or "directsound". Empty before sound starts.</summary>
     public string AudioStream { get; private set; } = "";
+
+    /// <summary>The last path or address LibVLC was given, or null if it has been given nothing. A refused disc never gets here.</summary>
+    public string? HandedToLibVlc { get; private set; }
 
     /// <summary>Errors LibVLC logged since the last <see cref="Open"/>, newest last.</summary>
     public IReadOnlyList<string> LoggedErrors => [.. _errors];
@@ -140,6 +206,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
             AudioOutput = AudioStream = "";
             _state = PlaybackState.Opening;
             _generation++;
+            _lastPath = path;
             if (_player is null) _pending = path;
         }
         Raise();
@@ -154,11 +221,24 @@ public sealed class LibVlcEngine : IPlaybackEngine
         int generation = _generation;
         _opening = Task.Run(() =>
         {
+            // STX decides what this is before LibVLC sees it. An encrypted disc, or an address that would need a
+            // listening port, is refused here and never opened (Phase 4).
+            var target = PlaybackTarget.For(path);
+            if (target.IsRefused)
+            {
+                lock (_gate) { if (_disposed || generation != _generation) return; _error = target.Refusal; }
+                Set(PlaybackState.Failed);
+                return;
+            }
             Media media;
             lock (_gate)
             {
                 if (_disposed || _vlc is null || generation != _generation) return;
-                media = new Media(_vlc, path, FromType.FromPath, [.. LibVlcOptions.ForMedia(Profile), .. StartPaused ? [":start-paused"] : Array.Empty<string>()]);
+                string[] options = [.. LibVlcOptions.ForMedia(Profile), .. LibVlcOptions.ForTarget(target.Kind), .. StartPaused ? [":start-paused"] : Array.Empty<string>()];
+                media = target.Kind == TargetKind.File
+                    ? new Media(_vlc, path, FromType.FromPath, options)
+                    : new Media(_vlc, target.Location, FromType.FromLocation, options);
+                HandedToLibVlc = target.Location;
             }
             var (mono, dirac) = Inspect(media);
             if (dirac)
@@ -250,14 +330,15 @@ public sealed class LibVlcEngine : IPlaybackEngine
     void Start(IReadOnlyList<string>? swapChain)
     {
         _ = NativeReady.Value;
+        _swapChain = swapChain;
         // Debug level, so the decoder LibVLC picks can be read from its log.
         string? soundFont = File.Exists(ShippedSoundFont) ? ShippedSoundFont : null;
-        var vlc = new LibVLC(enableDebugLogs: true, LibVlcOptions.For(_headless, swapChain, _realAudio, soundFont));
+        var vlc = new LibVLC(enableDebugLogs: true, LibVlcOptions.For(_headless, swapChain, _realAudio, soundFont, Passthrough, _enhance));
         vlc.Log += OnLog;
         var player = new MediaPlayer(vlc) { Volume = _volume };
         if (_headless) DrawIntoMemory(player);
         player.Opening += (_, _) => Set(PlaybackState.Opening);
-        player.Playing += (_, _) => Set(PlaybackState.Playing);
+        player.Playing += (_, _) => { Set(PlaybackState.Playing); Resume(player); };
         player.Paused += (_, _) => Set(PlaybackState.Paused);
         player.EndReached += (_, _) => Set(PlaybackState.Ended);
         player.EncounteredError += (_, _) => Fail();
@@ -269,6 +350,23 @@ public sealed class LibVlcEngine : IPlaybackEngine
         PlayerCreated?.Invoke(this, EventArgs.Empty);
     }
 
+    // After an ENHANCE restart, the file carries on from where it was, paused if it was paused.
+    void Resume(MediaPlayer player)
+    {
+        if (_resumeAt is not { } at) return;
+        _resumeAt = null;
+        bool paused = _resumePaused;
+        Task.Run(() =>
+        {
+            lock (_gate)
+            {
+                if (_disposed || !ReferenceEquals(player, _player)) return;
+                if (player.IsSeekable) player.Time = (long)at.TotalMilliseconds;
+                if (paused) player.SetPause(true);
+            }
+        });
+    }
+
     // Headless pictures land in one small buffer that nothing reads. LibVLC's dummy video output would be the obvious
     // choice, but in 3.0.24 it crashes the process (0xC0000005) when an H.264 file reaches its end.
     const int MemoryWidth = 160, MemoryHeight = 90;
@@ -276,7 +374,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
 
     void DrawIntoMemory(MediaPlayer player)
     {
-        _memory = System.Runtime.InteropServices.Marshal.AllocHGlobal(MemoryWidth * MemoryHeight * 4);
+        if (_memory == IntPtr.Zero) _memory = System.Runtime.InteropServices.Marshal.AllocHGlobal(MemoryWidth * MemoryHeight * 4);
         IntPtr memory = _memory;
         player.SetVideoFormat("RV32", MemoryWidth, MemoryHeight, MemoryWidth * 4);
         player.SetVideoCallbacks((IntPtr _, IntPtr planes) =>
@@ -305,6 +403,10 @@ public sealed class LibVlcEngine : IPlaybackEngine
                 if (_monoRecovery) RecoverMono(AudioStream);
             }
         }
+        // ENHANCE, as VLC reports it: the sharpen filter loading, or the Direct3D 11 output starting its scaler or refusing it.
+        if (e.Message.Contains("video filter module \"sharpen\"", StringComparison.Ordinal)) EnhanceSeen = EnhanceLevel.Sharpen;
+        else if (e.Message.StartsWith("Using Super Resolution scaler", StringComparison.Ordinal)) EnhanceSeen = EnhanceLevel.Upscale;
+        else if (e.Message.StartsWith("Super Resolution filter not supported", StringComparison.Ordinal)) EnhanceSeen = EnhanceLevel.Off;
         if (e.Module == "avcodec")
         {
             if (e.Message.Contains("for hardware decoding", StringComparison.Ordinal)) _sawHardwareDecoder = true;

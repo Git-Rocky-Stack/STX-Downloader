@@ -18,6 +18,55 @@ public class LibVlcEngineTests
         Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > 0 && engine.Decoded.AudioBlocks > 0), $"decoded {engine.Decoded}");
     }
 
+    // Phase 4, done when: an encrypted sample is refused with no playback attempted. The disc is built from sectors
+    // carrying CSS's scrambling bits, so nothing encrypted is in the repo, and LibVLC is never given it.
+    [Fact]
+    public void An_encrypted_disc_never_reaches_libvlc()
+    {
+        string disc = Directory.CreateTempSubdirectory("stx-css").FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(disc, "VIDEO_TS"));
+            var sector = new byte[2048];
+            new byte[] { 0, 0, 1, 0xBA, 0x44, 0, 4, 0, 4, 1, 1, 0x89, 0xC3, 0xF8, 0, 0, 1, 0xE0, 0x07, 0xEC, 0x90, 0x80, 0x05 }.CopyTo(sector, 0);
+            File.WriteAllBytes(Path.Combine(disc, "VIDEO_TS", "VTS_01_1.VOB"), [.. Enumerable.Repeat(sector, 16).SelectMany(b => b)]);
+
+            using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+            engine.Open(disc);
+            Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+            Assert.Equal(DiscCheck.Refused, engine.Error);
+            Assert.Null(engine.HandedToLibVlc);
+        }
+        finally { Directory.Delete(disc, true); }
+    }
+
+    [Fact]
+    public void A_stream_that_needs_a_listening_port_never_reaches_libvlc()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open("udp://@239.0.0.1:1234");
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+        Assert.Equal(StreamLink.PortRefused, engine.Error);
+        Assert.Null(engine.HandedToLibVlc);
+    }
+
+    // Phase 6, done when: SHARPEN visibly applies. VLC's own log confirms its sharpen filter is on the picture; the
+    // screenshot comparison of the effect is a local gate (PlayerPlaybackTests).
+    [Fact]
+    public void Sharpen_loads_vlcs_filter_and_a_live_change_carries_on_where_it_was()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(Fixture.File("tiny.mp4"));
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.6)), $"state {engine.State}");
+        Assert.Null(engine.EnhanceSeen);
+
+        var before = engine.Position;
+        engine.Enhance = EnhanceLevel.Sharpen;
+        Assert.True(Fixture.Within(Five, () => engine.EnhanceSeen == EnhanceLevel.Sharpen), $"seen {engine.EnhanceSeen}, errors {string.Join("; ", engine.LoggedErrors)}");
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position >= before - TimeSpan.FromSeconds(0.3)),
+            $"state {engine.State}, position {engine.Position}, before {before}");
+    }
+
     [Fact]
     public void Reports_audio_only()
     {

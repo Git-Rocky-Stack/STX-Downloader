@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Stx.App.Primitives;
 using Stx.Core.Settings;
 using Stx.Look;
@@ -12,7 +13,7 @@ namespace Stx.App.Panels;
 /// <summary>Settings, as switches on a plate. Every change applies and saves at once.</summary>
 public sealed partial class SettingsPanel : ContentControl
 {
-    public SettingsPanel(SettingsViewModel settings, Window? owner, Action? openGuide = null, Action? openTutorial = null)
+    public SettingsPanel(SettingsViewModel settings, Window? owner, Action? openGuide = null, Action? openTutorial = null, DefaultPlayerViewModel? defaultPlayer = null)
     {
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
@@ -117,7 +118,102 @@ public sealed partial class SettingsPanel : ContentControl
         var column = new StackPanel { Spacing = 12 };
         column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Settings" });
         column.Children.Add(top);
+        column.Children.Add(WatchedFolders(settings, owner));
+        if (defaultPlayer is not null) column.Children.Add(DefaultPlayer(defaultPlayer));
+        column.Children.Add(BitPerfectRow(settings));
         Content = new Faceplate { PanelName = "settings", Padding = new Thickness(36, 28, 36, 28), Content = column };
+    }
+
+    // The folders whose media joins the Library: Videos and Music to begin with. Removing one only stops watching it.
+    static FrameworkElement WatchedFolders(SettingsViewModel settings, Window? owner)
+    {
+        var list = new ListView { SelectionMode = ListViewSelectionMode.Single, MaxHeight = 132, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(list, "Watched folders");
+        var add = new Pad { Content = "ADD FOLDER", VerticalAlignment = VerticalAlignment.Top };
+        var remove = new Pad { Content = "REMOVE FOLDER", VerticalAlignment = VerticalAlignment.Top, IsEnabled = false };
+
+        void Fill()
+        {
+            list.Items.Clear();
+            foreach (string folder in settings.WatchedFolders)
+            {
+                var item = new ListViewItem { MinHeight = 44, Content = new GlowText { Tone = DisplayTone.Amber, Text = folder }, Tag = folder };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, "Watched: " + folder);
+                list.Items.Add(item);
+            }
+            remove.IsEnabled = false;
+        }
+
+        list.SelectionChanged += (_, _) => remove.IsEnabled = list.SelectedItem is not null;
+        remove.Click += (_, _) =>
+        {
+            if ((list.SelectedItem as ListViewItem)?.Tag is string folder) settings.RemoveWatchedFolder(folder);
+            Fill();
+        };
+        add.Click += async (_, _) =>
+        {
+            if (owner is null) return;
+            var picker = new FolderPicker();
+            picker.FileTypeFilter.Add("*");
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(owner));
+            if (await picker.PickSingleFolderAsync() is { } chosen) settings.AddWatchedFolder(chosen.Path);
+            Fill();
+        };
+        Fill();
+
+        var pads = new StackPanel { Spacing = 12 };
+        pads.Children.Add(add);
+        pads.Children.Add(remove);
+        var row = new Grid { ColumnSpacing = 16 };
+        row.ColumnDefinitions.Add(new ColumnDefinition());
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(pads, 1);
+        row.Children.Add(new Display { Tone = DisplayTone.Amber, Padding = new Thickness(6), Content = list });
+        row.Children.Add(pads);
+
+        var section = new StackPanel { Spacing = 8 };
+        section.Children.Add(new EngravedLabel { Kind = LabelKind.Label, Text = "Watched folders: their media joins the Library" });
+        section.Children.Add(row);
+        return section;
+    }
+
+    // Windows doesn't let an app make itself the default, so this is a pad that opens Windows' page for choosing STX.
+    // The LED is what Windows actually does: green for every type, amber for some, dark for none.
+    static FrameworkElement DefaultPlayer(DefaultPlayerViewModel player)
+    {
+        var choose = new Pad { Content = "DEFAULT PLAYER", VerticalAlignment = VerticalAlignment.Center };
+        choose.Click += (_, _) => player.ChooseCommand.Execute(null);
+        var led = new Led { VerticalAlignment = VerticalAlignment.Center };
+        var readout = new GlowText { Tone = DisplayTone.Cyan, VerticalAlignment = VerticalAlignment.Center };
+        void Paint()
+        {
+            led.Color = player.State.IsAll ? LedColor.Green : LedColor.Amber;
+            led.State = player.State.IsNone ? LedState.Off : LedState.On;
+            readout.Text = player.StateText;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(choose, "Default player: " + player.StateText.ToLowerInvariant());
+        }
+        player.PropertyChanged += (_, _) => Paint();
+        Paint();
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
+        row.Children.Add(choose);
+        row.Children.Add(led);
+        row.Children.Add(new Display { Tone = DisplayTone.Cyan, Padding = new Thickness(12, 8, 12, 8), Content = readout });
+        return row;
+    }
+
+    // BIT-PERFECT, with what it costs said beside it, always (spec, Phase 5).
+    static FrameworkElement BitPerfectRow(SettingsViewModel settings)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
+        row.Children.Add(Switch("BIT-PERFECT", settings.BitPerfect, v => settings.BitPerfect = v));
+        row.Children.Add(new EngravedLabel
+        {
+            Kind = LabelKind.Label,
+            VerticalAlignment = VerticalAlignment.Center,
+            Text = "Lossless music takes the sound device to itself, at the file's own format. While BIT-PERFECT is on, other apps can't make sound. Films pass their soundtrack to your receiver from the next launch.",
+        });
+        return row;
     }
 
     static Pad HelpPad(string text, Action open)

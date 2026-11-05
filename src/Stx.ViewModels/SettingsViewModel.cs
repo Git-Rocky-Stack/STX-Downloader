@@ -29,6 +29,8 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
     public bool ToolUpdates { get => _settings.ToolUpdates; set => Apply(_settings with { ToolUpdates = value }); }
     public bool ReduceMotion { get => _settings.ReduceMotion; set => Apply(_settings with { ReduceMotion = value }); }
     public DownloadChoice Download { get => _settings.Download; set => Apply(_settings with { Download = value }); }
+    public Stx.Core.Playback.EnhanceLevel Enhance { get => _settings.Enhance; set => Apply(_settings with { Enhance = value }); }
+    public bool BitPerfect { get => _settings.BitPerfect; set => Apply(_settings with { BitPerfect = value }); }
     public bool EmbedTags { get => _settings.EmbedTags; set => Apply(_settings with { EmbedTags = value }); }
     public bool EmbedCoverArt { get => _settings.EmbedCoverArt; set => Apply(_settings with { EmbedCoverArt = value }); }
     public bool EmbedChapters { get => _settings.EmbedChapters; set => Apply(_settings with { EmbedChapters = value }); }
@@ -41,6 +43,19 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
     /// <summary>In the order of DownloadChoice.</summary>
     public static IReadOnlyList<string> DownloadLabels { get; } = ["BEST", "1080P", "720P", "VIDEO", "AUDIO"];
     public string OutputFolder { get => _settings.OutputFolder; set => Apply(_settings with { OutputFolder = value }); }
+
+    /// <summary>The folders whose media joins the Library. Videos and Music until changed.</summary>
+    public IReadOnlyList<string> WatchedFolders => _settings.Watched;
+
+    public void AddWatchedFolder(string folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || _settings.Watched.Contains(folder, StringComparer.OrdinalIgnoreCase)) return;
+        Apply(_settings with { WatchedFolders = [.. _settings.Watched, folder] }, nameof(WatchedFolders));
+    }
+
+    /// <summary>Only stops watching. Nothing is deleted from disk.</summary>
+    public void RemoveWatchedFolder(string folder) =>
+        Apply(_settings with { WatchedFolders = [.. _settings.Watched.Where(f => !string.Equals(f, folder, StringComparison.OrdinalIgnoreCase))] }, nameof(WatchedFolders));
     public string FilenameTemplate { get => _settings.FilenameTemplate; set => Apply(_settings with { FilenameTemplate = value }); }
 
     public bool StartWithWindows
@@ -53,6 +68,9 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
             Apply(_settings with { StartWithWindows = value });
         }
     }
+
+    /// <summary>Records that the default-player question was answered, so it's never asked again.</summary>
+    public void MarkDefaultPlayerAsked() => Apply(_settings with { DefaultPlayerAsked = true });
 
     /// <summary>True on the first launch only. Saved straight away, so the guide never opens by itself twice.</summary>
     public bool TakeFirstLaunchGuide()

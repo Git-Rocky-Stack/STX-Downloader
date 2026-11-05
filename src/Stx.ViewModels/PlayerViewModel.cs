@@ -33,8 +33,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _engine.Changed += OnEngineChanged;
     }
 
-    string _title = "", _timeText = "00:00:00", _problem = "";
-    bool _hasMedia, _isPlaying, _isAudioOnly, _isFullScreen;
+    string _title = "", _timeText = "00:00:00", _problem = "", _audioReadout = "";
+    bool _hasMedia, _isPlaying, _isAudioOnly, _isFullScreen, _volumeFixed;
     double _progress;
 
     public string Title { get => _title; private set => SetProperty(ref _title, value); }
@@ -45,6 +45,12 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     public double Progress { get => _progress; private set => SetProperty(ref _progress, value); }
     public string Problem { get => _problem; private set => SetProperty(ref _problem, value); }
     public bool IsFullScreen { get => _isFullScreen; set => SetProperty(ref _isFullScreen, value); }
+
+    /// <summary>What reaches the sound device while BIT-PERFECT is on ("24/96 BIT-PERFECT", or why it's shared). Empty otherwise.</summary>
+    public string AudioReadout { get => _audioReadout; private set => SetProperty(ref _audioReadout, value); }
+
+    /// <summary>True while a bit-perfect stream plays: it goes out at full scale, so VOLUME can't change it.</summary>
+    public bool VolumeFixed { get => _volumeFixed; private set => SetProperty(ref _volumeFixed, value); }
 
     public int Volume
     {
@@ -132,6 +138,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         var length = _engine.Length;
         Progress = length > TimeSpan.Zero ? Math.Clamp(position / length, 0, 1) : 0;
         Problem = state == PlaybackState.Failed ? _engine.Error ?? CouldNotPlay : "";
+        AudioReadout = HasMedia ? _engine.AudioReadout : "";
+        VolumeFixed = HasMedia && _engine.VolumeFixed;
         OnPropertyChanged(nameof(AudioTracks));
         OnPropertyChanged(nameof(SubtitleTracks));
         OnPropertyChanged(nameof(Chapters));

@@ -35,7 +35,7 @@ public sealed partial class MainWindow : Window
         _tutorial = new TutorialPanel(() => ShowHelp(null)) { Visibility = Visibility.Collapsed };
         var settings = new SettingsPanel(_app.Settings, this,
             () => ShowHelp(_guide.Visibility == Visibility.Visible ? null : _guide),
-            () => ShowHelp(_tutorial.Visibility == Visibility.Visible ? null : _tutorial)) { Visibility = Visibility.Collapsed };
+            () => ShowHelp(_tutorial.Visibility == Visibility.Visible ? null : _tutorial), _app.DefaultPlayer) { Visibility = Visibility.Collapsed };
         var first = new FirstRunPanel(_app.FirstRun);
         var truth = new SourceTruthPanel(_app.SourceTruth, _app.ConvertSelected);
 
@@ -45,7 +45,8 @@ public sealed partial class MainWindow : Window
         rack.Children.Add(_guide);
         rack.Children.Add(_tutorial);
         rack.Children.Add(first);
-        rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard));
+        rack.Children.Add(new DefaultPlayerOfferPanel(_app.DefaultPlayer));
+        rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard, () => _app.PlayStreamAsync(_app.Source.Link), PickDiscAsync));
 
         // The deck: QUEUE and LIBRARY on the left; the PLAYER, with SOURCE TRUTH under it reading the same file, on the right.
         var deck = new Grid { ColumnSpacing = 8 };
@@ -53,8 +54,8 @@ public sealed partial class MainWindow : Window
         deck.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var left = new StackPanel { Spacing = 8 };
         left.Children.Add(new QueuePanel(_app.Queue));
-        left.Children.Add(new LibraryPanel(_app.Library, _app.Select));
-        _player = new PlayerPanel(_app.Player, _app.PlayerEngine);
+        left.Children.Add(new LibraryPanel(_app.Library, _app.Select, PickShrinkFolderAsync));
+        _player = new PlayerPanel(_app.Player, _app.PlayerEngine, _app.Enhance);
         var right = new StackPanel { Spacing = 8 };
         right.Children.Add(_player);
         right.Children.Add(truth);
@@ -98,6 +99,8 @@ public sealed partial class MainWindow : Window
         _app.Settings.Changed += (_, current) => ApplyBackgroundChoices(current);
         if (_app.Settings.TakeFirstLaunchGuide()) ShowHelp(_guide);
 
+        // Coming back from Windows' Default Apps page: the LED reads what Windows now does.
+        Activated += (_, e) => { if (e.WindowActivationState != WindowActivationState.Deactivated) _app.DefaultPlayer.Refresh(); };
         AppWindow.Closing += OnClosing;
         Closed += (_, _) => Shutdown();
         _ = _app.StartAsync();
@@ -156,6 +159,26 @@ public sealed partial class MainWindow : Window
     {
         ShowFromTray();
         _app.OpenFromOutside(path);
+        _player.StartBringIntoView();
+    }
+
+    // SHRINK FOLDER: the copies are written beside the originals, inside the folder picked.
+    async Task PickShrinkFolderAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        if (await picker.PickSingleFolderAsync() is { } chosen) await _app.Shrink.QueueAsync(chosen.Path);
+    }
+
+    // A drive or a disc folder. Windows' folder picker lists DVD and Blu-ray drives like any other.
+    async Task PickDiscAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        if (await picker.PickSingleFolderAsync() is not { } chosen) return;
+        _app.PlayDisc(chosen.Path);
         _player.StartBringIntoView();
     }
 

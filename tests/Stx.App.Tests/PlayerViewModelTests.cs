@@ -192,7 +192,7 @@ public class PlayerViewModelTests
     }
 
     [Fact]
-    public void Engine_events_reach_the_ui_through_onUi()
+    public async Task Engine_events_reach_the_ui_through_onUi()
     {
         var engine = new FakeEngine();
         var queued = new List<Action>();
@@ -201,7 +201,7 @@ public class PlayerViewModelTests
         queued.ForEach(run => run());
         queued.Clear();
         engine.Position = TimeSpan.FromSeconds(42);
-        Task.Run(engine.Raise).Wait();
+        await Task.Run(engine.Raise);
         Assert.Equal("00:00:00", player.TimeText);
         queued.ForEach(run => run());
         Assert.Equal("00:00:42", player.TimeText);

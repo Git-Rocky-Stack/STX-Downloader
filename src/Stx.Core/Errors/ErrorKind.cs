@@ -1,6 +1,6 @@
 namespace Stx.Core.Errors;
 
-public enum ErrorKind { UnsupportedSite, SignInNeeded, PrivateOrUnavailable, DrmDetected, LinkExpired, Network, ToolFailure, OutputFailure }
+public enum ErrorKind { UnsupportedSite, SignInNeeded, PrivateOrUnavailable, DrmDetected, LinkExpired, Network, ToolFailure, OutputFailure, CopyFailedCheck, EncoderMissing }
 
 /// <summary>Every error in plain language, with what to do next.</summary>
 public static class ErrorKindText
@@ -14,6 +14,8 @@ public static class ErrorKindText
         ErrorKind.LinkExpired => "The stream link has expired.",
         ErrorKind.Network => "The connection dropped, or the site isn't responding.",
         ErrorKind.OutputFailure => "The file couldn't be written.",
+        ErrorKind.CopyFailedCheck => "The new copy didn't check out, so it wasn't kept. The original is untouched.",
+        ErrorKind.EncoderMissing => "This FFmpeg has no encoder for that format.",
         _ => "The download tool stopped unexpectedly.",
     };
 
@@ -26,6 +28,8 @@ public static class ErrorKindText
         ErrorKind.LinkExpired => "Play it again in Chrome to capture a fresh link.",
         ErrorKind.Network => "Check your connection, then retry.",
         ErrorKind.OutputFailure => "Check the output folder exists and has free space, then retry.",
+        ErrorKind.CopyFailedCheck => "Copy the log to see what didn't match. Retrying makes a new copy from the original.",
+        ErrorKind.EncoderMissing => "Let the tools update in Settings, then retry.",
         _ => "Retry, and copy the log if it keeps happening.",
     };
 }

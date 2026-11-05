@@ -1,0 +1,170 @@
+; Generated from src/Stx.Core/Library/FileAssociations.cs. Don't edit by hand:
+; FileAssociationTests.The_installer_registers_exactly_the_plan says how to make it again.
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Video"; ValueType: string; ValueData: "STX video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Video"; ValueName: "FriendlyTypeName"; ValueType: string; ValueData: "STX video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Video\DefaultIcon"; ValueType: string; ValueData: """{app}\STXDownloader.exe"",0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Video\shell\open\command"; ValueType: string; ValueData: """{app}\STXDownloader.exe"" ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Audio"; ValueType: string; ValueData: "STX audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Audio"; ValueName: "FriendlyTypeName"; ValueType: string; ValueData: "STX audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Audio\DefaultIcon"; ValueType: string; ValueData: """{app}\STXDownloader.exe"",0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\STXDownloader.Audio\shell\open\command"; ValueType: string; ValueData: """{app}\STXDownloader.exe"" ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe"; ValueName: "FriendlyAppName"; ValueType: string; ValueData: "STX Downloader"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\shell\open\command"; ValueType: string; ValueData: """{app}\STXDownloader.exe"" ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities"; ValueName: "ApplicationName"; ValueType: string; ValueData: "STX Downloader"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities"; ValueName: "ApplicationDescription"; ValueType: string; ValueData: "Plays your videos and music on VLC's engine, and tells you the truth about their quality."; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities"; ValueName: "ApplicationIcon"; ValueType: string; ValueData: """{app}\STXDownloader.exe"",0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".3gp"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.3gp\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".3gp"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".aac"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.aac\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".aac"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".ac3"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.ac3\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".ac3"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".aif"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.aif\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".aif"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".aiff"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.aiff\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".aiff"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".ape"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.ape\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".ape"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".asf"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.asf\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".asf"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".avi"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.avi\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".avi"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".dts"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.dts\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".dts"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".dv"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.dv\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".dv"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".eac3"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.eac3\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".eac3"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".flac"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.flac\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".flac"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".flv"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.flv\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".flv"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".m1v"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.m1v\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".m1v"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".m2ts"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.m2ts\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".m2ts"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".m2v"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.m2v\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".m2v"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".m4a"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.m4a\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".m4a"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".m4v"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.m4v\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".m4v"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mid"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mid\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mid"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".midi"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.midi\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".midi"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mka"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mka\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mka"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mkv"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mkv\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mkv"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mlp"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mlp\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mlp"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mov"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mov\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mov"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mp2"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mp2\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mp2"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mp3"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mp3\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mp3"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mp4"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mp4\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mp4"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mpc"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mpc\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mpc"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mpeg"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mpeg\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mpeg"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mpg"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mpg\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mpg"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mts"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mts\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mts"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".mxf"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mxf\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".mxf"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".nut"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.nut\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".nut"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".oga"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.oga\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".oga"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".ogg"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.ogg\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".ogg"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".ogm"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.ogm\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".ogm"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".ogv"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.ogv\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".ogv"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".opus"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.opus\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".opus"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".rm"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.rm\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".rm"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".rmvb"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.rmvb\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".rmvb"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".spx"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.spx\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".spx"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".thd"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.thd\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".thd"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".ts"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.ts\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".ts"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".tta"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.tta\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".tta"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".vob"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.vob\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".vob"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".voc"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.voc\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".voc"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".wav"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.wav\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".wav"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".webm"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.webm\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".webm"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".wma"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.wma\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".wma"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".wmv"; ValueType: string; ValueData: "STXDownloader.Video"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.wmv\OpenWithProgids"; ValueName: "STXDownloader.Video"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".wmv"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\STXDownloader\Capabilities\FileAssociations"; ValueName: ".wv"; ValueType: string; ValueData: "STXDownloader.Audio"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.wv\OpenWithProgids"; ValueName: "STXDownloader.Audio"; ValueType: string; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Applications\STXDownloader.exe\SupportedTypes"; ValueName: ".wv"; ValueType: string; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueName: "STX Downloader"; ValueType: string; ValueData: "Software\STXDownloader\Capabilities"; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\STXDownloader"; Flags: uninsdeletekeyifempty

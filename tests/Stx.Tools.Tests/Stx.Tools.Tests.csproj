@@ -1,14 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- xunit.v3 test projects build as their own runner, on Microsoft.Testing.Platform (global.json). -->
+    <OutputType>Exe</OutputType>
+    <!-- xUnit1051 (new in v3) asks every awaited call to take the test's cancellation token. The suites end on their own
+         timeouts, so it's off rather than threaded through 150 existing calls. -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Stx.Tools\Stx.Tools.csproj" />

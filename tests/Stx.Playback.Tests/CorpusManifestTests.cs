@@ -14,6 +14,15 @@ public partial class CorpusManifestTests
         Assert.True(missing.Count == 0, "No corpus file for: " + string.Join(", ", missing));
     }
 
+    // Phase 3: STX registers as a player only for types it's proven to play. Each one has a corpus file of that type.
+    [Fact]
+    public void Every_type_STX_registers_is_played_by_a_corpus_file()
+    {
+        var proven = Corpus.Manifest().Where(e => e.Expect != "refused").Select(e => Path.GetExtension(e.File).ToLowerInvariant()).ToHashSet(StringComparer.Ordinal);
+        var unproven = Stx.Core.Library.MediaTypes.All.Where(t => !proven.Contains(t)).ToList();
+        Assert.True(unproven.Count == 0, "Registered without a corpus file: " + string.Join(", ", unproven));
+    }
+
     [Fact]
     public void Every_manifest_feature_is_on_the_list()
     {

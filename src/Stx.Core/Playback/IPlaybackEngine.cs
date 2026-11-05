@@ -31,6 +31,12 @@ public interface IPlaybackEngine : IDisposable
     void SelectSubtitle(int id);
     void SelectChapter(int id);
 
+    /// <summary>What reaches the sound device, for the plate's readout ("24/96 BIT-PERFECT", "SHARED WITH WINDOWS"). Empty when there's nothing to say.</summary>
+    string AudioReadout => "";
+
+    /// <summary>True while the volume can't change: a bit-perfect stream is sent at full scale, untouched.</summary>
+    bool VolumeFixed => false;
+
     /// <summary>Something above changed. May fire on any thread.</summary>
     event EventHandler? Changed;
 }

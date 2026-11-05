@@ -11,9 +11,10 @@ The player uses VLC's engine. The build fetches each item below from its publish
 | VLC 3.0.24 engine (libvlc, libvlccore and plugins) | Playing media | The official [VLC 3.0.24 win64 zip](https://download.videolan.org/vlc/3.0.24/win64/) from VideoLAN | [LGPL-2.1-or-later](https://code.videolan.org/videolan/vlc/-/blob/3.0.x/COPYING.LIB), dynamically linked. Some plugins are GPL, as in VLC itself. |
 | LibVLCSharp and LibVLCSharp.WinUI 3.10.2 | .NET access to LibVLC, and the video view the player draws into | NuGet ([LibVLCSharp](https://www.nuget.org/packages/LibVLCSharp/3.10.2), [LibVLCSharp.WinUI](https://www.nuget.org/packages/LibVLCSharp.WinUI/3.10.2)) | [LGPL-2.1-or-later](https://code.videolan.org/videolan/LibVLCSharp/-/blob/3.x/LICENSE) |
 | SharpDX 4.2.0 | Direct3D access for LibVLCSharp.WinUI's video view | NuGet, as a dependency of LibVLCSharp.WinUI | [MIT](https://github.com/sharpdx/SharpDX/blob/master/LICENSE). SharpDX has been unmaintained since 2019. STX uses it only through LibVLCSharp.WinUI's video view. |
+| NAudio.Wasapi and NAudio.Core 2.2.1 | BIT-PERFECT: holding the sound device exclusively and handing it PCM (`src/Stx.Playback/ExclusiveRenderer.cs`) | NuGet ([NAudio.Wasapi](https://www.nuget.org/packages/NAudio.Wasapi/2.2.1)) | [MIT](https://github.com/naudio/NAudio/blob/master/license.txt) |
 | FluidR3_GM SoundFont, by Frank Wen | Playing MIDI files | Debian's [fluid-soundfont-gm 3.1-5.3](https://packages.debian.org/source/sid/fluid-soundfont) package | MIT. The copyright file ships beside it (`libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt`). |
 
-Some of VLC's plugins aren't shipped, each with its reason in `tools/vlc/engine.json`: the ones that would open network ports, run site scripts or show VLC's own windows. VLC's two DVD plugins (`libdvdnav`, `libdvdread`) are left out as well, because they have libdvdcss built in, which decrypts CSS-protected DVDs. STX can't decrypt a DVD; the README's no-DRM rule applies to playback too.
+Some of VLC's plugins aren't shipped, each with its reason in `tools/vlc/engine.json`: the ones that would open network ports, run site scripts or show VLC's own windows. VLC's two DVD plugins (`libdvdnav`, `libdvdread`) do ship, for unencrypted DVDs (Rocky's decision for Phase 4). Both have libdvdcss built in, which can decrypt CSS-protected DVDs. **STX doesn't use it**: before any disc, disc folder or disc image reaches LibVLC, STX reads the disc's own CSS and AACS markings and refuses an encrypted one (`src/Stx.Core/Playback/DiscCheck.cs`). The README's no-DRM rule applies to playback too. No AACS or BD+ library ships, so libbluray reads only unencrypted Blu-ray discs.
 
 ## Downloaded on first run
 
@@ -23,7 +24,7 @@ None of these are included in the app. When its tool setup runs, it downloads ea
 |---|---|---|---|
 | yt-dlp | Reading and downloading media | [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) releases (`src/Stx.Tools/ToolVersions.cs:6`) | [Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE) |
 | Deno | JavaScript runtime that yt-dlp uses for full YouTube extraction | [denoland/deno](https://github.com/denoland/deno) releases (`src/Stx.Tools/ToolVersions.cs:10`) | [MIT](https://github.com/denoland/deno/blob/main/LICENSE.md) |
-| FFmpeg and FFprobe | Merging streams, converting, and measuring audio | [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) release branch 9.0, `win64-gpl` (`src/Stx.Tools/FfmpegSource.cs:9`) | [GPL](https://ffmpeg.org/legal.html), because this build enables GPL components |
+| FFmpeg and FFprobe | Merging streams, converting, measuring audio, and decoding lossless music for BIT-PERFECT | [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) release branch 9.0, `win64-gpl` (`src/Stx.Tools/FfmpegSource.cs:9`) | [GPL](https://ffmpeg.org/legal.html), because this build enables GPL components |
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php), under [its own license](https://jrsoftware.org/files/is/license.txt).
 

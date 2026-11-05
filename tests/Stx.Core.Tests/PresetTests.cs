@@ -9,8 +9,8 @@ public class PresetTests
     static Preset Named(string name) => PresetCatalog.All.Single(p => p.Name == name);
 
     [Fact]
-    public void All_four_named_presets_exist() =>
-        Assert.Equal(["Keep original", "Car USB", "Phone", "Archive"], PresetCatalog.All.Select(p => p.Name));
+    public void All_named_presets_exist() =>
+        Assert.Equal(["Keep original", "Car USB", "Phone", "Archive", "Shrink AV1", "Shrink HEVC", "Shrink Opus"], PresetCatalog.All.Select(p => p.Name));
 
     [Fact]
     public void Keep_original_preset_never_reencodes()

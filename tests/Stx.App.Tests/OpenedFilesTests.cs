@@ -1,3 +1,4 @@
+using Stx.Core.Library;
 using Stx.Core.Queue;
 using Stx.ViewModels;
 using Xunit;
@@ -5,9 +6,10 @@ using Xunit;
 namespace Stx.App.Tests;
 
 /// <summary>The catalog as the app has it: one store that both adds media and lists the library.</summary>
-sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog
+sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
 {
     readonly MemoryCatalog _media = new();
+    readonly Dictionary<long, MediaOrigin> _origins = new();
     public List<MediaRecord> Items => _media.Items;
     public List<(long Media, string Path, string Format)> Files => _media.Files;
 
@@ -19,7 +21,23 @@ sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog
     public long? RememberedCapture(string key) => null;
 
     public IReadOnlyList<LibraryItem> Library() =>
-        [.. Items.Select(i => new LibraryItem(i.Id, i.Title, i.PageUrl, [.. Files.Select((f, n) => (f, n)).Where(x => x.f.Media == i.Id).Select(x => new LibraryFile(x.n + 1, x.f.Path, x.f.Format))]))];
+        [.. Items.Select(i => new LibraryItem(i.Id, i.Title, i.PageUrl, [.. Files.Select((f, n) => (f, n)).Where(x => x.f.Media == i.Id).Select(x => new LibraryFile(x.n + 1, x.f.Path, x.f.Format))], _origins.GetValueOrDefault(i.Id)))];
+
+    public IReadOnlyList<IndexedFile> IndexedFiles() => [.. Files.Select((f, n) => new IndexedFile(n + 1, f.Media, f.Path, null, null, _origins.GetValueOrDefault(f.Media)))];
+
+    public void AddLocal(IReadOnlyList<FoundFile> files, MediaOrigin origin)
+    {
+        foreach (var file in files)
+        {
+            long id = AddItem(null, null, Path.GetFileNameWithoutExtension(file.Path));
+            _origins[id] = origin;
+            AddFile(id, file.Path, null, SourceViewModel.OriginalFormat);
+        }
+    }
+
+    public void MoveFile(long fileId, string newPath) => throw new NotSupportedException();
+    public void UpdateFacts(long fileId, long size, DateTimeOffset modified) => throw new NotSupportedException();
+    public int ForgetWatchedUnder(string folder) => throw new NotSupportedException();
 }
 
 public class OpenedFilesTests
@@ -62,5 +80,26 @@ public class OpenedFilesTests
         var (opened, _) = Make();
         Assert.Equal("Big Night", opened.Adopt(@"D:\Films\Big Night.mkv").Title);
         Assert.Equal(SourceViewModel.OriginalFormat, _catalog.Files[0].Format);
+    }
+
+    [Fact]
+    public void An_opened_file_says_so()
+    {
+        var (opened, _) = Make();
+        var row = opened.Adopt(@"D:\Films\Big Night.mkv");
+        Assert.Equal(MediaOrigin.Opened, row.Origin);
+        Assert.Equal("MKV · OPENED", row.Status);
+    }
+
+    // A search narrowing the list mustn't make STX think a listed file is new.
+    [Fact]
+    public void Adopting_while_a_search_hides_the_row_adds_nothing()
+    {
+        var (opened, library) = Make();
+        var first = opened.Adopt(@"D:\Films\Big Night.mkv");
+        library.Query = "something else";
+        Assert.Empty(library.Rows);
+        Assert.Equal(first.FileId, opened.Adopt(@"D:\Films\Big Night.mkv").FileId);
+        Assert.Single(_catalog.Files);
     }
 }

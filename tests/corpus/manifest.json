@@ -1113,6 +1113,120 @@
       "sha256": "3aa9d463b6ae836d445dd8e2f45d4aeaa3c1a60e2d31b2c64f02255e70cd8443",
       "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
       "note": "VLC 3.0.24 reads USF only inside Matroska; its subtitle demuxer has no standalone USF type."
+    },
+    {
+      "file": "container.asf",
+      "features": [
+        "ASF / WMV / WMA",
+        "WMV 1/2",
+        "WMA 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v wmv2 -c:a wmav2 -f asf {out}"
+    },
+    {
+      "file": "container.m2ts",
+      "features": [
+        "MPEG TS",
+        "H.264 / MPEG-4 AVC",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a ac3 -f mpegts -mpegts_m2ts_mode 1 {out}"
+    },
+    {
+      "file": "container.mts",
+      "features": [
+        "MPEG TS",
+        "H.264 / MPEG-4 AVC",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a ac3 -f mpegts -mpegts_m2ts_mode 1 {out}"
+    },
+    {
+      "file": "container.m4v",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "H.264 / MPEG-4 AVC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -f mp4 {out}"
+    },
+    {
+      "file": "container.mpeg",
+      "features": [
+        "MPEG PS",
+        "MPEG-1/2",
+        "MPEG Layer 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg1video -c:a mp2 -f mpeg {out}"
+    },
+    {
+      "file": "container.aif",
+      "features": [
+        "LPCM"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a pcm_s16be -f aiff {out}"
+    },
+    {
+      "file": "container.midi",
+      "features": [
+        "Standard MIDI / SMF",
+        "MIDI"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/arpeggio.mid (written by tools/corpus/make-own-binaries.py; the .midi spelling of the same file)"
+    },
+    {
+      "file": "container.mka",
+      "features": [
+        "Matroska (MKV)",
+        "FLAC"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a flac -f matroska {out}"
+    },
+    {
+      "file": "container.oga",
+      "features": [
+        "OGG",
+        "FLAC"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a flac -f ogg {out}"
+    },
+    {
+      "file": "container.opus",
+      "features": [
+        "OGG"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a libopus -f ogg {out}",
+      "note": "Opus in Ogg. VideoLAN's 3.0.24 feature list has no Opus line, so this proves the container and the extension STX registers."
     }
   ]
 }

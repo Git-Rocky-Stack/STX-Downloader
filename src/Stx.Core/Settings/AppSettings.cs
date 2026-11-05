@@ -30,6 +30,21 @@ public sealed record AppSettings
     public bool GuideShown { get; init; }
     /// <summary>How hard playback may work. Auto picks from the PC's hardware.</summary>
     public PlaybackPerformance Performance { get; init; } = PlaybackPerformance.Auto;
+    /// <summary>ENHANCE: OFF, SHARPEN or UPSCALE, for the picture on screen only.</summary>
+    public EnhanceLevel Enhance { get; init; } = EnhanceLevel.Off;
+    /// <summary>BIT-PERFECT: lossless music holds the sound device exclusively at the file's own format, and films pass
+    /// their compressed soundtracks to the receiver. Off by default, because while it's on other apps can't make sound.</summary>
+    public bool BitPerfect { get; init; }
+    /// <summary>First-run setup asks once whether STX should be the player for videos and music. Yes or Not now, it never asks again.</summary>
+    public bool DefaultPlayerAsked { get; init; }
+    /// <summary>Folders whose media joins the Library. Null means never chosen: Videos and Music.</summary>
+    public IReadOnlyList<string>? WatchedFolders { get; init; }
+
+    /// <summary>The folders actually watched.</summary>
+    public IReadOnlyList<string> Watched => WatchedFolders ?? DefaultWatched;
+
+    public static IReadOnlyList<string> DefaultWatched { get; } =
+        [.. new[] { Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) }.Where(f => f.Length > 0)];
 
     /// <summary>Brings anything out of range back in, so a hand-edited file can't stop the app.</summary>
     public AppSettings Sanitized()
@@ -41,7 +56,17 @@ public sealed record AppSettings
             OutputFolder = string.IsNullOrWhiteSpace(OutputFolder) ? defaults.OutputFolder : OutputFolder,
             FilenameTemplate = string.IsNullOrWhiteSpace(FilenameTemplate) ? defaults.FilenameTemplate : FilenameTemplate,
             Performance = Enum.IsDefined(Performance) ? Performance : PlaybackPerformance.Auto,
+            Enhance = Enum.IsDefined(Enhance) ? Enhance : EnhanceLevel.Off,
+            WatchedFolders = CleanFolders(WatchedFolders),
         };
+    }
+
+    // The same list comes back untouched, so a save that changes nothing stays a no-op.
+    static IReadOnlyList<string>? CleanFolders(IReadOnlyList<string>? folders)
+    {
+        if (folders is null) return null;
+        var clean = folders.Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => f.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        return clean.SequenceEqual(folders, StringComparer.Ordinal) ? folders : clean;
     }
 }
 
