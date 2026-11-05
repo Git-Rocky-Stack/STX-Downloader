@@ -29,7 +29,9 @@ jobs:
           $zip = 'ffmpeg-n9.0-latest-win64-gpl-9.0.zip'
           $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg'
           Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip)
-          $want = ((Invoke-WebRequest "$base/checksums.sha256").Content -split "`n" | Where-Object { $_ -match [regex]::Escape($zip) }).Split(' ')[0]
+          # GitHub serves the checksum list as binary, so it's saved and read as lines rather than taken from .Content.
+          Invoke-WebRequest "$base/checksums.sha256" -OutFile (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256')
+          $want = (Get-Content (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256') | Where-Object { $_ -match [regex]::Escape($zip) } | Select-Object -First 1) -split '\s+' | Select-Object -First 1
           $got = (Get-FileHash (Join-Path $env:RUNNER_TEMP $zip) -Algorithm SHA256).Hash
           if (-not $want -or $got -ne $want) { throw "FFmpeg's sha256 is $got; its publisher says $want" }
           Expand-Archive (Join-Path $env:RUNNER_TEMP $zip) -DestinationPath $dir
