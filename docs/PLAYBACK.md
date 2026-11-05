@@ -1,8 +1,6 @@
 # The playback engine
 
-**Status: in development.** The engine below is built and tested, but the PLAYER plate that uses it isn't on the console yet. Nothing on this page can be reached from the app until it is. The plan is `docs/superpowers/plans/2026-11-04-player-phase1.md`.
-
-STX plays media with VLC's engine, LibVLC, through LibVLCSharp. The code is in `src/Stx.Playback/`.
+STX plays media with VLC's engine, LibVLC, through LibVLCSharp. The engine is in `src/Stx.Playback/`, and the PLAYER plate that uses it is `src/Stx.App/Panels/PlayerPanel.cs`, in the rack at `src/Stx.App/MainWindow.cs:57`.
 
 ## Which VLC STX ships
 
@@ -20,7 +18,7 @@ STX ships the **official VLC 3.0.24 build for 64-bit Windows**, the same zip Vid
 
 VLC 3.0.24's engine crashes the whole program on Dirac / VC-2 video. That happens in the official desktop build too, with a real video window, and with a genuine Dirac sample from FFmpeg's archive as well as one made by FFmpeg. If STX passed such a file to the engine, STX would close.
 
-So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:183`), and the rest of the console keeps working.
+So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:192`), and the rest of the console keeps working.
 
 Dirac is rare. It's mostly found in BBC archive material. VLC 3.0.24 doesn't play it safely either.
 
@@ -30,7 +28,7 @@ VLC plays MIDI through FluidSynth, which needs a SoundFont. VLC doesn't ship one
 
 ### Mono sound reaches WASAPI in stereo
 
-Windows refuses a one-channel stream in WASAPI shared mode (`0x88890008`, `AUDCLNT_E_UNSUPPORTED_FORMAT`), and LibVLC 3.0.24 then falls back to DirectSound. For mono files, STX starts muted. When the output lands on DirectSound, it switches the output to stereo, which reopens it on WASAPI, and then lets the sound through (`src/Stx.Playback/LibVlcEngine.cs:169`, `src/Stx.Playback/LibVlcEngine.cs:286`). Files with 2, 6 or 8 channels keep their own layout, so surround is never downmixed. LibVLC still logs Windows' first refusal once for each mono file.
+Windows refuses a one-channel stream in WASAPI shared mode (`0x88890008`, `AUDCLNT_E_UNSUPPORTED_FORMAT`), and LibVLC 3.0.24 then falls back to DirectSound. For mono files, STX starts muted. When the output lands on DirectSound, it switches the output to stereo, which reopens it on WASAPI, and then lets the sound through (`src/Stx.Playback/LibVlcEngine.cs:178`, `src/Stx.Playback/LibVlcEngine.cs:312`). Files with 2, 6 or 8 channels keep their own layout, so surround is never downmixed. LibVLC still logs Windows' first refusal once for each mono file.
 
 ## The parity corpus
 

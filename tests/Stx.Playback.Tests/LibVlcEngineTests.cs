@@ -105,6 +105,20 @@ public class LibVlcEngineTests
         Assert.False(facts.GpuSuperResolution);
     }
 
+    // Closing STX just after opening a file: the engine must not free LibVLC while the file's tracks are still being read.
+    [Fact]
+    public void Dispose_right_after_open_is_safe()
+    {
+        for (int i = 0; i < 40; i++)
+        {
+            var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+            engine.Open(Fixture.File(i % 2 == 0 ? "moving.mp4" : "tiny-audio.flac"));
+            Thread.Sleep(i % 8);
+            engine.Dispose();
+            Assert.Equal(PlaybackState.Idle, engine.State);
+        }
+    }
+
     [Fact]
     public void Open_without_a_surface_waits_for_one()
     {

@@ -144,10 +144,12 @@ public sealed class LibVlcEngine : IPlaybackEngine
     }
 
     // Off the caller's thread: the file's tracks are read first, which takes a moment.
+    Task _opening = Task.CompletedTask;
+
     void Play(string path)
     {
         int generation = _generation;
-        _ = Task.Run(() =>
+        _opening = Task.Run(() =>
         {
             Media media;
             lock (_gate)
@@ -314,11 +316,11 @@ public sealed class LibVlcEngine : IPlaybackEngine
         if (stream == "directsound" && !_monoRestarted)
         {
             _monoRestarted = true;
-            Task.Run(() => player.SetChannel(AudioOutputChannel.Stereo));
+            Task.Run(() => { lock (_gate) { if (!_disposed && ReferenceEquals(player, _player)) player.SetChannel(AudioOutputChannel.Stereo); } });
             return;
         }
         _monoRecovery = false;
-        Task.Run(() => player.Mute = false);
+        Task.Run(() => { lock (_gate) { if (!_disposed && ReferenceEquals(player, _player)) player.Mute = false; } });
     }
 
     // LibVLC's own words stay in LoggedErrors; the plate gets the console's plain message.
@@ -353,6 +355,8 @@ public sealed class LibVlcEngine : IPlaybackEngine
             _media = null;
             _state = PlaybackState.Idle;
         }
+        // An open still reading the file's tracks uses LibVLC; let it see _disposed and finish before LibVLC goes.
+        try { _opening.Wait(TimeSpan.FromSeconds(6)); } catch (AggregateException) { }
         player?.Stop();
         player?.Dispose();
         media?.Dispose();
