@@ -62,6 +62,9 @@ public sealed class IdenticalFileCheck(Func<IReadOnlyList<MediaFact>> existing, 
         }
     }
 
+    /// <summary>The file's sha256, in lower-case hex.</summary>
+    public static Task<string> HashOfAsync(string path, CancellationToken cancel) => HashOf(path, cancel);
+
     static async Task<string> HashOf(string path, CancellationToken cancel)
     {
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.Asynchronous | FileOptions.SequentialScan);

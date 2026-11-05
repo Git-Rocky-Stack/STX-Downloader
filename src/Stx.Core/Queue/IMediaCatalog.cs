@@ -15,7 +15,10 @@ public interface IMediaCatalog
 
 public sealed record LibraryFile(long Id, string Path, string Format);
 
-public sealed record LibraryItem(long Id, string? Title, string? PageUrl, IReadOnlyList<LibraryFile> Files);
+/// <summary>How an item came into the Library. Each row says which.</summary>
+public enum MediaOrigin { Downloaded, Opened, Watched }
+
+public sealed record LibraryItem(long Id, string? Title, string? PageUrl, IReadOnlyList<LibraryFile> Files, MediaOrigin Origin = MediaOrigin.Downloaded);
 
 public interface ILibraryCatalog
 {

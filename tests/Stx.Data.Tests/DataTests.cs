@@ -34,8 +34,8 @@ public sealed class DataTests : IDisposable
     }
 
     [Theory]
-    [InlineData("media_items", "id,page_url,source_id,title")]
-    [InlineData("media_files", "id,media_id,path,hash,format")]
+    [InlineData("media_items", "id,page_url,source_id,title,origin")]
+    [InlineData("media_files", "id,media_id,path,hash,format,size,modified")]
     [InlineData("jobs", "id,media_id,kind,state,attempts,error_kind,preset,created_at")]
     public void Tables_have_the_planned_columns(string table, string expected)
     {

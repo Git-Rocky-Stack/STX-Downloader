@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Stx.App.Primitives;
 using Stx.Core.Settings;
 using Stx.Look;
@@ -117,7 +118,61 @@ public sealed partial class SettingsPanel : ContentControl
         var column = new StackPanel { Spacing = 12 };
         column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Settings" });
         column.Children.Add(top);
+        column.Children.Add(WatchedFolders(settings, owner));
         Content = new Faceplate { PanelName = "settings", Padding = new Thickness(36, 28, 36, 28), Content = column };
+    }
+
+    // The folders whose media joins the Library: Videos and Music to begin with. Removing one only stops watching it.
+    static FrameworkElement WatchedFolders(SettingsViewModel settings, Window? owner)
+    {
+        var list = new ListView { SelectionMode = ListViewSelectionMode.Single, MaxHeight = 132, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(list, "Watched folders");
+        var add = new Pad { Content = "ADD FOLDER", VerticalAlignment = VerticalAlignment.Top };
+        var remove = new Pad { Content = "REMOVE FOLDER", VerticalAlignment = VerticalAlignment.Top, IsEnabled = false };
+
+        void Fill()
+        {
+            list.Items.Clear();
+            foreach (string folder in settings.WatchedFolders)
+            {
+                var item = new ListViewItem { MinHeight = 44, Content = new GlowText { Tone = DisplayTone.Amber, Text = folder }, Tag = folder };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, "Watched: " + folder);
+                list.Items.Add(item);
+            }
+            remove.IsEnabled = false;
+        }
+
+        list.SelectionChanged += (_, _) => remove.IsEnabled = list.SelectedItem is not null;
+        remove.Click += (_, _) =>
+        {
+            if ((list.SelectedItem as ListViewItem)?.Tag is string folder) settings.RemoveWatchedFolder(folder);
+            Fill();
+        };
+        add.Click += async (_, _) =>
+        {
+            if (owner is null) return;
+            var picker = new FolderPicker();
+            picker.FileTypeFilter.Add("*");
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(owner));
+            if (await picker.PickSingleFolderAsync() is { } chosen) settings.AddWatchedFolder(chosen.Path);
+            Fill();
+        };
+        Fill();
+
+        var pads = new StackPanel { Spacing = 12 };
+        pads.Children.Add(add);
+        pads.Children.Add(remove);
+        var row = new Grid { ColumnSpacing = 16 };
+        row.ColumnDefinitions.Add(new ColumnDefinition());
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(pads, 1);
+        row.Children.Add(new Display { Tone = DisplayTone.Amber, Padding = new Thickness(6), Content = list });
+        row.Children.Add(pads);
+
+        var section = new StackPanel { Spacing = 8 };
+        section.Children.Add(new EngravedLabel { Kind = LabelKind.Label, Text = "Watched folders: their media joins the Library" });
+        section.Children.Add(row);
+        return section;
     }
 
     static Pad HelpPad(string text, Action open)

@@ -57,6 +57,16 @@ public static class Migrations
             media_id INTEGER NOT NULL REFERENCES media_items(id) ON DELETE CASCADE
         );
         """,
+        // The Library as the whole collection: where each item came from, and the light index kept for watched files.
+        // Items with no link were opened from File Explorer before this step.
+        """
+        ALTER TABLE media_items ADD COLUMN origin TEXT NOT NULL DEFAULT 'downloaded';
+        ALTER TABLE media_files ADD COLUMN size INTEGER;
+        ALTER TABLE media_files ADD COLUMN modified TEXT;
+        UPDATE media_items SET origin = 'opened' WHERE page_url IS NULL AND source_id IS NULL;
+        CREATE INDEX media_files_path ON media_files(path COLLATE NOCASE);
+        CREATE INDEX media_items_origin ON media_items(origin);
+        """,
     ];
 
     public static int Latest => Steps.Length;

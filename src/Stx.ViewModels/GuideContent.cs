@@ -58,8 +58,12 @@ public static class GuideContent
             ], ["PAUSE", "RESUME", "CANCEL", "RETRY", "COPY LOG", "OPEN PAGE"]),
             new("Library",
             [
-                // LibraryPanel.cs summary
-                "Everything you've saved is listed here.",
+                // LibraryPanel.cs summary, CollectionWatcher.cs, OpenedFiles.cs
+                "Everything you've saved, every file you've opened with STX, and the media in your watched folders is listed here. Each row says ORIGINAL, OPENED or WATCHED.",
+                // LibraryViewModel.cs Query, LibraryRowViewModel.Matches
+                "Type in the search box to find a file by its title, file name or folder. Every word you type has to match.",
+                // CollectionWatcher.cs Apply
+                "New files in a watched folder appear by themselves. A renamed file keeps its row; a deleted one stays listed as FILE MISSING.",
                 // LibraryPanel.cs:32-33
                 "Select a file, then press OPEN to play it on the Player plate, or FIND FILE to show it in its folder.",
                 // LibraryPanel.cs:34-36, README.md:21
@@ -105,7 +109,9 @@ public static class GuideContent
                 "TAGS, COVER ART and CHAPTERS choose what gets embedded in the file.",
                 // SettingsPanel.cs:44-49 and :73, AppSettings.cs OutputFolder
                 "Saves go to the output folder, named by the filename template.",
-            ], ["SETTINGS", "TRAY", "CLIPBOARD", "TAGS", "COVER ART", "CHAPTERS"]),
+                // SettingsPanel.cs WatchedFolders, AppSettings.cs DefaultWatched, MediaRepo.cs ForgetWatchedUnder
+                "Videos and Music are watched to begin with. ADD FOLDER and REMOVE FOLDER change the list. Removing a folder takes its files out of the Library, never off your disk.",
+            ], ["SETTINGS", "TRAY", "CLIPBOARD", "TAGS", "COVER ART", "CHAPTERS", "ADD FOLDER", "REMOVE FOLDER"]),
             new("Good to know",
             [
                 // README.md:5

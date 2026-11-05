@@ -41,6 +41,19 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
     /// <summary>In the order of DownloadChoice.</summary>
     public static IReadOnlyList<string> DownloadLabels { get; } = ["BEST", "1080P", "720P", "VIDEO", "AUDIO"];
     public string OutputFolder { get => _settings.OutputFolder; set => Apply(_settings with { OutputFolder = value }); }
+
+    /// <summary>The folders whose media joins the Library. Videos and Music until changed.</summary>
+    public IReadOnlyList<string> WatchedFolders => _settings.Watched;
+
+    public void AddWatchedFolder(string folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || _settings.Watched.Contains(folder, StringComparer.OrdinalIgnoreCase)) return;
+        Apply(_settings with { WatchedFolders = [.. _settings.Watched, folder] }, nameof(WatchedFolders));
+    }
+
+    /// <summary>Only stops watching. Nothing is deleted from disk.</summary>
+    public void RemoveWatchedFolder(string folder) =>
+        Apply(_settings with { WatchedFolders = [.. _settings.Watched.Where(f => !string.Equals(f, folder, StringComparison.OrdinalIgnoreCase))] }, nameof(WatchedFolders));
     public string FilenameTemplate { get => _settings.FilenameTemplate; set => Apply(_settings with { FilenameTemplate = value }); }
 
     public bool StartWithWindows

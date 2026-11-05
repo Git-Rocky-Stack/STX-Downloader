@@ -6,6 +6,7 @@ using Stx.Audio;
 using Stx.Bridge;
 using Stx.App.Platform;
 using Stx.Core.Files;
+using Stx.Core.Library;
 using Stx.Core.Playback;
 using Stx.Playback;
 using Stx.Core.Queue;
@@ -30,6 +31,7 @@ public sealed class Composition : IDisposable
     readonly MediaRepo _catalog;
     readonly SemaphoreSlim _measuring = new(1, 1);
     readonly IdenticalFileCheck _identical;
+    readonly CollectionWatcher _watcher;
     PipeServer? _bridge;
     LibraryRowViewModel? _selectedRow;
 
@@ -66,6 +68,10 @@ public sealed class Composition : IDisposable
         PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect()));
         Player = new PlayerViewModel(PlayerEngine, OnUi);
         Opened = new OpenedFiles(catalog, Library);
+        // The watched folders. The downloads folder is left to the queue, which records each download itself.
+        _watcher = new CollectionWatcher(catalog, path => FolderScan.IsUnder(path, Settings.Current.OutputFolder));
+        _watcher.Changed += (_, _) => OnUi(() => _ = Library.RefreshAsync());
+        _watcher.Progress += (_, progress) => OnUi(() => Library.ShowScan(progress));
 
         FirstRun = new FirstRunViewModel(Tools, Status, () => Settings.Current.ToolUpdates);
         Clipboard = new ClipboardOfferViewModel(() => Settings.Current.ClipboardDetect);
@@ -116,7 +122,9 @@ public sealed class Composition : IDisposable
     public async Task StartAsync()
     {
         Queue.Load();
-        Library.Refresh();
+        await Library.RefreshAsync();
+        // The first scan runs in the background below normal priority; rows appear as it goes.
+        _watcher.Watch(Settings.Current.Watched);
         Engine.RecoverAfterRestart();
         try
         {
@@ -162,6 +170,23 @@ public sealed class Composition : IDisposable
         else if (FactsJson.Read(stored) is { } facts) SourceTruth.Show(row.Title, facts);
         else if (!row.IsMissing) _ = MeasureAsync(new SavedMedia(row.MediaId, row.FileId, row.Path, row.Title));
         else SourceTruth.Clear();
+        // Watched and opened files are indexed lightly. Their bytes are hashed the first time they're chosen, so a
+        // later download of the same file is recognised.
+        if (row.Origin != MediaOrigin.Downloaded && !row.IsMissing) _ = HashOnFirstUseAsync(row);
+    }
+
+    async Task HashOnFirstUseAsync(LibraryRowViewModel row)
+    {
+        if (_catalog.FileHash(row.FileId) is not null) return;
+        try
+        {
+            string hash = await Task.Run(() => IdenticalFileCheck.HashOfAsync(row.Path, _closing.Token)).ConfigureAwait(false);
+            _catalog.SetFileIdentity(row.FileId, hash, row.Path);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or OperationCanceledException)
+        {
+            // Unreadable or closing: it's hashed the next time it's chosen.
+        }
     }
 
     /// <summary>Plays a Library row on the PLAYER plate. PREV and NEXT walk the Library in its order.</summary>
@@ -184,7 +209,7 @@ public sealed class Composition : IDisposable
     // A newly saved file: find out if its bytes are already here, then measure whichever file is kept.
     async Task SettleAsync(SavedMedia media)
     {
-        Library.Refresh();
+        await Library.RefreshAsync();
         SavedMedia settled;
         try
         {
@@ -214,7 +239,7 @@ public sealed class Composition : IDisposable
     // One at a time and below normal priority, so measuring a batch never competes with what you're doing.
     async Task MeasureAsync(SavedMedia media)
     {
-        OnUi(Library.Refresh);
+        OnUi(() => _ = Library.RefreshAsync());
         if (Tools.Paths.Ffmpeg is not { } ffmpeg || Tools.FfprobePath is not { } ffprobe) return;
 
         await _measuring.WaitAsync(_closing.Token).ConfigureAwait(false);
@@ -242,6 +267,7 @@ public sealed class Composition : IDisposable
     {
         _closing.Cancel();
         _bridge?.Dispose();
+        _watcher.Dispose();
         // Stops playback and lets the decoder go before anything else closes.
         Player.Dispose();
         // Tools end and their credential files go now, not at the next launch. Dispose isn't on a thread the jobs need.
@@ -276,6 +302,7 @@ public sealed class Composition : IDisposable
         LookState.ReduceMotionChosen = settings.ReduceMotion;
         Tools.Options = new ToolOptions(settings.ToolUpdates);
         Engine.Policy = new QueuePolicy { MaxParallel = settings.MaxParallel };
+        _watcher.Watch(settings.Watched);
         Engine.Tick();
         // PERFORMANCE applies from the next file played; nothing is rebuilt and nothing playing is interrupted.
         PlayerEngine.Profile = PerformanceProfile.For(settings.Performance, HardwareProbe.Detect());
