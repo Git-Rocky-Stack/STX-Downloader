@@ -96,6 +96,21 @@ public class ShrinkTests
         Assert.Equal("MKV · WATCHED", library.Rows.Single(r => r.FileId == 1).Status);
     }
 
+    // Independent review, finding 8: an original with an AV1 and an HEVC copy was counted, and its saving added, twice.
+    // It's one original; what deleting it frees is measured against its smallest copy.
+    [Fact]
+    public void An_original_with_two_copies_is_counted_once()
+    {
+        var catalog = new LibraryCatalog();
+        catalog.Stored.Add(new LibraryItem(1, "Big Night", null, [new LibraryFile(1, @"D:\f\Big Night.mkv", "Original"), new LibraryFile(2, @"D:\f\Big Night (AV1).mkv", "Shrink AV1"), new LibraryFile(3, @"D:\f\Big Night (HEVC).mkv", "Shrink HEVC")], MediaOrigin.Watched));
+        var sizes = new Dictionary<string, long> { [@"D:\f\Big Night.mkv"] = 4L << 30, [@"D:\f\Big Night (AV1).mkv"] = 1L << 30, [@"D:\f\Big Night (HEVC).mkv"] = 2L << 30 };
+        var engine = new QueueEngine(new MemoryJobs(), new HandRunner(), new QueuePolicy(), new SystemClock(), new CaptureVault());
+        var library = new LibraryViewModel(catalog, engine, new ShellSpy(), _ => true, _ => { }, p => sizes.GetValueOrDefault(p));
+        library.Refresh();
+
+        Assert.Equal("DELETING 1 ORIGINAL WOULD FREE 3.0 GB. STX NEVER DELETES THEM.", library.SpaceText);
+    }
+
     [Fact]
     public void A_copy_is_never_shrunk_again_nor_an_original_twice()
     {
@@ -182,6 +197,64 @@ public sealed class ShrinkWithFfmpegTests : IDisposable
         Assert.Equal(codecs, Codecs(result.OutputPath!));
         Assert.Equal(before, Hash(original));
         Assert.Empty(Directory.GetFiles(_dir, FfmpegRunner.PartialPrefix + "*"));
+    }
+
+    // Independent review, finding 3, checked against FFmpeg 9.0: libopus takes only Vorbis's layouts and refuses the rest,
+    // 5.1(side) among them, which is how most films' AC3 and DTS arrive. WAV keeps the layout's name, so these reach
+    // the named cases. Each comes out with every channel it went in with.
+    [Theory]
+    [InlineData("5.1(side)", 6)]
+    [InlineData("5.0(side)", 5)]
+    [InlineData("quad(side)", 4)]
+    [InlineData("2.1", 6)]
+    [InlineData("3.0(back)", 4)]
+    [InlineData("4.0", 5)]
+    [InlineData("3.1", 6)]
+    [InlineData("4.1", 6)]
+    [InlineData("6.0", 7)]
+    [InlineData("hexagonal", 8)]
+    [InlineData("7.0", 8)]
+    [InlineData("7.1(wide)", 8)]
+    [InlineData("octagonal", 8)]
+    [InlineData("stereo", 2)]
+    [InlineData("quad", 4)]
+    [InlineData("7.1", 8)]
+    public async Task A_named_layout_opus_refuses_is_widened_without_losing_a_channel(string layout, int channels)
+    {
+        string original = Make("song.wav", $"-f lavfi -i sine=frequency=440:sample_rate=48000 -t 2 -af aformat=channel_layouts={layout} -c:a pcm_s16le");
+        var preset = PresetCatalog.ShrinkFor(false, ShrinkCodec.Av1);
+        var result = await Runner().ConvertAsync(new ConvertRequest(original, _dir, preset.Output) { Shrink = ShrinkCodec.Opus, Suffix = preset.Suffix });
+
+        Assert.True(result.IsSuccess, $"{layout}: {result.Error}");
+        Assert.Equal("opus", Codecs(result.OutputPath!));
+        Assert.Equal(channels, Channels(result.OutputPath!));
+    }
+
+    static int Channels(string path)
+    {
+        var start = new ProcessStartInfo(Tool(Ffprobe)) { UseShellExecute = false, RedirectStandardOutput = true };
+        foreach (string arg in new[] { "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels", "-of", "csv=p=0", path }) start.ArgumentList.Add(arg);
+        using var process = Process.Start(start)!;
+        string text = process.StandardOutput.ReadToEnd().Trim();
+        process.WaitForExit();
+        return int.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    // Matroska keeps no layout for PCM, so these arrive unnamed: 3 and 4 unnamed channels are refused too.
+    [Theory]
+    [InlineData("2.1")]
+    [InlineData("3.0")]
+    [InlineData("4.0")]
+    [InlineData("quad")]
+    [InlineData("3.1")]
+    [InlineData("5.1(side)")]
+    public async Task Every_common_sound_layout_shrinks_to_opus(string layout)
+    {
+        string original = Make("film.mkv", $"-f lavfi -i testsrc2=size=320x180:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 2 -af aformat=channel_layouts={layout} -c:v libx264 -pix_fmt yuv420p -c:a pcm_s16le");
+        var result = await Runner().ConvertAsync(new ConvertRequest(original, _dir, OutputChoice.Mkv) { Shrink = ShrinkCodec.Hevc, Suffix = " (HEVC)" });
+
+        Assert.True(result.IsSuccess, $"{layout}: {result.Error}");
+        Assert.Equal("hevc,opus", Codecs(result.OutputPath!));
     }
 
     [Fact]

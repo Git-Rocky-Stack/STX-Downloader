@@ -73,7 +73,12 @@ public sealed class RoutingEngine : IPlaybackEngine
         // Probing runs ffprobe, which takes a moment; never on the caller's thread.
         Task.Run(() =>
         {
-            var (route, source, why) = Decide(path);
+            // Anything thrown here would vanish into the task and leave the plate on OPENING. It plays shared instead.
+            AudioRoute route;
+            PcmSource? source;
+            string why;
+            try { (route, source, why) = Decide(path); }
+            catch (Exception e) when (e is not OutOfMemoryException) { (route, source, why) = (AudioRoute.Shared, null, UnreadableSound); }
             lock (_gate)
             {
                 if (generation != _generation) return;
@@ -121,6 +126,9 @@ public sealed class RoutingEngine : IPlaybackEngine
         return (route, source, route == AudioRoute.Shared ? BitPerfect.WhyShared(source) : "");
     }
 
+    const string UnreadableSound = "SHARED: STX COULDN'T READ THE FILE'S SOUND";
+    static readonly TimeSpan ProbeLimit = TimeSpan.FromSeconds(10);
+
     static PcmSource? Probe(string ffprobe, string path)
     {
         var start = new ProcessStartInfo(ffprobe) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
@@ -130,9 +138,14 @@ public sealed class RoutingEngine : IPlaybackEngine
             using var process = Process.Start(start)!;
             process.ErrorDataReceived += (_, _) => { };
             process.BeginErrorReadLine();
-            string json = process.StandardOutput.ReadToEnd();
-            process.WaitForExit(10_000);
-            return PcmSource.FromProbe(json);
+            // Read while waiting, so the limit holds: a ReadToEnd first would wait as long as a stalled share does.
+            var json = process.StandardOutput.ReadToEndAsync();
+            if (!process.WaitForExit(ProbeLimit))
+            {
+                try { process.Kill(true); } catch (InvalidOperationException) { }
+                return null;
+            }
+            return PcmSource.FromProbe(json.GetAwaiter().GetResult());
         }
         catch (System.ComponentModel.Win32Exception) { return null; }
     }

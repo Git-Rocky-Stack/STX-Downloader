@@ -219,6 +219,35 @@ public sealed class PlaybackTargetTests : IDisposable
         Assert.Equal(StreamLink.PortRefused, PlaybackTarget.For("udp://@239.0.0.1:1234").Refusal);
         Assert.Equal("mmsh://media.example.com/live", PlaybackTarget.For("mms://media.example.com/live").Location);
     }
+
+    // Independent review, finding 4: a scheme STX doesn't know went to LibVLC as a stream address. dshow:// and
+    // screen:// open the camera and the desktop. Only the streams STX knows reach the engine.
+    [Theory]
+    [InlineData("dshow://")]
+    [InlineData("screen://")]
+    [InlineData("smb://nas/films/a.mkv")]
+    [InlineData("tcp://example.com:1234")]
+    [InlineData("rist://example.com:1234")]
+    public void An_address_stx_doesnt_know_never_reaches_the_engine(string address) =>
+        Assert.True(PlaybackTarget.For(address, _ => throw new InvalidOperationException("no disc check for a link")).IsRefused, address);
+
+    // The review's own example, tcp://@:1234, isn't an address .NET can read, so it's taken as a file name, and the
+    // engine opens files by path (LibVlcEngine: FromType.FromPath). VLC never sees it as a stream, so nothing listens.
+    [Fact]
+    public void An_unreadable_address_is_only_ever_a_file_name()
+    {
+        var target = PlaybackTarget.For("tcp://@:1234", _ => new DiscVerdict(DiscKind.None, false, ""));
+        Assert.Equal(TargetKind.File, target.Kind);
+    }
+
+    // A file: address is a file, and plays as one.
+    [Fact]
+    public void A_file_address_plays_as_the_file()
+    {
+        var target = PlaybackTarget.For("file:///C:/Music/a%20song.mp3", _ => new DiscVerdict(DiscKind.None, false, ""));
+        Assert.Equal(TargetKind.File, target.Kind);
+        Assert.Equal(@"C:\Music\a song.mp3", target.Location);
+    }
 }
 
 public class StreamLinkTests

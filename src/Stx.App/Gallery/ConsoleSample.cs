@@ -78,8 +78,9 @@ internal static class ConsoleSample
     public static UIElement Settings()
     {
         string file = Path.Combine(Path.GetTempPath(), "stx-gallery-settings-" + Environment.ProcessId + ".json");
-        // A fixed sample, so a baseline never holds a real user's folder.
-        File.WriteAllText(file, "{\"OutputFolder\":\"D:\\\\Media\\\\STX Downloader\"}");
+        // A fixed sample, so a baseline never holds a real user's folder. Without WatchedFolders the panel would show
+        // this machine's own Videos and Music.
+        File.WriteAllText(file, "{\"OutputFolder\":\"D:\\\\Media\\\\STX Downloader\",\"WatchedFolders\":[\"D:\\\\Media\\\\Videos\",\"D:\\\\Media\\\\Music\"]}");
         return new SettingsPanel(new SettingsViewModel(new SettingsStore(file), new NoStartup()), null, () => { }, () => { });
     }
 

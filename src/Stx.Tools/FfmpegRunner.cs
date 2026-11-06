@@ -42,6 +42,9 @@ public sealed partial class FfmpegRunner(IProcessRunner process, string ffmpegPa
         string stem = Path.GetFileNameWithoutExtension(request.InputPath) + request.Suffix;
         if (request.Shrink is { } codec && hasEncoder is not null && !await hasEncoder(FfmpegArgs.Encoder(codec)).ConfigureAwait(false))
             return ConvertResult.Failed(ErrorKind.EncoderMissing);
+        // Opus refuses some layouts (2.1, quad...); knowing each stream's lets them be widened first.
+        if (request.Shrink is not null && check is not null && request.AudioLayouts.Count == 0)
+            request = request with { AudioLayouts = await check.AudioLayoutsAsync(request.InputPath, cancel).ConfigureAwait(false) };
         // A short, fixed name, because a long title plus a suffix could pass the path limit before the real name is chosen.
         string partial = Path.Combine(request.OutputFolder, $"{PartialPrefix}{Guid.NewGuid():N}{extension}");
         string encoder = request.Reencode && h264Encoder is not null ? await h264Encoder().ConfigureAwait(false) : "libx264";
@@ -74,7 +77,10 @@ public sealed partial class FfmpegRunner(IProcessRunner process, string ffmpegPa
         }
         finally
         {
-            if (File.Exists(partial)) File.Delete(partial);
+            // Right after a cancel, ffmpeg may still hold the file. A failed cleanup mustn't replace the job's real outcome;
+            // the stx.partial- name keeps a leftover out of the Library either way.
+            try { if (File.Exists(partial)) File.Delete(partial); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { onLog?.Invoke("Couldn't remove the unfinished copy: " + e.Message); }
         }
     }
 

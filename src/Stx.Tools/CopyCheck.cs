@@ -32,6 +32,21 @@ public sealed class CopyCheck(IProcessRunner process, string ffmpegPath, string 
         return null;
     }
 
+    /// <summary>Each audio stream's channels and layout, in stream order, as ffprobe names them ("5.1(side)", "quad",
+    /// or "unknown": Matroska keeps no layout for PCM).</summary>
+    public async Task<IReadOnlyList<SoundLayout>> AudioLayoutsAsync(string path, CancellationToken cancel = default)
+    {
+        var layouts = new List<SoundLayout>();
+        await process.RunAsync(ffprobePath, ["-v", "error", "-select_streams", "a", "-show_entries", "stream=channels,channel_layout", "-of", "csv=p=0", path],
+            line =>
+            {
+                string[] parts = line.Trim().Split(',', 2);
+                if (int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int channels))
+                    lock (layouts) layouts.Add(new SoundLayout(channels, parts.Length > 1 ? parts[1] : ""));
+            }, cancel).ConfigureAwait(false);
+        lock (layouts) return layouts.ToList();
+    }
+
     async Task<(TimeSpan? Length, (int Video, int Audio) Streams)> ProbeAsync(string path, CancellationToken cancel)
     {
         var lines = new List<string>();

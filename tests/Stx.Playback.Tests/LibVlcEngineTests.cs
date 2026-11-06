@@ -2,6 +2,7 @@ using Stx.Core.Playback;
 
 namespace Stx.Playback.Tests;
 
+[Collection(SoundDeviceCollection.Name)]
 public class LibVlcEngineTests
 {
     static readonly TimeSpan Five = TimeSpan.FromSeconds(5);
@@ -214,6 +215,20 @@ public class LibVlcEngineTests
             Assert.True(Fixture.Within(Five, () => engine.Player is { Mute: false }), $"{name}: still muted");
             Assert.True(engine.LoggedErrors.Count(e => e.Contains("cannot negotiate audio format", StringComparison.Ordinal)) <= 1, string.Join(" | ", engine.LoggedErrors));
         }
+    }
+
+    // Phase 4 was built with no live stream ever played. This one is a real internet radio station, so it's a local
+    // gate (Category=Network), never CI's: it needs the internet and the station on the air.
+    [Fact, Trait("Category", "Network")]
+    public void A_live_internet_radio_stream_plays()
+    {
+        const string station = "https://ice1.somafm.com/groovesalad-128-mp3";
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true, realAudio: true);
+        engine.Open(station);
+        Assert.True(Fixture.Within(TimeSpan.FromSeconds(20), () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(3)),
+            $"state {engine.State}, position {engine.Position}, error {engine.Error}");
+        Assert.True(engine.Decoded.AudioBlocks > 0, $"decoded {engine.Decoded}");
+        Assert.Equal(station, engine.HandedToLibVlc);
     }
 
     [Fact, Trait("Category", "Device")]

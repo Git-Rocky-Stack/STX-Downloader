@@ -8,7 +8,17 @@ Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, every run exiting 
 
 **These budgets apply when nothing is playing.** Playback has no fixed limits: it uses what the file needs, within the PERFORMANCE setting (AUTO, ECO, BALANCED, MAX; `src/Stx.Core/Playback/PerformanceProfile.cs:16`). The PLAYER plate sits in the rack whether or not anything plays, so the idle budgets are measured with it there.
 
-**Watched folders (Phase 2).** The first scan of Videos and Music is work, like a download: it runs on its own thread below normal priority (`src/Stx.Core/Library/CollectionWatcher.cs:94`), so the idle budget applies once it has finished. Watching costs nothing until a file changes. **Not re-measured:** Phases 2 to 7 were built without a Windows machine, so these numbers predate them. In particular, private memory with a very large collection hasn't been measured: every Library row is held in memory for search, and 50,000 rows may take the app past the 150 MB budget. That needs a run of `tools/Measure-Budgets.ps1` on the reference PC with a large watched folder.
+**Watched folders (Phase 2).** The first scan of Videos and Music is work, like a download: it runs on its own thread below normal priority (`src/Stx.Core/Library/CollectionWatcher.cs:94`), so the idle budget applies once it has finished. Watching costs nothing until a file changes.
+
+**Measured after Phases 2 to 7** (2026-11-05, this machine, `tools/Measure-Budgets.ps1 -Scenario idle -Assert -WatchedFolder <folder>`; `-WatchedFolder` makes that folder the only one watched). The 50,000 files are small files with media names in 500 folders: the scan reads only path, size and date (`src/Stx.Core/Library/FolderScan.cs:12`), so they make 50,000 real Library rows, and the database held 50,000 `media_files` rows afterwards.
+
+```
+watched folder   wsMB   privateMB privateMaxMB cpuPct gpu3dPct exit
+empty            228.90    117.30       117.50   0.01     0.00 0
+50,000 files     302.70    185.30       185.50   0.00     0.00 1 (over the 150 MB budget)
+```
+
+**The idle memory budget fails with a very large collection.** With nothing watched, Phases 2 to 7 cost about 38 MB over Phase 1's 80 MB. Each Library row then costs about 1.4 KB: every row is held in memory so search answers as you type, and each keeps a second, lower-case copy of its title, file name and folder for that search (`src/Stx.ViewModels/LibraryViewModel.cs:46`). Whether to shrink the rows or give the budget an allowance per row is open. The idle and hidden rows below predate Phases 2 to 7.
 
 `cpuPct` is a share of all 8 cores. Each row is 10 samples over 30 seconds, after settling. `toolSamples` is how many samples had a tool running under the app.
 

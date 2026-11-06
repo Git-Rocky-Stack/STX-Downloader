@@ -80,8 +80,12 @@ public sealed class ExclusiveRenderer : IDisposable
     /// <summary>How long a frame waits in the device's buffer: what a picture shown with this sound must allow for.</summary>
     public TimeSpan Latency => TimeSpan.FromSeconds((double)_bufferFrames / Rate);
 
-    /// <summary>Raised once the stream runs dry and the last frame has been handed over.</summary>
+    /// <summary>Raised once the stream runs dry and the last frame has been handed over. Raised off the pump thread.</summary>
     public event EventHandler? Finished;
+
+    /// <summary>Raised when the device or the stream fails mid-play: a DAC unplugged, the endpoint invalidated, the
+    /// decoder gone. Raised off the pump thread, which has stopped. Without it, the throw would end the whole app.</summary>
+    public event EventHandler<Exception>? Faulted;
 
     /// <summary>
     /// Opens the default device exclusively with the first candidate layout it takes at <paramref name="rate"/>.
@@ -137,6 +141,9 @@ public sealed class ExclusiveRenderer : IDisposable
         _paused = false;
         Interlocked.Exchange(ref _framesWritten, 0);
         _client.Reset();
+        // StopThread signalled the event to wake the old pump. Left set, the new pump would fill a buffer the device
+        // hasn't asked for yet, right after the pre-fill below has filled it.
+        _ready.Reset();
         // The first buffer is filled before starting, as exclusive event mode expects.
         Fill(_bufferFrames);
         _thread = new Thread(Pump) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "STX bit-perfect" };
@@ -159,15 +166,29 @@ public sealed class ExclusiveRenderer : IDisposable
     void Pump()
     {
         bool ended = false;
-        while (!_stopping)
+        try
         {
-            if (!_ready.WaitOne(2000)) { if (_paused) continue; break; }
-            if (_stopping || _paused) continue;
-            if (ended) break;
-            ended = !Fill(_bufferFrames);
+            while (!_stopping)
+            {
+                if (!_ready.WaitOne(2000)) { if (_paused) continue; break; }
+                if (_stopping || _paused) continue;
+                if (ended) break;
+                ended = !Fill(_bufferFrames);
+            }
         }
-        if (ended && !_stopping) Finished?.Invoke(this, EventArgs.Empty);
+        catch (Exception e) when (e is COMException or IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            if (!_stopping) Raise(() => Faulted?.Invoke(this, e));
+            return;
+        }
+        if (ended && !_stopping) Raise(() => Finished?.Invoke(this, EventArgs.Empty));
     }
+
+    // Off the pump thread, so a handler that takes a lock the stopping thread holds can't keep this thread from ending.
+    static void Raise(Action raise) => ThreadPool.QueueUserWorkItem(_ => raise());
+
+    /// <summary>Stops handing frames to the device and waits for the pump to end, so the stream can be closed safely.</summary>
+    public void Halt() => StopThread();
 
     // One period's worth. Exclusive event mode always takes the whole buffer. Short reads are padded with silence,
     // which ends the stream.

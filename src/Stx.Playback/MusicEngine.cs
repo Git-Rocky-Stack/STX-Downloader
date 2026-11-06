@@ -60,6 +60,7 @@ public sealed class MusicEngine(string ffmpeg) : IPlaybackEngine
             _error = null;
             _renderer = ExclusiveRenderer.Open(source.Rate, source.Channels, BitPerfect.Candidates(source.Bits));
             _renderer.Finished += OnFinished;
+            _renderer.Faulted += OnFaulted;
             Start(TimeSpan.Zero);
         }
     }
@@ -68,7 +69,9 @@ public sealed class MusicEngine(string ffmpeg) : IPlaybackEngine
 
     void Start(TimeSpan from)
     {
-        _decoder?.Kill(true);
+        // The pump stops before the decoder it reads from is killed, or a seek would pull it out from under the read.
+        _renderer!.Halt();
+        try { _decoder?.Kill(true); } catch (InvalidOperationException) { }
         _decoder?.Dispose();
         var start = new ProcessStartInfo(ffmpeg) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (string arg in BitPerfect.FfmpegArgs(_path, _renderer!.Layout, from)) start.ArgumentList.Add(arg);
@@ -90,6 +93,19 @@ public sealed class MusicEngine(string ffmpeg) : IPlaybackEngine
             Release();
         }
         Set(PlaybackState.Ended);
+    }
+
+    // The device went away or the decoder died mid-play. The device goes back to Windows and the plate says so.
+    void OnFaulted(object? sender, Exception e)
+    {
+        lock (_gate)
+        {
+            if (!ReferenceEquals(sender, _renderer)) return;
+            _offset = Position;
+            _error = "THE SOUND DEVICE STOPPED: " + e.Message.ToUpperInvariant();
+            Release();
+        }
+        Set(PlaybackState.Failed);
     }
 
     public void TogglePause()

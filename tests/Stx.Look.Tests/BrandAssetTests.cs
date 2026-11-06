@@ -56,7 +56,10 @@ public class BrandAssetTests
     {
         string window = File.ReadAllText(InApp("MainWindow.cs"));
         Assert.Contains("SetIcon", window);
-        Assert.Contains("IconShowOptions.HideIconAndSystemMenu", window);
+        // Every STX window wears the one strip, which hides the icon (Rocky: no icon up there, the gallery's either).
+        Assert.Contains("IconShowOptions.HideIconAndSystemMenu", File.ReadAllText(InApp("TitleStrip.cs")));
+        Assert.Contains("TitleStrip.Paint(AppWindow)", window);
+        Assert.Contains("TitleStrip.Paint(AppWindow)", File.ReadAllText(InApp(Path.Combine("Gallery", "GalleryWindow.cs"))));
     }
 
     // A focus ring appears when the last input anywhere was the keyboard, so an activated window's capture

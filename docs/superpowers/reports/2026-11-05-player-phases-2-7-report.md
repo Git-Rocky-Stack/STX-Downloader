@@ -31,7 +31,7 @@ Read from VLC 3.0.24's source (`github.com/videolan/vlc` at tag `3.0.24`):
 - `modules/audio_output/wasapi.c:546-548`: plain PCM always opens `AUDCLNT_SHAREMODE_SHARED`. Exclusive is used only for S/PDIF (`:535`) and HDMI (`:542`) passthrough. **Assumption A4 confirmed.**
 - `modules/audio_output/amem.c:191-193`: the callback output rejects any format but `S16N` (`/* TODO: amem-format */`). The spec's route, callbacks into STX's own renderer, would cut 24-bit files to 16.
 
-The work stopped there, as the spec says, and Rocky chose FFmpeg for music (D6). One part of that choice wasn't built: **a film's 16-bit PCM through the callbacks into exclusive mode.** Keeping it in sync with the picture couldn't be checked without the reference PC, so those soundtracks play shared, and the readout says why.
+The work stopped there, as the spec says, and Rocky chose FFmpeg for music (D6). One part of that choice wasn't built: **a film's 16-bit PCM through the callbacks into exclusive mode.** Keeping it in sync with the picture couldn't be checked without the reference PC, so those soundtracks play shared, and the readout says why. *Later, 2026-11-05:* VLC's callback output gives VLC no timing back, so sound and picture would drift apart over a film, and Rocky chose to keep film PCM shared for good; `docs/PLAYBACK.md` has the source lines.
 
 ### S6: super resolution is real on NVIDIA, assumed by VLC on Intel
 
@@ -115,8 +115,34 @@ Performance, measured here (Linux, in-process):
 
 - **Screenshot baselines.** The Library, Settings, Source and Player plates changed, so `console`, `library`, `settings` and the `player` baselines will differ. They need capturing with `tools/Capture-Gallery.ps1` and Rocky's approval, as before.
 - **Device, Corpus and screenshot tests** for these phases are written and not run.
-- **Film PCM through the callbacks** (part of D6); see S5.
+- **Film PCM through the callbacks** (part of D6); see S5. *Later:* not to be built; Rocky chose shared (see the addendum).
 - **Performance budgets** weren't re-measured. `tools/Measure-Budgets.ps1` needs a run on the reference PC, with a large watched folder.
 - **The installer** wasn't built or installed. Its registry lines are tested against the plan, but no install, Default Apps choice or uninstall was run.
 - **Code signing** stays after Phase 7, as Rocky decided.
 - **A self-review only.** The work wasn't reviewed independently; as in Phase 1, that is weaker than an independent review.
+
+## Addendum, 2026-11-05: the first run on the reference PC, and the first independent review
+
+Run on the reference PC (i5-8350U, UHD 620, Realtek audio, one 96 DPI screen, no optical drive). Every result here was produced and read on that machine; `CHANGELOG.md` anchors each fix.
+
+**CI suites (same filters as CI, plus Network):** Look 177, Art 69, Core 394, Data 38, Tools 190, Audio 68, Bridge 56, App 285, Playback 45, all passing. Two had failed at first, on this machine only: its VLC engine predated Phase 4, because the engine was fetched only when missing. The build now fetches it again whenever `tools/vlc/engine.json` changes (break-checked: with the old condition the stamp kept its time; with the new one the engine was rebuilt).
+
+**Local gates:**
+
+- **Corpus:** `Every_corpus_file_plays` passes on all 109 files, the 10 added in Phases 2 to 7 included.
+- **Device, first run:** exclusive mode was switched off on this PC's only output, so every bit-perfect test fell back to shared ("WINDOWS DOESN'T ALLOW EXCLUSIVE MODE ON THIS DEVICE"), and `Stopping_lets_the_device_go` passed without the device ever being held.
+- **Device, after Rocky ticked "Allow applications to take exclusive control"** (the registry write from an elevated script was refused: "Requested registry access is not allowed"): 8 pass, 2 fail, the same on three runs. The bit-perfect path has now run on a device: 16/48 and 24/48 BIT-PERFECT. The 16/44.1 and 24/96 rows fail with "THE DEVICE CAN'T TAKE … KHZ AS IT IS", which is true: asked directly through NAudio, this Realtek takes 48 kHz only in exclusive mode (16-bit and 24-in-32; 44.1, 88.2, 96 and 192 refused), and STX's own format gets the same answers as NAudio's. Those rows stay for a DAC that takes the rates. `Stopping_lets_the_device_go` now plays 48 kHz and first checks the device was held (break-checked: without the renderer's Dispose, VLC found WASAPI taken and fell back to DirectSound). New: a held track reaching ENDED, seeking while held, and letting go as a track ends. Running them showed the device tests colliding, a held device pushing a shared test onto DirectSound; tests that open the device now share one serial collection.
+- **Network (new):** a live internet radio station (SomaFM Groove Salad, MP3 over HTTPS) plays through STX's engine; break-checked against a mount the station doesn't have.
+- **Performance:** the idle budget fails with 50,000 Library rows (185.5 MB against 150 MB); `docs/PERFORMANCE.md` has the numbers.
+- **Screenshots:** `library` and `settings` differ in both modes, as expected. Both plates had also outgrown the gallery window, so the new rows were cut off, and the Settings sample showed this machine's own watched folders. Both are fixed in the gallery. New images await Rocky's approval; the approved baselines are unchanged.
+
+**Independent review** (a separate reviewer, given the code and not this report). Each finding was checked before acting on it:
+
+- Fixed, with a test that failed first: Shrink refusing most surround layouts (finding 3; first judged refuted from a test that used unnamed layouts, then confirmed with named ones); OPENING forever and the probe limit (2); unknown stream schemes reaching LibVLC (4: the review's own `tcp://@:1234` was already safe, since it can't be read as an address and is opened as a file path); the double-counted original (8).
+- Fixed, tested on the device held exclusively (10), each break-checked: with `Halt()` taken out of the seek, three runs of 3 ended the track ("Expected: Playing, Actual: Ended"); with the end announced on the renderer's own thread again, letting the device go as a track ended took 3.03 s against 0.3 s with the fix.
+- Fixed without a test that can run here: the renderer's pump crashing the app when the device goes away (1), which needs one unplugged mid-play; the wake event left set after Play, which makes no difference anything here can observe; a failed cleanup no longer replacing a conversion's result (9).
+- Not checked yet, so not claimed: the UNC disc address (5), the Opened path on the UI thread (6), duplicate Shrink jobs and Library rows (7), COM objects left after a failed open (11).
+
+**Closed:** film PCM into exclusive mode (D6): Rocky chose shared, for the drift reason above. Signing: a signed setup was built here from the uncommitted tree (`dist/STXDownloader-1.0.0-setup.exe`, Authenticode Valid, CN=Sharif Elsalaymeh, timestamped); it hasn't been installed on a clean machine.
+
+**Still open:** bit-perfect at 44.1 and 96 kHz on a device that takes them, and a loopback bit comparison; the SF3 SoundFont (STX's FluidSynth reads SF3, checked by rendering MIDI with each font: the SF3's sound is tonal, zero-crossing rate 0.022 against white noise's 0.50, not raw compressed bytes); the encoder settings; discs, a receiver, RTX or Arc upscaling, Default Apps, the installer on a clean machine, and high-DPI and HDR screens, none of which this PC can do. A failed stream reaches `Failed` with no message, which the plate should explain.

@@ -10,6 +10,8 @@ param(
     [string] $VideoId = 'QBwwj5p25AM',
     [string] $OutputFolder,
     [switch] $AfterJob,
+    # The only folder the app watches, in place of Videos and Music. Give it a large one to measure a big Library.
+    [string] $WatchedFolder,
     # Copies the test database here before it's removed, to see how a job ended. It holds no secrets.
     [string] $KeepDatabaseIn,
     [switch] $Assert,
@@ -57,6 +59,7 @@ if ($realApp) {
     # The app stores LookMode as a number, and it ignores a settings file it can't read, so this must match exactly.
     $settings = @{ LookMode = $(if ($Mode -eq 'light') { 1 } else { 0 }); TrayMode = ($Scenario -eq 'hidden') }
     if ($OutputFolder) { New-Item -ItemType Directory -Force $OutputFolder | Out-Null; $settings.OutputFolder = $OutputFolder }
+    if ($WatchedFolder) { $settings.WatchedFolders = @((Resolve-Path -LiteralPath $WatchedFolder).Path) }
     $settings | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
     $launch = @(); if ($Scenario -eq 'hidden') { $launch = @('--hidden') }
 }

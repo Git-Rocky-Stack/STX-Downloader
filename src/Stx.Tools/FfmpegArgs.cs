@@ -21,7 +21,13 @@ public sealed record ConvertRequest(string InputPath, string OutputFolder, Outpu
 
     /// <summary>Added to the copy's file name, before its extension.</summary>
     public string? Suffix { get; init; }
+
+    /// <summary>A shrink's audio streams' channel layouts, in order, so a layout Opus refuses can be widened first.</summary>
+    public IReadOnlyList<SoundLayout> AudioLayouts { get; init; } = [];
 }
+
+/// <summary>An audio stream's channel count and ffprobe's name for its layout.</summary>
+public sealed record SoundLayout(int Channels, string Layout);
 
 public static class FfmpegArgs
 {
@@ -74,10 +80,38 @@ public static class FfmpegArgs
         _ => "libopus",
     };
 
+    /// <summary>
+    /// The filter a sound needs before Opus, or null when Opus takes it as it is. Checked against FFmpeg 9.0: with
+    /// mapping family 1, libopus takes only Vorbis's layouts (mono, stereo, 3.0, quad, 5.0, 5.1, 6.1, 7.1) and refuses
+    /// every other, including 5.1(side), which most films' AC3 and DTS arrive as.
+    /// The side layouts hold Vorbis's channels in Vorbis's order, so they're renamed and no sample changes. The rest are
+    /// widened to the smallest Vorbis layout holding each of their channels: a channel the source lacks is silent, and only
+    /// a channel Vorbis has no place for (a back centre, front wides) is shared between its two neighbours.
+    /// An unnamed layout (PCM in Matroska) with 3 or 4 channels is refused too; 5.1 holds any arrangement of 3 or 4.
+    /// </summary>
+    public static string? OpusFilter(SoundLayout sound) => sound.Layout switch
+    {
+        "5.1(side)" => "channelmap=channel_layout=5.1",
+        "5.0(side)" => "channelmap=channel_layout=5.0",
+        "quad(side)" => "channelmap=channel_layout=quad",
+        "3.0(back)" => Widen("quad"),
+        "4.0" => Widen("5.0"),
+        "2.1" or "3.1" or "4.1" => Widen("5.1"),
+        "6.0" => Widen("6.1"),
+        "6.0(front)" or "hexagonal" or "6.1(back)" or "6.1(front)" or "7.0" or "7.0(front)" or "7.1(wide)" or "7.1(wide-side)" or "octagonal" => Widen("7.1"),
+        "" or "unknown" when sound.Channels is 3 or 4 => Widen("5.1"),
+        _ => null,
+    };
+
+    static string Widen(string layout) => "aformat=channel_layouts=" + layout;
+
     // Picture and sound in modern codecs at settings that keep the look, every subtitle, chapter and attachment carried
-    // over. 10-bit output, so a 10-bit or HDR source isn't cut to 8 bits. Opus takes any layout up to 7.1.
+    // over. 10-bit output, so a 10-bit or HDR source isn't cut to 8 bits. Opus takes only Vorbis's layouts; any other
+    // is renamed or widened first (OpusFilter).
     static void AddShrink(List<string> args, ConvertRequest request, ShrinkCodec codec)
     {
+        for (int i = 0; i < request.AudioLayouts.Count; i++)
+            if (OpusFilter(request.AudioLayouts[i]) is { } filter) args.AddRange([$"-filter:a:{i}", filter]);
         var opus = new[] { "-c:a", "libopus", "-b:a", codec == ShrinkCodec.Opus ? "128k" : "160k", "-mapping_family", "1" };
         if (codec == ShrinkCodec.Opus)
         {

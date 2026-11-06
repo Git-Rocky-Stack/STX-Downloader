@@ -43,6 +43,43 @@ public class BitPerfectRoutingTests
         Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing), $"state {engine.State}");
         Assert.Equal("SHARED: FFMPEG ISN'T DOWNLOADED YET", engine.AudioReadout);
     }
+
+    // Independent review, finding 2: anything thrown while deciding the route used to vanish into the task, leaving the
+    // player on OPENING for good. A probe STX can't read still plays, shared, and the readout says why.
+    [Fact]
+    public void A_probe_that_cant_be_read_still_plays_shared_and_says_why()
+    {
+        string dir = Directory.CreateTempSubdirectory("stx-probe").FullName;
+        try
+        {
+            // A channel count of 2.5 is a JSON number that isn't an int: reading it throws.
+            string probe = Path.Combine(dir, "ffprobe.cmd");
+            File.WriteAllText(probe, "@echo {\"streams\":[{\"codec_type\":\"audio\",\"codec_name\":\"flac\",\"sample_rate\":\"44100\",\"channels\":2.5}]}\r\n");
+            using var engine = new RoutingEngine(new LibVlcEngine(Fixture.Profile, headless: true), () => true, () => probe, () => probe);
+            engine.Open(Fixture.File("tiny-audio.flac"));
+            Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing), $"state {engine.State}");
+            Assert.Equal("SHARED: STX COULDN'T READ THE FILE'S SOUND", engine.AudioReadout);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    // Independent review, finding 2: the 10 second probe limit didn't hold, because the output was read to its end
+    // before the wait began. An ffprobe that hangs (a stalled network share) is given up on, and the file plays shared.
+    [Fact]
+    public void A_hung_probe_is_given_up_on_within_its_limit()
+    {
+        string dir = Directory.CreateTempSubdirectory("stx-probe").FullName;
+        try
+        {
+            string probe = Path.Combine(dir, "ffprobe.cmd");
+            File.WriteAllText(probe, "@ping -n 40 127.0.0.1 >nul\r\n");
+            using var engine = new RoutingEngine(new LibVlcEngine(Fixture.Profile, headless: true), () => true, () => probe, () => probe);
+            engine.Open(Fixture.File("tiny-audio.flac"));
+            Assert.True(Fixture.Within(TimeSpan.FromSeconds(20), () => engine.State == PlaybackState.Playing), $"state {engine.State}");
+        }
+        // A probe that wasn't killed may still hold its script; the temp folder is left for Windows then.
+        finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+    }
 }
 
 /// <summary>
@@ -50,7 +87,7 @@ public class BitPerfectRoutingTests
 /// need a real sound device and FFmpeg on PATH, so they're a local gate. The readout is what was actually opened on the
 /// device. A loopback bit comparison needs hardware loopback (an S/PDIF out wired to an in); see the Phase 2-7 report.
 /// </summary>
-[Trait("Category", "Device")]
+[Trait("Category", "Device"), Collection(SoundDeviceCollection.Name)]
 public sealed class BitPerfectDeviceTests : IDisposable
 {
     readonly string _dir = Directory.CreateTempSubdirectory("stx-exclusive").FullName;
@@ -61,20 +98,24 @@ public sealed class BitPerfectDeviceTests : IDisposable
         Environment.GetEnvironmentVariable("PATH")!.Split(Path.PathSeparator).Select(d => Path.Combine(d, name + ".exe")).FirstOrDefault(File.Exists)
         ?? throw new InvalidOperationException(name + " isn't on PATH.");
 
-    string Flac(int bits, int rate)
+    string Flac(int bits, int rate, int seconds = 4)
     {
-        string flac = Path.Combine(_dir, $"{bits}-{rate}.flac");
+        string flac = Path.Combine(_dir, $"{bits}-{rate}-{seconds}.flac");
         var start = new ProcessStartInfo(Tool("ffmpeg")) { UseShellExecute = false, RedirectStandardError = true };
-        foreach (string arg in new[] { "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", $"sine=frequency=440:sample_rate={rate}:duration=4", "-ac", "2", "-sample_fmt", bits == 24 ? "s32" : "s16", "-bits_per_raw_sample", $"{bits}", "-c:a", "flac", flac })
+        foreach (string arg in new[] { "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", $"sine=frequency=440:sample_rate={rate}:duration={seconds}", "-ac", "2", "-sample_fmt", bits == 24 ? "s32" : "s16", "-bits_per_raw_sample", $"{bits}", "-c:a", "flac", flac })
             start.ArgumentList.Add(arg);
         using var process = Process.Start(start)!;
         process.WaitForExit();
         return flac;
     }
 
+    // 44.1 and 96 need a device that takes them exclusively (a USB DAC does). The reference PC's Realtek takes 48 kHz
+    // only (16 and 24-in-32; probed 2026-11-05), so the 48 kHz rows are the ones that hold the device there.
     [Theory]
     [InlineData(24, 96000, "24/96 BIT-PERFECT")]
     [InlineData(16, 44100, "16/44.1 BIT-PERFECT")]
+    [InlineData(24, 48000, "24/48 BIT-PERFECT")]
+    [InlineData(16, 48000, "16/48 BIT-PERFECT")]
     public void A_flac_holds_the_device_at_its_own_format(int bits, int rate, string readout)
     {
         string flac = Flac(bits, rate);
@@ -87,15 +128,79 @@ public sealed class BitPerfectDeviceTests : IDisposable
         engine.Stop();
     }
 
+    RoutingEngine Held(string flac)
+    {
+        var engine = new RoutingEngine(new LibVlcEngine(Fixture.Profile, headless: true, realAudio: true), () => true, () => Tool("ffmpeg"), () => Tool("ffprobe"));
+        engine.Open(flac);
+        Assert.True(Fixture.Within(TimeSpan.FromSeconds(5), () => engine.State == PlaybackState.Playing), $"state {engine.State}, error {engine.Error}");
+        Assert.EndsWith("BIT-PERFECT", engine.AudioReadout);
+        return engine;
+    }
+
+    // A held track reaches ENDED at its end, and the device is let go then.
+    [Fact]
+    public void A_held_track_ends_at_its_end()
+    {
+        using var engine = Held(Flac(16, 48000, seconds: 2));
+        var clock = Stopwatch.StartNew();
+        Assert.True(Fixture.Within(TimeSpan.FromSeconds(6), () => engine.State == PlaybackState.Ended), $"state {engine.State} after {clock.Elapsed}");
+        Assert.Equal("", engine.AudioReadout);
+    }
+
+    // Independent review, finding 10. MusicEngine's end-of-track handler takes its lock; Stop, a seek or the next track
+    // takes the same lock and then waits for the renderer's thread. When the end was announced on that thread, a Stop
+    // landing as a track ended waited out the whole 3 second join. This sets that race up on purpose: the handler is
+    // running and wants the lock, and the lock's holder lets the device go.
+    [Fact]
+    public void Letting_go_as_a_track_ends_does_not_wait_on_the_end_handler()
+    {
+        // Disposed once, inside the lock: a second Dispose would throw and hide the assertion.
+        var renderer = ExclusiveRenderer.Open(48000, 2, BitPerfect.Candidates(16));
+        var gate = new object();
+        using var entered = new ManualResetEventSlim();
+        renderer.Finished += (_, _) => { entered.Set(); lock (gate) { } };
+        TimeSpan took;
+        lock (gate)
+        {
+            renderer.Play(new MemoryStream(new byte[48000 * 4 / 4])); // a quarter second of silence, 16-bit stereo
+            bool announced = entered.Wait(TimeSpan.FromSeconds(5));
+            var clock = Stopwatch.StartNew();
+            renderer.Dispose();
+            took = clock.Elapsed;
+            Assert.True(announced, "the end was never announced");
+        }
+        Assert.True(took < TimeSpan.FromSeconds(1), $"letting the device go took {took}");
+    }
+
+    // Independent review, finding 10: a seek killed the decoder while the renderer was still reading from it. The
+    // closed pipe read as the end of the file, so seeking could end playback. After many seeks it must still be playing.
+    [Fact]
+    public void Seeking_while_held_keeps_playing_from_the_new_place()
+    {
+        using var engine = Held(Flac(16, 48000, seconds: 20));
+        for (int i = 0; i < 15; i++)
+        {
+            engine.Seek(TimeSpan.FromSeconds(1 + i % 5));
+            Thread.Sleep(60);
+        }
+        engine.Seek(TimeSpan.FromSeconds(10));
+        Assert.True(Fixture.Within(TimeSpan.FromSeconds(3), () => engine.Position > TimeSpan.FromSeconds(10.5)), $"state {engine.State}, position {engine.Position}");
+        Assert.Equal(PlaybackState.Playing, engine.State);
+        Assert.EndsWith("BIT-PERFECT", engine.AudioReadout);
+    }
+
     // Shared mode still works, and the device goes back to Windows when STX stops.
     [Fact]
     public void Stopping_lets_the_device_go()
     {
-        string flac = Flac(16, 44100);
+        // 48 kHz, which nearly every device takes exclusively: at 44.1 the Realtek refused, played shared, and this
+        // passed without the device ever having been held.
+        string flac = Flac(16, 48000);
         using (var engine = new RoutingEngine(new LibVlcEngine(Fixture.Profile, headless: true, realAudio: true), () => true, () => Tool("ffmpeg"), () => Tool("ffprobe")))
         {
             engine.Open(flac);
             Assert.True(Fixture.Within(TimeSpan.FromSeconds(5), () => engine.State == PlaybackState.Playing));
+            Assert.Equal("16/48 BIT-PERFECT", engine.AudioReadout);
             engine.Stop();
         }
         using var shared = new LibVlcEngine(Fixture.Profile, headless: true, realAudio: true);

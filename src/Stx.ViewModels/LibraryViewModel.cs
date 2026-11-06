@@ -251,9 +251,10 @@ public sealed class LibraryViewModel : ObservableObject
     {
         bool wasEmpty = IsEmpty;
         _all = all;
-        var freed = all.Where(r => r is { IsShrinkCopy: true, SavedBytes: > 0 }).ToList();
+        // One original per item, however many copies it has, measured against its smallest copy.
+        var freed = all.Where(r => r is { IsShrinkCopy: true, SavedBytes: > 0 }).GroupBy(r => r.MediaId).Select(g => g.Max(r => r.SavedBytes!.Value)).ToList();
         SpaceText = freed.Count == 0 ? ""
-            : $"DELETING {freed.Count} ORIGINAL{(freed.Count == 1 ? "" : "S")} WOULD FREE {Bytes(freed.Sum(r => r.SavedBytes!.Value))}. STX NEVER DELETES THEM.";
+            : $"DELETING {freed.Count} ORIGINAL{(freed.Count == 1 ? "" : "S")} WOULD FREE {Bytes(freed.Sum())}. STX NEVER DELETES THEM.";
         Show();
         if (wasEmpty != IsEmpty) OnPropertyChanged(nameof(IsEmpty));
     }

@@ -27,7 +27,7 @@ public sealed partial class MainWindow : Window
         Title = "STX Downloader";
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "stx.ico"));
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1360, 920));
-        PaintTitleStrip();
+        TitleStrip.Paint(AppWindow);
         _app = new Composition(DispatcherQueue);
         StartsHidden = startHidden && _app.Settings.Current.TrayMode;
 
@@ -108,26 +108,6 @@ public sealed partial class MainWindow : Window
 
     public bool StartsHidden { get; }
 
-    // Black in both modes, running straight into the chassis below it. The S is on the taskbar. Up here its dark plate would vanish.
-    void PaintTitleStrip()
-    {
-        var strip = AppWindow.TitleBar;
-        strip.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
-        strip.BackgroundColor = strip.InactiveBackgroundColor = strip.ButtonBackgroundColor = strip.ButtonInactiveBackgroundColor = TitleStrip.Black;
-        strip.ForegroundColor = strip.ButtonForegroundColor = strip.ButtonHoverForegroundColor = strip.ButtonPressedForegroundColor = TitleStrip.Silver;
-        strip.InactiveForegroundColor = strip.ButtonInactiveForegroundColor = TitleStrip.SilverDim;
-        strip.ButtonHoverBackgroundColor = TitleStrip.ButtonHover;
-        strip.ButtonPressedBackgroundColor = TitleStrip.ButtonPressed;
-    }
-
-    static class TitleStrip
-    {
-        public static readonly Windows.UI.Color Black = ColorHelper.FromArgb(255, 8, 9, 10);
-        public static readonly Windows.UI.Color Silver = ColorHelper.FromArgb(255, 0xDF, 0xE3, 0xE8);
-        public static readonly Windows.UI.Color SilverDim = ColorHelper.FromArgb(255, 0xA4, 0xAB, 0xB3);
-        public static readonly Windows.UI.Color ButtonHover = ColorHelper.FromArgb(255, 0x2A, 0x2C, 0x2F);
-        public static readonly Windows.UI.Color ButtonPressed = ColorHelper.FromArgb(255, 0x1D, 0x1F, 0x22);
-    }
 
     // Prototype, on only with --pointer-light, until Rocky decides whether it stays.
     static void AddPointerLight(Grid root)

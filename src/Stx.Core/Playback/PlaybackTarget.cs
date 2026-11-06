@@ -17,10 +17,21 @@ public sealed record PlaybackTarget(TargetKind Kind, string Location, string? Re
 
     public static PlaybackTarget For(string pathOrUrl, Func<string, DiscVerdict>? inspect = null)
     {
+        // A file: address is the file it names.
+        if (pathOrUrl.TrimStart().StartsWith("file:", StringComparison.OrdinalIgnoreCase) && Uri.TryCreate(pathOrUrl.Trim(), UriKind.Absolute, out var file) && file.IsFile)
+            pathOrUrl = file.LocalPath;
+
         if (StreamLink.IsUrl(pathOrUrl))
         {
+            // Only a stream STX knows reaches the engine: an unknown scheme could open a camera or the desktop
+            // (dshow://, screen://) or a share STX never meant to browse (smb://).
             var (kind, why) = StreamLink.Classify(pathOrUrl);
-            return kind == LinkKind.Refused ? new(TargetKind.Stream, pathOrUrl, why) : new(TargetKind.Stream, StreamLink.ForEngine(pathOrUrl));
+            return kind switch
+            {
+                LinkKind.Refused => new(TargetKind.Stream, pathOrUrl, why),
+                LinkKind.NotALink => new(TargetKind.Stream, pathOrUrl, StreamLink.UnknownRefused),
+                _ => new(TargetKind.Stream, StreamLink.ForEngine(pathOrUrl)),
+            };
         }
 
         var verdict = (inspect ?? DiscCheck.Inspect)(pathOrUrl);
@@ -64,6 +75,7 @@ public static partial class StreamLink
 {
     public const string PortRefused = "STX DOESN'T LISTEN ON NETWORK PORTS, SO UDP AND RTP STREAMS CAN'T BE PLAYED.";
     public const string IsWebPage = "THAT'S A WEB PAGE, NOT A STREAM. PRESS ANALYZE TO SAVE FROM IT.";
+    public const string UnknownRefused = "STX PLAYS HTTP, HTTPS, RTSP, MMS, RTMP AND SRT STREAMS. IT DOESN'T KNOW THAT ADDRESS.";
 
     static readonly string[] Adaptive = [".m3u8", ".mpd"];
     static readonly string[] Playlists = [".pls", ".m3u", ".xspf"];

@@ -205,14 +205,20 @@ public sealed partial class SettingsPanel : ContentControl
     // BIT-PERFECT, with what it costs said beside it, always (spec, Phase 5).
     static FrameworkElement BitPerfectRow(SettingsViewModel settings)
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
+        // A Grid, not a horizontal StackPanel: the sentence needs a bounded width to wrap in, or it runs off the plate.
+        var row = new Grid { ColumnSpacing = 16 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition());
         row.Children.Add(Switch("BIT-PERFECT", settings.BitPerfect, v => settings.BitPerfect = v));
-        row.Children.Add(new EngravedLabel
+        var cost = new EngravedLabel
         {
             Kind = LabelKind.Label,
+            Wraps = true,
             VerticalAlignment = VerticalAlignment.Center,
             Text = "Lossless music takes the sound device to itself, at the file's own format. While BIT-PERFECT is on, other apps can't make sound. Films pass their soundtrack to your receiver from the next launch.",
-        });
+        };
+        Grid.SetColumn(cost, 1);
+        row.Children.Add(cost);
         return row;
     }
 

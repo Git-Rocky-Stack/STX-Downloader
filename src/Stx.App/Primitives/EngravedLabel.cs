@@ -62,6 +62,20 @@ public sealed partial class EngravedLabel : Grid
         set { _kind = value; Paint(); }
     }
 
+    /// <summary>A sentence that wraps within the width it's given instead of running off the plate. Off by default:
+    /// labels and titles stay on one line.</summary>
+    public bool Wraps
+    {
+        get => _ink.TextWrapping == TextWrapping.Wrap;
+        set
+        {
+            foreach (var text in new[] { _ink, _high, _low }) text.TextWrapping = value ? TextWrapping.Wrap : TextWrapping.NoWrap;
+            // Wrapping needs a bounded width, which an Auto column never gives.
+            ColumnDefinitions[0].Width = value ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+            ColumnDefinitions[1].Width = value ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        }
+    }
+
     static TextBlock NewText() => new() { FontFamily = new FontFamily("Segoe UI"), TextWrapping = TextWrapping.NoWrap };
 
     void Paint()
