@@ -66,6 +66,27 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(new AppSettings(), new SettingsStore(Path_).Load());
     }
 
+    // Review 2026-11-07: a damaged file loaded as defaults and the next save wrote over it, so whatever it held was lost.
+    [Fact]
+    public void A_damaged_file_is_kept_before_defaults_are_saved_over_it()
+    {
+        File.WriteAllText(Path_, "{ \"MaxParallel\": 5, \"OutputFolder\": \"D:\\\\Media\" ");
+        var store = new SettingsStore(Path_);
+        Assert.Equal(new AppSettings(), store.Load());
+        store.Save(new AppSettings());
+        Assert.Contains("D:\\\\Media", File.ReadAllText(store.DamagedPath));
+    }
+
+    [Fact]
+    public void A_save_leaves_no_temporary_file_behind()
+    {
+        var store = new SettingsStore(Path_);
+        store.Save(new AppSettings { MaxParallel = 4 });
+        store.Save(new AppSettings { MaxParallel = 2 });
+        Assert.Equal(["settings.json"], Directory.GetFiles(_dir).Select(Path.GetFileName));
+        Assert.Equal(2, store.Load().MaxParallel);
+    }
+
     [Fact]
     public void A_missing_file_means_defaults() => Assert.Equal(new AppSettings(), new SettingsStore(Path_).Load());
 
