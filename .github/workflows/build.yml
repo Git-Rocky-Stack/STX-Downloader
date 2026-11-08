@@ -30,7 +30,7 @@ jobs:
       - name: Install FFmpeg (the build STX downloads)
         shell: pwsh
         run: |
-          $base = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest'
+          $base = 'https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest'
           $zip = 'ffmpeg-n9.0-latest-win64-gpl-9.0.zip'
           $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg'
           Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip)

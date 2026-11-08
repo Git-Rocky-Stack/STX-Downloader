@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using Stx.Core.Logging;
 
 namespace Stx.Tools;
 
@@ -27,7 +28,8 @@ public interface IYtDlpVersions
 /// <summary>
 /// Installs and updates the external tools. Nothing is used unless its published checksum matches and it passes
 /// an offline self-test, and every failure leaves what was already working in place. It talks only to the hosts
-/// in ToolVersions, and not at all when updates are off.
+/// in ToolVersions, and not at all when updates are off. Give it a client that doesn't follow redirects
+/// (<see cref="NewHttpClient"/>): it follows them itself, so every hop is held to those hosts.
 /// </summary>
 public sealed class ToolManager(HttpClient http, string root, ToolOptions options, IProcessRunner process) : IYtDlpVersions, IToolSetup
 {
@@ -36,6 +38,9 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
 
     static readonly TimeSpan SelfTestLimit = TimeSpan.FromSeconds(30);
 
+    // One install or update at a time: a RETRY during first run used to start a second one beside it.
+    readonly SemaphoreSlim _ensuring = new(1, 1);
+
     string Tool(string name) => Path.Combine(root, name);
     string UnprovenFlag => Tool("update-unproven");
     string RejectedHash => Tool("rejected-hash.txt");
@@ -43,6 +48,40 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
     string Deno => Tool("deno.exe");
     string Ffmpeg => Tool("ffmpeg.exe");
     string Ffprobe => Tool("ffprobe.exe");
+
+    const int MostRedirects = 10;
+
+    /// <summary>The client the updater wants: redirects left to it, so it can check each one.</summary>
+    public static HttpClient NewHttpClient()
+    {
+        var client = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(30) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("STXDownloader");
+        return client;
+    }
+
+    // Review 2026-11-07: the hosts were listed but never checked, and redirects went wherever they led. The checksum
+    // still guarded what ran; now where it comes from is held to the list too.
+    async Task<HttpResponseMessage> GetFromToolHostAsync(string url, HttpCompletionOption completion, CancellationToken cancel)
+    {
+        var next = new Uri(url);
+        for (int hop = 0; ; hop++)
+        {
+            if (next.Scheme != Uri.UriSchemeHttps || !ToolVersions.UpdateHosts.Contains(next.Host, StringComparer.OrdinalIgnoreCase))
+            {
+                ErrorLog.Write("tool update", $"refused {next.Scheme}://{next.Host}, which isn't a tool host");
+                throw new HttpRequestException($"{next.Host} isn't a tool host.");
+            }
+            var response = await http.GetAsync(next, completion, cancel).ConfigureAwait(false);
+            if ((int)response.StatusCode is >= 300 and < 400 && response.Headers.Location is { } location)
+            {
+                response.Dispose();
+                if (hop >= MostRedirects) throw new HttpRequestException("Too many redirects.");
+                next = location.IsAbsoluteUri ? location : new Uri(next, location);
+                continue;
+            }
+            return response;
+        }
+    }
 
     public static string DefaultRoot() =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "STXDownloader", "tools");
@@ -58,10 +97,23 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
     /// <summary>True from an update until the new version completes real work.</summary>
     public bool UpdateUnproven => File.Exists(UnprovenFlag);
 
-    public void MarkUpdateProven() => File.Delete(UnprovenFlag);
+    /// <summary>The new yt-dlp did real work. A flag file that can't be deleted right now (an antivirus scan holding
+    /// it) stays, and is tried again after the next job: it must never turn a job that worked into one that failed.</summary>
+    public void MarkUpdateProven()
+    {
+        try { File.Delete(UnprovenFlag); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+    }
 
     /// <summary>Installs what's missing and updates yt-dlp. Offline or failing, this reports the state and never throws, except when you cancel.</summary>
     public async Task<ToolHealth> EnsureAsync(IProgress<ToolStatus>? progress = null, CancellationToken cancel = default)
+    {
+        await _ensuring.WaitAsync(cancel).ConfigureAwait(false);
+        try { return await EnsureOnceAsync(progress, cancel).ConfigureAwait(false); }
+        finally { _ensuring.Release(); }
+    }
+
+    async Task<ToolHealth> EnsureOnceAsync(IProgress<ToolStatus>? progress, CancellationToken cancel)
     {
         cancel.ThrowIfCancellationRequested();
         Directory.CreateDirectory(root);
@@ -106,8 +158,10 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
                 return ToolHealth.UpdatePending;
             }
 
-            File.Move(YtDlpPath, Previous, overwrite: true);
-            File.Move(fresh, YtDlpPath);
+            // One swap, with the old one kept as the previous version. Two moves left a moment with no yt-dlp.exe at
+            // all for a job to start into, and if the second failed, no yt-dlp.exe afterwards (review 2026-11-07).
+            File.Delete(Previous);
+            File.Replace(fresh, YtDlpPath, Previous, ignoreMetadataErrors: true);
             File.WriteAllText(UnprovenFlag, "");
             progress?.Report(new ToolStatus("yt-dlp", "Ready"));
             return ToolHealth.Current;
@@ -124,12 +178,24 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
     }
 
     /// <summary>Goes back to the prior yt-dlp, and won't take this update again. A newer release gets its own chance.</summary>
+    /// <remarks>A yt-dlp still running from another job can't be replaced. Then nothing changes, the reason is logged,
+    /// and the next job that needs the fallback tries again: a rollback that can't happen yet must not fail the job
+    /// whose fallback just worked.</remarks>
     public async Task RollbackAsync()
     {
         if (!File.Exists(Previous)) return;
-        File.WriteAllText(RejectedHash, await HashOf(YtDlpPath, default).ConfigureAwait(false));
-        File.Move(Previous, YtDlpPath, overwrite: true);
-        File.Delete(UnprovenFlag);
+        try
+        {
+            string rejected = await HashOf(YtDlpPath, default).ConfigureAwait(false);
+            File.Replace(Previous, YtDlpPath, null, ignoreMetadataErrors: true);
+            // Only once it's really gone back is this version refused for later.
+            File.WriteAllText(RejectedHash, rejected);
+            File.Delete(UnprovenFlag);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ErrorLog.Write("yt-dlp rollback", e);
+        }
     }
 
     async Task InstallYtDlpAsync(IProgress<ToolStatus>? progress, CancellationToken cancel)
@@ -146,6 +212,12 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
                 && await ReportsVersion(fresh, "--version", cancel).ConfigureAwait(false);
             if (ready) File.Move(fresh, YtDlpPath);
             progress?.Report(new ToolStatus("yt-dlp", ready ? "Ready" : "Failed"));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // An antivirus scan holding the file, or a full disk. EnsureAsync promises not to throw for this.
+            ErrorLog.Write("yt-dlp install", e);
+            progress?.Report(new ToolStatus("yt-dlp", File.Exists(YtDlpPath) ? "Ready" : "Failed"));
         }
         finally
         {
@@ -220,7 +292,7 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
     {
         try
         {
-            using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancel).ConfigureAwait(false);
+            using var response = await GetFromToolHostAsync(url, HttpCompletionOption.ResponseHeadersRead, cancel).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode) return false;
             await using (var file = File.Create(target))
                 await response.Content.CopyToAsync(file, cancel).ConfigureAwait(false);
@@ -236,7 +308,7 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
     {
         try
         {
-            using var response = await http.GetAsync(url, cancel).ConfigureAwait(false);
+            using var response = await GetFromToolHostAsync(url, HttpCompletionOption.ResponseContentRead, cancel).ConfigureAwait(false);
             return response.IsSuccessStatusCode ? await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false) : null;
         }
         catch (Exception e) when (IsOutageNotCancel(e, cancel))

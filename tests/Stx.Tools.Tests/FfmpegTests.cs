@@ -377,6 +377,38 @@ public class EncoderProbeTests
             throw new System.ComponentModel.Win32Exception("driver crash");
     }
 
+    // Lists encoders after a first listing that failed: FFmpeg was still being downloaded, or was busy.
+    sealed class FailsFirstListing : IProcessRunner
+    {
+        int _listings;
+        public Task<int> RunAsync(string path, IReadOnlyList<string> args, Action<string> onLine, CancellationToken cancel)
+        {
+            if (++_listings == 1) throw new System.ComponentModel.Win32Exception("the file is being written");
+            onLine(" V....D libsvtav1            SVT-AV1(Scalable Video Technology for AV1) encoder (codec av1)");
+            return Task.FromResult(0);
+        }
+    }
+
+    // Review 2026-11-07: a failed first listing was kept for the whole session.
+    [Fact]
+    public async Task A_failed_encoder_listing_is_asked_again()
+    {
+        var probe = new EncoderProbe(new FailsFirstListing(), "ffmpeg.exe");
+        Assert.False(await probe.HasAsync("libsvtav1"));
+        Assert.True(await probe.HasAsync("libsvtav1"));
+    }
+
+    // Review 2026-11-07: made before first run had downloaded FFmpeg, the probe kept the empty path for good.
+    [Fact]
+    public async Task Ffmpeg_arriving_later_is_used_then()
+    {
+        string? ffmpeg = null;
+        var probe = new EncoderProbe(new FakeEncoders("h264_qsv"), () => ffmpeg);
+        Assert.Equal("libx264", await probe.BestH264Async());
+        ffmpeg = "ffmpeg.exe";
+        Assert.Equal("h264_qsv", await probe.BestH264Async());
+    }
+
     [Fact]
     public async Task A_crashing_encoder_counts_as_not_working() =>
         Assert.Equal("libx264", await new EncoderProbe(new Exploding(), "ffmpeg.exe").BestH264Async());

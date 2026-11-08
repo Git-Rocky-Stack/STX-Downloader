@@ -24,7 +24,7 @@ None of these are included in the app. When its tool setup runs, it downloads ea
 |---|---|---|---|
 | yt-dlp | Reading and downloading media | [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) releases (`src/Stx.Tools/ToolVersions.cs:6`) | [Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE) |
 | Deno | JavaScript runtime that yt-dlp uses for full YouTube extraction | [denoland/deno](https://github.com/denoland/deno) releases (`src/Stx.Tools/ToolVersions.cs:10`) | [MIT](https://github.com/denoland/deno/blob/main/LICENSE.md) |
-| FFmpeg and FFprobe | Merging streams, converting, measuring audio, and decoding lossless music for BIT-PERFECT | [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) release branch 9.0, `win64-gpl` (`src/Stx.Tools/FfmpegSource.cs:9`) | [GPL](https://ffmpeg.org/legal.html), because this build enables GPL components |
+| FFmpeg and FFprobe | Merging streams, converting, measuring audio, and decoding lossless music for BIT-PERFECT | [FFmpeg-Builds/FFmpeg-Builds](https://github.com/FFmpeg-Builds/FFmpeg-Builds) (formerly BtbN/FFmpeg-Builds) release branch 9.0, `win64-gpl` (`src/Stx.Tools/FfmpegSource.cs:9`) | [GPL](https://ffmpeg.org/legal.html), because this build enables GPL components |
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php), under [its own license](https://jrsoftware.org/files/is/license.txt).
 
