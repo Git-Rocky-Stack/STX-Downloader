@@ -77,26 +77,61 @@ public sealed class SettingsStore(string path)
     public static string DefaultPath() =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "STXDownloader", "settings.json");
 
-    /// <summary>A missing or damaged file means defaults. Settings are never a reason not to start.</summary>
+    /// <summary>Where a damaged settings file is kept, so the first save after it doesn't erase what it held.</summary>
+    public string DamagedPath => path + ".damaged";
+
+    /// <summary>
+    /// A missing or damaged file means defaults. Settings are never a reason not to start. A damaged one is kept
+    /// beside it as settings.json.damaged and the error log says so: before the review of 2026-11-07 the next save
+    /// simply wrote the defaults over it.
+    /// </summary>
     public AppSettings Load()
     {
+        string text;
         try
         {
-            return (JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new AppSettings()).Sanitized();
+            if (!File.Exists(path)) return new AppSettings();
+            text = File.ReadAllText(path);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
+            return new AppSettings();
+        }
+        try
+        {
+            return (JsonSerializer.Deserialize<AppSettings>(text) ?? throw new JsonException("The settings file holds null.")).Sanitized();
+        }
+        catch (JsonException e)
+        {
+            Stx.Core.Logging.ErrorLog.Write("settings", $"{path} couldn't be read ({e.Message}); kept as {DamagedPath}, and defaults used");
+            try { File.Copy(path, DamagedPath, overwrite: true); }
+            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException) { }
             return new AppSettings();
         }
     }
 
-    /// <summary>Writes a temporary file and swaps it in, so a crash mid-save can't leave a half-written file.</summary>
+    /// <summary>
+    /// Writes a temporary file, flushed to the disk itself, then swaps it in, so neither a crash nor a power cut
+    /// mid-save can leave a half-written or empty file. Each save has its own temporary name, so two can't collide.
+    /// </summary>
     public void Save(AppSettings settings)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        string temporary = path + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, Pretty));
-        File.Move(temporary, path, overwrite: true);
+        string temporary = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                JsonSerializer.Serialize(file, settings, Pretty);
+                file.Flush(flushToDisk: true);
+            }
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            try { File.Delete(temporary); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        }
     }
 }
 

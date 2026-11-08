@@ -1,3 +1,4 @@
+using Stx.Core.Logging;
 using Stx.Core.Queue;
 
 namespace Stx.Core.Library;
@@ -19,22 +20,37 @@ public sealed class CollectionWatcher : IDisposable
     readonly ICollectionCatalog _catalog;
     readonly Func<string, bool> _ignore;
     readonly TimeSpan _settle;
+    // Lock order: _work, then _gate; never the other way round.
     readonly object _gate = new();
-    readonly Dictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
+    // The catalog's work, one piece at a time: a scan's batches, a set of changes, forgetting a folder. Before the
+    // review of 2026-11-07 the first scan and the watcher each decided from their own reading of the index, and both
+    // added the same new file; and the timer could start a second set of changes while the first still ran.
+    readonly object _work = new();
+    // A folder whose watcher couldn't start (an unplugged drive, a share not up yet) is listed with no watcher, and
+    // looked for again every so often until it appears.
+    readonly Dictionary<string, FileSystemWatcher?> _watchers = new(StringComparer.OrdinalIgnoreCase);
     readonly List<FsEvent> _pending = [];
     readonly Timer _timer;
+    readonly Timer _retry;
+    readonly TimeSpan _retryMissing;
     readonly CancellationTokenSource _closing = new();
     Task _scanning = Task.CompletedTask;
     bool _disposed;
+    int _failures;
+
+    const int MostRetries = 3;
 
     /// <param name="ignore">Paths STX tracks another way, such as the downloads folder, which the queue records itself.</param>
     /// <param name="settle">How long a folder must be quiet before its changes are applied.</param>
-    public CollectionWatcher(ICollectionCatalog catalog, Func<string, bool> ignore, TimeSpan? settle = null)
+    /// <param name="retryMissing">How often a watched folder that isn't there is looked for again.</param>
+    public CollectionWatcher(ICollectionCatalog catalog, Func<string, bool> ignore, TimeSpan? settle = null, TimeSpan? retryMissing = null)
     {
         _catalog = catalog;
         _ignore = ignore;
         _settle = settle ?? TimeSpan.FromMilliseconds(750);
+        _retryMissing = retryMissing ?? TimeSpan.FromSeconds(30);
         _timer = new Timer(_ => ApplyPending(), null, Timeout.Infinite, Timeout.Infinite);
+        _retry = new Timer(_ => LookForMissing(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     /// <summary>Something in the Library changed. Raised off the UI thread.</summary>
@@ -45,14 +61,13 @@ public sealed class CollectionWatcher : IDisposable
     /// <summary>The scan of folders added by the last <see cref="Watch"/>, for tests and for shutting down.</summary>
     public Task Scanning { get { lock (_gate) return _scanning; } }
 
-    public IReadOnlyList<string> Folders { get { lock (_gate) return [.. _watchers.Keys]; } }
-
     /// <summary>Watches exactly these folders. A new one is scanned in the background; this returns at once.
     /// A folder no longer listed has its watched items taken out of the Library. Files on disk are never touched.</summary>
     public void Watch(IReadOnlyList<string> folders)
     {
         var wanted = folders.Where(f => !string.IsNullOrWhiteSpace(f)).Select(Path.TrimEndingDirectorySeparator).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         List<string> added, removed;
+        bool missing = false;
         lock (_gate)
         {
             if (_disposed) return;
@@ -60,44 +75,78 @@ public sealed class CollectionWatcher : IDisposable
             added = wanted.Where(f => !_watchers.ContainsKey(f)).ToList();
             foreach (string folder in removed)
             {
-                _watchers[folder].Dispose();
+                _watchers[folder]?.Dispose();
                 _watchers.Remove(folder);
             }
-            foreach (string folder in added) _watchers[folder] = Start(folder);
+            foreach (string folder in added) missing |= (_watchers[folder] = Start(folder)) is null;
+            if (missing) _retry.Change(_retryMissing, _retryMissing);
         }
 
         bool forgot = false;
-        // A folder still watched (say, a parent of the one removed) keeps what's inside it.
-        foreach (string folder in removed)
-            if (!wanted.Any(w => FolderScan.IsUnder(folder, w))) forgot |= _catalog.ForgetWatchedUnder(folder) > 0;
+        // A folder still watched (say, a parent of the one removed) keeps what's inside it. Under the work lock, so a
+        // scan of the folder still running can't add rows back after they're forgotten: it stops at its next batch.
+        lock (_work)
+            foreach (string folder in removed)
+                if (!wanted.Any(w => FolderScan.IsUnder(folder, w))) forgot |= _catalog.ForgetWatchedUnder(folder) > 0;
         if (forgot) Changed?.Invoke(this, EventArgs.Empty);
-        if (added.Count == 0) return;
+        if (added.Count > 0) ScanInBackground(added);
+    }
 
+    // Scans the folders one after another on a thread of their own, below normal priority, after any scan already
+    // going. A folder that fails is written to the error log and the rest still run: before the review of 2026-11-07
+    // one failure was handed on to every later scan, so no folder added afterwards was scanned until a restart.
+    void ScanInBackground(IReadOnlyList<string> folders)
+    {
         lock (_gate)
         {
+            if (_disposed) return;
             var previous = _scanning;
             var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             _scanning = done.Task;
-            // Its own thread below normal priority, so a first scan of a big collection never competes with the console.
             var thread = new Thread(() =>
             {
-                try
+                previous.Wait();
+                foreach (string folder in folders)
                 {
-                    previous.Wait();
-                    foreach (string folder in added) ScanFolder(folder, _closing.Token);
-                    done.SetResult();
+                    if (_closing.IsCancellationRequested) break;
+                    try { ScanFolder(folder, _closing.Token); }
+                    catch (OperationCanceledException) { break; }
+                    catch (Exception e)
+                    {
+                        ErrorLog.Write("library scan", e);
+                        Progress?.Invoke(this, new ScanProgress(folder, 0, 0, true));
+                    }
                 }
-                catch (OperationCanceledException) { done.SetResult(); }
-                catch (AggregateException e) when (e.InnerException is OperationCanceledException) { done.SetResult(); }
-                catch (Exception e) { done.SetException(e); }
+                done.SetResult();
             })
             { IsBackground = true, Priority = ThreadPriority.BelowNormal, Name = "STX library scan" };
             thread.Start();
         }
     }
 
-    /// <summary>Scans a folder again from scratch, as after a watcher lost track of events.</summary>
-    public void Rescan(string folder) => ScanFolder(folder, _closing.Token);
+    bool IsWatched(string folder)
+    {
+        lock (_gate) return !_disposed && _watchers.ContainsKey(folder);
+    }
+
+    // A watched folder that wasn't there when it was added (a drive not plugged in at launch, say) is watched and
+    // scanned as soon as it appears. Before, it stayed unwatched until STX started again.
+    void LookForMissing()
+    {
+        var found = new List<string>();
+        lock (_gate)
+        {
+            if (_disposed) return;
+            foreach (string folder in _watchers.Where(w => w.Value is null).Select(w => w.Key).ToList())
+                if (Start(folder) is { } watcher)
+                {
+                    _watchers[folder] = watcher;
+                    found.Add(folder);
+                }
+            if (_watchers.Values.All(w => w is not null)) _retry.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+        if (found.Count > 0) ScanInBackground(found);
+    }
 
     void ScanFolder(string folder, CancellationToken cancel)
     {
@@ -109,16 +158,27 @@ public sealed class CollectionWatcher : IDisposable
             if (++seen % Batch == 0) Progress?.Invoke(this, new ScanProgress(folder, seen, added, false));
         }
 
-        var plan = FolderScan.Plan(folder, found, _catalog.IndexedFiles(), File.Exists);
-        foreach (var (id, path) in plan.Moves) _catalog.MoveFile(id, path);
-        foreach (var (id, size, modified) in plan.Updates) _catalog.UpdateFacts(id, size, modified);
+        ScanPlan plan;
+        lock (_work)
+        {
+            if (!IsWatched(folder)) { Progress?.Invoke(this, new ScanProgress(folder, seen, added, true)); return; }
+            plan = FolderScan.Plan(folder, found, _catalog.IndexedFiles(), File.Exists);
+            foreach (var (id, path) in plan.Moves) _catalog.MoveFile(id, path);
+            foreach (var (id, size, modified) in plan.Updates) _catalog.UpdateFacts(id, size, modified);
+        }
         var lastChanged = DateTime.UtcNow;
         if (plan.Moves.Count + plan.Updates.Count > 0) Changed?.Invoke(this, EventArgs.Empty);
         for (int start = 0; start < plan.Adds.Count; start += Batch)
         {
             cancel.ThrowIfCancellationRequested();
             var slice = plan.Adds.Skip(start).Take(Batch).ToList();
-            _catalog.AddLocal(slice, MediaOrigin.Watched);
+            // Each batch takes its turn with the watcher's changes. A file the watcher added meanwhile is already
+            // indexed, and the catalog doesn't add it again. A folder taken off the list stops here.
+            lock (_work)
+            {
+                if (!IsWatched(folder)) break;
+                _catalog.AddLocal(slice, MediaOrigin.Watched);
+            }
             added += slice.Count;
             Progress?.Invoke(this, new ScanProgress(folder, seen, added, false));
             // Rows appear as the scan goes, but the Library isn't asked to redraw more than once a second.
@@ -129,10 +189,11 @@ public sealed class CollectionWatcher : IDisposable
             }
         }
         Progress?.Invoke(this, new ScanProgress(folder, seen, added, true));
-        if (plan.Adds.Count > 0) Changed?.Invoke(this, EventArgs.Empty);
+        if (added > 0) Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    FileSystemWatcher Start(string folder)
+    // A watcher on the folder, or null when the folder isn't there to watch.
+    FileSystemWatcher? Start(string folder)
     {
         var watcher = new FileSystemWatcher
         {
@@ -146,8 +207,9 @@ public sealed class CollectionWatcher : IDisposable
         }
         catch (ArgumentException)
         {
-            // The folder isn't there (an unplugged drive, say). It's kept in the list and watched when added again.
-            return watcher;
+            // The folder isn't there (an unplugged drive, say). It stays on the list and is looked for again.
+            watcher.Dispose();
+            return null;
         }
         watcher.Created += (_, e) => Queue(new FsEvent(FsChange.Created, e.FullPath, null));
         watcher.Changed += (_, e) => Queue(new FsEvent(FsChange.Changed, e.FullPath, null));
@@ -172,21 +234,41 @@ public sealed class CollectionWatcher : IDisposable
     void ApplyPending()
     {
         List<FsEvent> changes;
-        lock (_gate)
+        bool any;
+        lock (_work)
         {
-            if (_disposed || _pending.Count == 0) return;
-            changes = [.. _pending];
-            _pending.Clear();
+            lock (_gate)
+            {
+                if (_disposed || _pending.Count == 0) return;
+                changes = [.. _pending];
+                _pending.Clear();
+            }
+            try
+            {
+                any = Apply(changes);
+                _failures = 0;
+            }
+            catch (OperationCanceledException)
+            {
+                return; // Closing.
+            }
+            catch (Exception e)
+            {
+                // This runs on a timer thread, where anything thrown ends the app; a busy or locked database
+                // (SqliteException) used to do exactly that. The changes are kept and tried again shortly; after a few
+                // failures in a row they're let go, and the next launch's scan catches up.
+                ErrorLog.Write("library watcher", e);
+                if (++_failures <= MostRetries)
+                    lock (_gate)
+                        if (!_disposed)
+                        {
+                            _pending.InsertRange(0, changes);
+                            _timer.Change(_settle, Timeout.InfiniteTimeSpan);
+                        }
+                return;
+            }
         }
-
-        try
-        {
-            if (Apply(changes)) Changed?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            // The disk or database was busy. The next change, or the next launch's scan, catches up.
-        }
+        if (any) Changed?.Invoke(this, EventArgs.Empty);
     }
 
     bool Apply(IReadOnlyList<FsEvent> changes)
@@ -222,6 +304,18 @@ public sealed class CollectionWatcher : IDisposable
             if (byPath.Remove(from, out var known))
             {
                 if (!MediaTypes.IsMedia(to) || _ignore(to)) { any = true; continue; }
+                // Renamed onto a file the Library lists (Explorer's "replace"): one row per path. A download keeps its
+                // row, since it has a history; otherwise the row that moved is the one that stays.
+                if (byPath.TryGetValue(to, out var displaced) && displaced.FileId != 0 && displaced.FileId != known.FileId)
+                {
+                    if (displaced.Origin != MediaOrigin.Downloaded) _catalog.ForgetFile(displaced.FileId);
+                    else if (known.Origin != MediaOrigin.Downloaded)
+                    {
+                        _catalog.ForgetFile(known.FileId);
+                        any = true;
+                        continue;
+                    }
+                }
                 _catalog.MoveFile(known.FileId, to);
                 byPath[to] = known with { Path = to };
                 any = true;
@@ -288,12 +382,13 @@ public sealed class CollectionWatcher : IDisposable
         {
             if (_disposed) return;
             _disposed = true;
-            foreach (var watcher in _watchers.Values) watcher.Dispose();
+            foreach (var watcher in _watchers.Values) watcher?.Dispose();
             _watchers.Clear();
             _pending.Clear();
         }
         _closing.Cancel();
         _timer.Dispose();
+        _retry.Dispose();
         try { Scanning.Wait(TimeSpan.FromSeconds(2)); }
         catch (AggregateException) { }
         // The token source isn't disposed: a scan that outlives the wait still reads it on its way out.

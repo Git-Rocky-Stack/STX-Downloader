@@ -220,6 +220,47 @@ public class PlayerViewModelTests
         Assert.False(player.HasMedia);
     }
 
+    /// <summary>An order whose answers wait until a test gives them: the Library's, read from the database.</summary>
+    sealed class SlowOrder : IPlayOrder
+    {
+        public readonly List<(string From, TaskCompletionSource<PlayItem?> Answer)> Asked = [];
+
+        public Task<PlayItem?> AfterAsync(string path)
+        {
+            var answer = new TaskCompletionSource<PlayItem?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (Asked) Asked.Add((path, answer));
+            return answer.Task;
+        }
+
+        public Task<PlayItem?> BeforeAsync(string path) => Task.FromResult<PlayItem?>(null);
+    }
+
+    // Plan 2026-11-05, step 3: NEXT reads the Library's order off the UI thread. Pressed twice before the first answer
+    // comes, it still steps twice: the second step waits for the first and goes on from where it landed.
+    [Fact]
+    public async Task Two_quick_presses_of_next_step_twice()
+    {
+        var (player, engine) = Make();
+        var order = new SlowOrder();
+        player.Play(@"D:\a.mkv", "A", order);
+        var first = player.NextCommand.ExecuteAsync(null);
+        var second = player.NextCommand.ExecuteAsync(null);
+        order.Asked.Single().Answer.SetResult(new PlayItem(@"D:\b.mkv", "B"));
+        await first;
+        await WaitFor(() => order.Asked.Count == 2);
+        Assert.Equal(@"D:\b.mkv", order.Asked[1].From);
+        order.Asked[1].Answer.SetResult(new PlayItem(@"D:\c.mkv", "C"));
+        await second;
+        Assert.Equal([@"open D:\a.mkv", @"open D:\b.mkv", @"open D:\c.mkv"], engine.Calls);
+        Assert.Equal("C", player.Title);
+    }
+
+    static async Task WaitFor(Func<bool> condition)
+    {
+        for (int i = 0; i < 200 && !condition(); i++) await Task.Delay(10);
+        Assert.True(condition());
+    }
+
     [Fact]
     public void Full_screen_toggles()
     {

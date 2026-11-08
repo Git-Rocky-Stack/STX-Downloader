@@ -72,6 +72,40 @@ public class QueueEngineTests
 
     JobState State(long id) => _repo.Get(id)!.State;
 
+    // Review 2026-11-07: SHRINK pressed twice, or a file and then its folder, queued the same encode twice.
+    [Fact]
+    public void The_same_conversion_isnt_queued_twice_while_one_is_pending()
+    {
+        var engine = Engine(new QueuePolicy { MaxParallel = 1 });
+        var blocker = engine.Enqueue(9, JobKind.Link, "original");
+        var first = engine.Enqueue(1, JobKind.Convert, "shrink-av1");
+        var again = engine.Enqueue(1, JobKind.Convert, "shrink-av1");
+        Assert.Equal(first.Id, again.Id);
+        Assert.True(engine.HasPending(1, JobKind.Convert, "shrink-av1"));
+        Assert.NotEqual(first.Id, engine.Enqueue(1, JobKind.Convert, "shrink-hevc").Id);
+        Assert.Equal(3, _repo.All().Count);
+        _runner.Succeed(blocker.Id);
+        _runner.Succeed(first.Id);
+        Assert.Equal(JobState.Completed, State(first.Id));
+        Assert.False(engine.HasPending(1, JobKind.Convert, "shrink-av1"));
+        Assert.NotEqual(first.Id, engine.Enqueue(1, JobKind.Convert, "shrink-av1").Id);
+    }
+
+    // Review 2026-11-07: RESUME right after PAUSE started a second run while the first one's tool was still ending.
+    [Fact]
+    public void A_resumed_job_waits_for_its_last_run_to_end()
+    {
+        var engine = Engine();
+        var job = engine.Enqueue(1, JobKind.Link, "original");
+        Assert.True(engine.Pause(job.Id));
+        Assert.True(engine.Resume(job.Id));
+        Assert.Equal([job.Id], _runner.Started);
+        Assert.Equal(JobState.Queued, State(job.Id));
+        _runner.Finish(job.Id, JobOutcome.Failure(ErrorKind.ToolFailure)); // the stopped tool, reporting as it goes
+        Assert.Equal(2, _runner.Started.Count);
+        Assert.Equal(JobState.Running, State(job.Id));
+    }
+
     [Fact]
     public void Enqueued_job_runs()
     {
@@ -309,15 +343,21 @@ public class QueueEngineTests
         var oldRun = _runner.Pending[job.Id];
         engine.Pause(job.Id);
         engine.Resume(job.Id);
-        var newToken = _runner.Tokens[job.Id];
+        // Review 2026-11-07: the new run waits for the old one to end, so two tools never share the job's part file.
+        Assert.Equal(JobState.Queued, State(job.Id));
+        Assert.Single(_runner.Started);
 
         var context = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(null);
         oldRun.SetResult(JobOutcome.Failure(ErrorKind.DrmDetected));
         SynchronizationContext.SetSynchronizationContext(context);
 
+        // Its report changed nothing, and the new run started once it was over.
         Assert.Equal(JobState.Running, State(job.Id));
         Assert.Null(_repo.Get(job.Id)!.Error);
+        Assert.Equal(2, _runner.Started.Count);
+        var newToken = _runner.Tokens[job.Id];
+        Assert.False(newToken.IsCancellationRequested);
 
         // The new run must still be the one in charge.
         engine.Pause(job.Id);

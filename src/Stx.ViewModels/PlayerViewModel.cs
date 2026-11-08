@@ -19,8 +19,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     readonly IPlaybackEngine _engine;
     readonly Action<Action> _onUi;
-    IReadOnlyList<(string Path, string Title)> _list = [];
-    int _index = -1;
+    IPlayOrder _order = new ListOrder([]);
+    // What's playing, or was last: what PLAY plays again once it has stopped, and where PREV and NEXT step from.
+    PlayItem? _current;
+    // One step of PREV or NEXT at a time: a second press waits for the first, so two presses step twice.
+    readonly SemaphoreSlim _stepping = new(1, 1);
     bool _disposed;
     // Whether the file playing has a picture, read while it plays. LibVLC lists no tracks once a file has ended, so
     // the answer is kept: a finished song stays music, and a finished film isn't taken for one.
@@ -63,20 +66,20 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     public IReadOnlyList<MediaTrack> Chapters => _engine.Chapters;
 
     /// <summary>Plays <paramref name="path"/>, replacing whatever was playing. The list is what PREV and NEXT walk.</summary>
-    public void Play(string path, string title, IReadOnlyList<(string Path, string Title)> list)
+    public void Play(string path, string title, IReadOnlyList<(string Path, string Title)> list) => Play(path, title, new ListOrder(list));
+
+    /// <summary>Plays <paramref name="path"/>, replacing whatever was playing. PREV and NEXT walk <paramref name="order"/> from it.</summary>
+    public void Play(string path, string title, IPlayOrder order)
     {
-        _list = list;
-        _index = Enumerable.Range(0, list.Count).FirstOrDefault(i => string.Equals(list[i].Path, path, StringComparison.OrdinalIgnoreCase), -1);
-        Title = title;
-        _hasPicture = null;
-        _engine.Open(path);
+        _order = order;
+        PlayItem(new PlayItem(path, title));
         Refresh();
     }
 
     [RelayCommand]
     void PlayPause()
     {
-        if (_engine.State == PlaybackState.Idle && _index >= 0) PlayAt(_index);
+        if (_engine.State == PlaybackState.Idle && _current is { } current) PlayItem(current);
         else _engine.TogglePause();
         Refresh();
     }
@@ -88,20 +91,36 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
+    /// <summary>Back to the start of the file, or once it's barely begun, to the file before. The order is read off the UI thread.</summary>
     [RelayCommand]
-    void Previous()
+    async Task Previous()
     {
-        if (_engine.Position > RestartAfter || _index <= 0) _engine.Seek(TimeSpan.Zero);
-        else PlayAt(_index - 1);
-        Refresh();
+        await _stepping.WaitAsync();
+        try
+        {
+            var before = _current is { } current && _engine.Position <= RestartAfter ? await _order.BeforeAsync(current.Path) : null;
+            if (_disposed) return;
+            if (before is null) _engine.Seek(TimeSpan.Zero);
+            else PlayItem(before);
+            Refresh();
+        }
+        finally { _stepping.Release(); }
     }
 
+    /// <summary>The file after, or a stop at the end. The order is read off the UI thread.</summary>
     [RelayCommand]
-    void Next()
+    async Task Next()
     {
-        if (_index >= 0 && _index < _list.Count - 1) PlayAt(_index + 1);
-        else _engine.Stop();
-        Refresh();
+        await _stepping.WaitAsync();
+        try
+        {
+            var after = _current is { } current ? await _order.AfterAsync(current.Path) : null;
+            if (_disposed) return;
+            if (after is null) _engine.Stop();
+            else PlayItem(after);
+            Refresh();
+        }
+        finally { _stepping.Release(); }
     }
 
     [RelayCommand]
@@ -115,12 +134,12 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     public void SelectSubtitle(int id) => _engine.SelectSubtitle(id);
     public void SelectChapter(int id) => _engine.SelectChapter(id);
 
-    void PlayAt(int index)
+    void PlayItem(PlayItem item)
     {
-        _index = index;
+        _current = item;
         _hasPicture = null;
-        Title = _list[index].Title;
-        _engine.Open(_list[index].Path);
+        Title = item.Title;
+        _engine.Open(item.Path);
     }
 
     void OnEngineChanged(object? sender, EventArgs e) => _onUi(Refresh);

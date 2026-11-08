@@ -178,6 +178,24 @@ public class MeasurerArgsTests
     }
 }
 
+// Review 2026-11-07: FFmpeg's exit status was never read, so a decode that died partway was labelled "Measured".
+public class MeasurerFailureTests
+{
+    [Fact]
+    public async Task A_decode_that_fails_is_unreadable_not_measured()
+    {
+        string dir = Directory.CreateTempSubdirectory("stx-measure").FullName;
+        try
+        {
+            string probe = Path.Combine(dir, "ffprobe.cmd"), ffmpeg = Path.Combine(dir, "ffmpeg.cmd");
+            File.WriteAllText(probe, $"@type \"{Path.Combine(Fixture.Dir(), "probe-chevrolet.json")}\"\r\n");
+            File.WriteAllText(ffmpeg, "@exit /b 1\r\n");
+            Assert.Null(await new AudioMeasurer(ffmpeg, probe).MeasureAsync(Path.Combine(dir, "film.mp4"), TestContext.Current.CancellationToken));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+}
+
 public class ProbeTests
 {
     [Fact]

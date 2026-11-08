@@ -15,7 +15,7 @@ public sealed partial class GalleryWindow : Window
         LookState.ReduceMotionChosen = options.ReduceMotion;
         Title = $"STX gallery {options.Name} {options.Mode}";
         // Settings and the Library grew in Phases 2 to 7 (watched folders, BIT-PERFECT, Shrink) past the first 640.
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(960, options.Name is "settings" or "library" ? 800 : 640));
+        Platform.WindowSize.Set(AppWindow, 960, options.Name is "settings" or "library" ? 800 : 640);
         TitleStrip.Paint(AppWindow);
         var root = new Grid { Background = new SolidColorBrush(TitleStrip.Black) };
         root.Children.Add(options.Name.StartsWith("player", StringComparison.Ordinal) ? PlayerGallery.Build(this, options) : GalleryPages.Build(options));

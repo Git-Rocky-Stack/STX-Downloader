@@ -42,10 +42,11 @@ public sealed class Mp4Preference(IProcessRunner process)
             }
             return target;
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or OperationCanceledException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             return path;
         }
+        // A cancel isn't swallowed (review 2026-11-07): it used to come back as the MKV, and the job reported success.
         finally
         {
             TryDelete(partial);

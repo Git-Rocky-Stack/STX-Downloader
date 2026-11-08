@@ -61,4 +61,22 @@ public class OpenRequestsTests
         Assert.True(Within(TimeSpan.FromSeconds(5), () => got.Contains(@"D:\after.mkv")));
         Assert.Equal([@"D:\after.mkv"], got);
     }
+
+    // Review 2026-11-07: an exception from handing the path on (anything but four pipe errors) ended the listener, and
+    // every later "Open with" was lost until STX restarted.
+    [Fact]
+    public async Task A_path_that_fails_to_hand_on_doesnt_stop_the_next()
+    {
+        string name = PipeName();
+        var got = new ConcurrentQueue<string>();
+        using var server = new OpenRequestServer(name, path =>
+        {
+            if (path.EndsWith("bad.mkv", StringComparison.Ordinal)) throw new ArgumentException("the window was closing");
+            got.Enqueue(path);
+        });
+        Assert.True(await OpenRequests.SendAsync(name, @"D:\bad.mkv", TimeSpan.FromSeconds(5)));
+        Thread.Sleep(300);
+        Assert.True(await OpenRequests.SendAsync(name, @"D:\good.mkv", TimeSpan.FromSeconds(5)));
+        Assert.True(Within(TimeSpan.FromSeconds(5), () => got.Contains(@"D:\good.mkv")), "the listener stopped");
+    }
 }

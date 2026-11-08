@@ -4,28 +4,34 @@ on:
   push:
   pull_request:
 
+# The build reads the repository and nothing else: no token here can write to it (review 2026-11-07).
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
+      # Each action is pinned to the commit its release tag named on 2026-11-07, so a moved tag can't change what runs.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24
-      # The VLC engine and SoundFont the player ships (tools/vlc/engine.json), downloaded once and reused.
-      - uses: actions/cache@v5
+      # The VLC engine and SoundFont the player ships (tools/vlc/engine.json), downloaded, and the SoundFont converted to
+      # SF3 with the FFmpeg build engine.json pins, once, then reused.
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: .engine
-          key: engine-${{ hashFiles('tools/vlc/engine.json', 'tools/vlc/Get-Engine.ps1') }}
+          key: engine-${{ hashFiles('tools/vlc/engine.json', 'tools/vlc/Get-Engine.ps1', 'tools/vlc/Make-Sf3.cs') }}
       # The FFmpeg tests (bit-perfect decoding, Phase 5; shrink copies, Phase 7) run the build STX itself downloads
       # (src/Stx.Tools/FfmpegSource.cs), checked against its publisher's sha256, so they prove that build has the encoders.
       - name: Install FFmpeg (the build STX downloads)
         shell: pwsh
         run: |
-          $base = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest'
+          $base = 'https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest'
           $zip = 'ffmpeg-n9.0-latest-win64-gpl-9.0.zip'
           $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg'
           Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip)
@@ -50,3 +56,33 @@ jobs:
           }
       - name: Test extension
         run: node --test "extension/test/*.test.js"
+
+  # The projects that aren't Windows-only (Look, Art, Core, Data) are tested on Linux too, so their rules can't lean
+  # on Windows by accident: a path's separators, a drive letter, a file system that ignores case.
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          dotnet-version: 10.0.x
+      # Core's bit-perfect decode tests run FFmpeg: the same release STX downloads on Windows, in its Linux build,
+      # checked against its publisher's sha256.
+      - name: Install FFmpeg
+        shell: bash
+        run: |
+          base=https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest
+          archive=ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "$base/$archive"
+          curl -fsSL -o "$RUNNER_TEMP/ffmpeg.sha256" "$base/checksums.sha256"
+          want=$(grep " $archive\$" "$RUNNER_TEMP/ffmpeg.sha256" | cut -d' ' -f1)
+          got=$(sha256sum "$RUNNER_TEMP/$archive" | cut -d' ' -f1)
+          [ -n "$want" ] && [ "$got" = "$want" ] || { echo "FFmpeg's sha256 is $got; its publisher says $want"; exit 1; }
+          tar -xJf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          dirname "$(find "$RUNNER_TEMP" -name ffmpeg -type f -path '*/bin/*' | head -1)" >> "$GITHUB_PATH"
+      - name: Test
+        shell: bash
+        run: |
+          for project in Look Art Core Data; do
+            dotnet test --project "tests/Stx.$project.Tests" -c Release --filter-not-trait "Category=Device" --filter-not-trait "Category=Corpus" --filter-not-trait "Category=Network"
+          done

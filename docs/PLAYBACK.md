@@ -18,13 +18,17 @@ STX ships the **official VLC 3.0.24 build for 64-bit Windows**, the same zip Vid
 
 VLC 3.0.24's engine crashes the whole program on Dirac / VC-2 video. That happens in the official desktop build too, with a real video window, and with a genuine Dirac sample from FFmpeg's archive as well as one made by FFmpeg. If STX passed such a file to the engine, STX would close.
 
-So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:275`), and the rest of the console keeps working.
+So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:304`), and the rest of the console keeps working. When LibVLC can't finish reading a file's tracks (a slow share, a parse that times out or fails), STX doesn't take the file as safe: it reads the first megabyte itself for Dirac's sequence header, `BBCD` and parse code 0, which FFmpeg writes within the first few kilobytes in MKV, MOV, MP4, MPEG-TS, NUT and AVI (`src/Stx.Core/Playback/DiracSniff.cs`; added 2026-11-07). An http(s) stream is read too (added later on 2026-11-07): LibVLC reads local files' tracks only, so before a stream that may carry video is given to it, STX reads its start, up to a megabyte or 2 seconds, and refuses Dirac with the same message (`src/Stx.Core/Playback/DiracSniff.cs:33`, `src/Stx.Playback/LibVlcEngine.cs:262`). Sound isn't read (its server says it's sound, or its address names a sound file, which isn't even asked), nor are playlists, manifests (HLS, DASH) or pages; a stream slower than that reaches the player with what arrived checked. RTSP, RTMP and MMS aren't read; Dirac isn't carried that way in practice.
+
+**Why no engine setting avoids it** (2026-11-07, a probe that plays a file in a child process): the crash is FFmpeg's decoder inside VLC's `avcodec` plugin, `Assertion frame->data[i] failed at src/libavcodec/decode.c:1628`, then abort. It happened with the Dirac demuxer or packetizer taken out of the engine, with one decoding thread, and with hardware decoding off, on two Dirac files ten runs each; never on H.264.
 
 Dirac is rare. It's mostly found in BBC archive material. VLC 3.0.24 doesn't play it safely either.
 
 ### MIDI plays with a bundled SoundFont
 
-VLC plays MIDI through FluidSynth, which needs a SoundFont. VLC doesn't ship one, and Windows' built-in `gm.dls` can't be loaded by it. STX ships **FluidR3_GM** by Frank Wen, under the MIT license. Its copyright file is shipped beside it, as `libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt`. STX passes it to the engine when the engine starts (`src/Stx.Playback/LibVlcEngine.cs:22`, `src/Stx.Playback/LibVlcOptions.cs:28`).
+VLC plays MIDI through FluidSynth, which needs a SoundFont. VLC doesn't ship one, and Windows' built-in `gm.dls` can't be loaded by it. STX ships **FluidR3_GM** by Frank Wen, under the MIT license. Its copyright file is shipped beside it, as `libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt`. STX passes it to the engine when the engine starts (`src/Stx.Playback/LibVlcEngine.cs:32`, `src/Stx.Playback/LibVlcOptions.cs:28`).
+
+**It ships as SoundFont 3** (2026-11-07): `FluidR3_GM.sf3`, the same font with each of its 1,418 samples compressed in Ogg Vorbis, 148 MB down to 27 MB. The build makes it from the pinned SoundFont 2 (`tools/vlc/Make-Sf3.cs`, with an FFmpeg build `tools/vlc/engine.json` pins; the result's sha256 is pinned too, so a change to either fails the build). The format is FluidSynth 2's own (`fluid_sffile.c`, `fluid_defsfont.c`): version 3, each sample its own Ogg stream flagged `0x10`, its start and end byte offsets into the sample chunk, its loop points counted from the sample's start. VLC 3.0.24's FluidSynth reads it: its plugin carries libsndfile and libVorbis. **Checked by ear's proxy:** a ten-second MIDI file (piano, strings, hi-hats, and organ, flute and strings held eight seconds so their loops sound) rendered through VLC with the SF2 and with the SF3 came out with a waveform correlation of 0.9998, the difference 33 dB below the music, and each second's level within 0.1 dB; an SF3 with its loop points left as SF2 has them correlated 0.30. `tests/Stx.Playback.Tests/MidiTests.cs` holds the shipped SF3 to the SF2's levels.
 
 ### Mono sound reaches WASAPI in stereo
 
@@ -32,7 +36,7 @@ Windows refuses a one-channel stream in WASAPI shared mode (`0x88890008`, `AUDCL
 
 ### Discs start at the main title, and encrypted ones are refused first
 
-Discs, disc folders and disc images go to VLC's DVD and Blu-ray readers as `dvd:///` or `bluray:///` addresses (`src/Stx.Core/Playback/PlaybackTarget.cs`). Before that, STX checks the disc itself (`src/Stx.Core/Playback/DiscCheck.cs`):
+Discs, disc folders and disc images go to VLC's DVD and Blu-ray readers as `dvd:///` or `bluray:///` addresses (`src/Stx.Core/Playback/PlaybackTarget.cs`). One on a network share keeps the share's two leading slashes, `dvd://///nas/Films/My%20Film/`: the plain form reached VLC's DVD reader as `nas\Films\...`, a path on the current drive, so a disc on a share never opened. Checked on 2026-11-07 against LibVLC 3.0.24 with a disc folder reached as `\\localhost\C$\...`; the reader then read the folder's `VIDEO_TS.IFO`, as it does for the same folder on C: (`tests/Stx.Playback.Tests/LibVlcEngineTests.cs`, Category=Network). Before that, STX checks the disc itself (`src/Stx.Core/Playback/DiscCheck.cs`):
 
 - **DVD:** a sample of sectors spread through every VOB file (or through the image) is read. CSS sets the PES scrambling bits on every sector it scrambles; an unencrypted disc leaves them clear.
 - **Blu-ray:** an `AACS` or `BDSVM` folder, which every protected disc carries, or AACS's copy-permission bits at the start of an m2ts's aligned units. In an image, those names are looked for in its directory area.
@@ -44,7 +48,7 @@ The check runs inside the engine, so nothing reaches VLC's readers unchecked, wh
 
 ### Streams connect out only
 
-PLAY STREAM plays an address (`src/Stx.ViewModels/StreamOpener.cs`). Adaptive streams (`.m3u8`, `.mpd`) and direct media play as they are. A radio playlist (`.pls`, `.m3u`, `.xspf`) is read by STX, which plays its first stream and keeps the rest for NEXT. An address that doesn't say what it is gets its headers asked for, and nothing more. A web page is sent to ANALYZE. UDP, RTP and SAP would need STX to listen on a port, so they're refused (`src/Stx.Core/Playback/PlaybackTarget.cs`), and RTSP is told to stay on its one TCP connection (`:rtsp-tcp`).
+PLAY STREAM plays an address (`src/Stx.ViewModels/StreamOpener.cs`). Adaptive streams (`.m3u8`, `.mpd`) and direct media play as they are. A radio playlist (`.pls`, `.m3u`, `.xspf`) is read by STX, which plays its first stream and keeps the rest for NEXT. An address that doesn't say what it is gets its headers asked for, and nothing more. A web page is sent to ANALYZE. UDP, RTP and SAP would need STX to listen on a port, so they're refused (`src/Stx.Core/Playback/PlaybackTarget.cs`), and RTSP is told to stay on its one TCP connection (`:rtsp-tcp`). A stream that fails says which way: **THAT STREAM COULDN'T BE OPENED** if nothing played, **THE STREAM WAS CUT OFF** if it had been playing (`src/Stx.Playback/LibVlcEngine.cs:23`; added 2026-11-07, when it said "THIS FILE COULDN'T BE PLAYED", or nothing).
 
 ### BIT-PERFECT doesn't use VLC's audio output for music
 
@@ -62,13 +66,19 @@ So, with Rocky's choice:
 
 **On hardware (reference PC, 2026-11-05).** The Device-category tests in `tests/Stx.Playback.Tests/BitPerfectEngineTests.cs` held its Realtek exclusively: 16/48 and 24/48 BIT-PERFECT, the device back with Windows after STOP, a track ending, seeking while held, and letting go just as a track ends. That Realtek takes 48 kHz only in exclusive mode (asked of it directly with NAudio, 44.1 to 192 kHz), so the 16/44.1 and 24/96 rows play shared there and say "THE DEVICE CAN'T TAKE … KHZ AS IT IS"; they need a DAC that takes those rates. Tests that open the device run one at a time (`tests/Stx.Playback.Tests/SoundDeviceCollection.cs`): a bit-perfect test holding it had pushed a shared one onto DirectSound. Still not proven: a loopback bit comparison, which needs a hardware loopback (an S/PDIF out wired to an in), because Windows' own loopback capture hears nothing from an exclusive stream.
 
+**On a second PC (2026-11-07):** a Core Ultra 7 258V's "Speakers (SoundWire Audio)", on Intel Smart Sound Technology, take 44.1 and 96 kHz exclusively, and all 13 Device tests pass there, the **16/44.1 and 24/96 BIT-PERFECT** rows included: the first time those rates reached a device bit-perfect. New the same day, each break-checked on that device: disposing the renderer twice, a decode that dies before the end (FAILED with a message, not ENDED), and a pump left in a stalled read, which before the fix wrote 173,760 frames beside the next run.
+
 ### ENHANCE changes only the picture on screen
 
 Spike S6 read VLC 3.0.24's source. UPSCALE is VLC's Direct3D 11 super resolution scaler (`--d3d11-upscale-mode=super`, `modules/video_output/win32/direct3d11.c:77-80`). In `d3d11_scaler.cpp:76-123`, NVIDIA needs a 530 or later driver and its video-processor extension. For Intel, VLC says "detection doesn't work" and assumes it's there. Anywhere it isn't, VLC falls back to plain scaling. STX doesn't assume: it reads the GPU through DXGI (`src/Stx.Playback/HardwareProbe.cs`) and offers UPSCALE only on NVIDIA RTX with a 530 or later driver, and on Intel Arc or Xe (`src/Stx.Core/Playback/Enhance.cs`). On the reference UHD 620 it says UPSCALE UNAVAILABLE. SHARPEN is VLC's sharpen filter.
 
 Both are options of the whole engine: VLC makes the video output under the player, not the file (VLC's own source, input/resource.c line 241), so a file's own options don't reach it. Turning the knob restarts LibVLC in place; the video view takes the new player, and the file carries on from where it was. The readout under the knob says what VLC's own log confirms is running.
 
-**Not proven on hardware.** SHARPEN loading is tested in CI from VLC's log. Whether UPSCALE applies needs an RTX or Arc GPU, which wasn't available.
+**Seen on hardware (2026-11-07).** SHARPEN loading is tested in CI from VLC's log. UPSCALE was seen running on an Intel Arc 140V: VLC's log says "Using Super Resolution scaler" with the player on screen (`tests/Stx.VisualTests/EnhanceSeenTests.cs`, which skips on a GPU without super resolution). Not seen on an RTX.
+
+### HDR10 reaches an HDR screen as HDR
+
+On a screen with Windows' HDR on (seen 2026-11-07 on a laptop panel, 10 bits per channel), VLC's Direct3D 11 output, drawing into STX's WinUI swap chain, offers the screen's Rec.2020 colour spaces and chooses Rec.2020 with the PQ curve (SMPTE ST 2084) for an HDR10 file, in P010 at 10 bits, so HDR video isn't flattened to SDR. `tests/Stx.VisualTests/HdrTests.cs` checks VLC's own log for that choice, and skips on a screen that isn't in HDR mode. Whether the picture's brightness matches another player's wasn't measured.
 
 ## The parity corpus
 

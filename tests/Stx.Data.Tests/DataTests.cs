@@ -34,8 +34,8 @@ public sealed class DataTests : IDisposable
     }
 
     [Theory]
-    [InlineData("media_items", "id,page_url,source_id,title,origin")]
-    [InlineData("media_files", "id,media_id,path,hash,format,size,modified")]
+    [InlineData("media_items", "id,page_url,source_id,title,origin,title_key")]
+    [InlineData("media_files", "id,media_id,path,hash,format,size,modified,path_key,listed")]
     [InlineData("jobs", "id,media_id,kind,state,attempts,error_kind,preset,created_at")]
     public void Tables_have_the_planned_columns(string table, string expected)
     {
@@ -228,10 +228,12 @@ public sealed class DataTests : IDisposable
         media.AddFile(fresh, @"D:\new.mp4", null, "Original");
         media.AddFile(fresh, @"D:\new.flac", null, "Flac");
 
-        var library = media.Library();
+        var library = media.Rows(LibrarySearch.All, null, 100);
 
-        Assert.Equal(["New", "Old"], library.Select(i => i.Title));
-        Assert.Equal(["Original", "Flac"], library[0].Files.Select(f => f.Format));
+        // One row per file: the newest item's two files in the order they were saved, then the older item's.
+        Assert.Equal(["New", "New", "Old"], library.Select(r => r.Title));
+        Assert.Equal([@"D:\new.mp4", @"D:\new.flac", @"D:\old.mp4"], library.Select(r => r.Path));
+        Assert.Equal(["Original", "Flac"], library[0].SiblingFormats);
     }
 
     [Fact]

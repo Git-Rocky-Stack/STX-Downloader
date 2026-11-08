@@ -31,15 +31,22 @@ public class BaselineTests
                 Assert.True(File.Exists(Path.Combine(baselines, $"{gallery}-{mode}.png")), $"No approved image for {gallery} {mode}");
     }
 
-    /// <summary>Exactly the app's content area. Anything larger would carry pixels from the desktop into a public repo.</summary>
+    /// <summary>
+    /// Exactly the app's content area. Anything larger would carry pixels from the desktop into a public repo. The
+    /// gallery window is 960x640 (944x601 inside), and 960x800 (944x761) for the settings and Library plates, which grew
+    /// in Phases 2 to 7 (src/Stx.App/Gallery/GalleryWindow.cs). This test still asked 944x601 of those two after their
+    /// taller baselines were approved on 2026-11-05, so it failed there until 2026-11-07.
+    /// </summary>
     [Fact]
     public void Baselines_hold_only_the_app_content()
     {
         string baselines = Path.Combine(Root(), "tests", "baselines");
         foreach (string file in Directory.GetFiles(baselines, "*.png", SearchOption.AllDirectories))
         {
+            string name = Path.GetFileName(file);
+            int height = name.StartsWith("settings-", StringComparison.Ordinal) || name.StartsWith("library-", StringComparison.Ordinal) ? 761 : 601;
             using var image = new System.Drawing.Bitmap(file);
-            Assert.True(image.Width == 944 && image.Height == 601, $"{Path.GetFileName(file)} is {image.Width}x{image.Height}");
+            Assert.True(image.Width == 944 && image.Height == height, $"{name} is {image.Width}x{image.Height}, not 944x{height}");
         }
     }
 

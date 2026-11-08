@@ -11,20 +11,21 @@ namespace Stx.ViewModels;
 public sealed class ShrinkFolder(ICollectionCatalog collection, LibraryViewModel library, Func<string, bool>? ignore = null)
 {
     /// <summary>Queues the folder and says, on the Library plate, how many were queued. Returns that number. The folder
-    /// is read off the calling thread; call it from the UI thread, where the queue and the Library live.</summary>
+    /// and the Library are read off the calling thread; call it from the UI thread, where the queue and the Library live.</summary>
     public async Task<int> QueueAsync(string folder)
     {
         var found = await Task.Run(() => FolderScan.Find(folder, ignore ?? (_ => false)).ToList());
-        var unknown = found.Where(f => library.Find(f.Path) is null).ToList();
+        var unknown = await Task.Run(() => found.Where(f => !library.Lists(f.Path)).ToList());
         if (unknown.Count > 0)
         {
             await Task.Run(() => collection.AddLocal(unknown, MediaOrigin.Opened));
             await library.RefreshAsync();
         }
+        var rows = await Task.Run(() => found.Select(f => library.ReadRow(f.Path)).ToList());
         int queued = 0, skipped = 0;
-        foreach (var file in found)
+        foreach (var row in rows)
         {
-            if (library.Find(file.Path) is { } row && library.QueueShrink(row, quiet: true)) queued++;
+            if (row is not null && library.QueueShrink(row, quiet: true)) queued++;
             else skipped++;
         }
         library.Say(queued == 0

@@ -25,10 +25,15 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
         lock (_gate) return repo.All();
     }
 
+    /// <summary>Adds a job and starts it when a slot is free. A conversion already waiting or running for the same
+    /// file and preset isn't added again; that job is returned instead.</summary>
     public Job Enqueue(long mediaId, JobKind kind, string preset, CaptureSecrets? secrets = null)
     {
         lock (_gate)
         {
+            // Review 2026-11-07: SHRINK pressed twice, or a file shrunk and then its folder, queued the same
+            // multi-hour encode twice; the second copy then landed as a second row of the same format.
+            if (kind == JobKind.Convert && Pending(mediaId, kind, preset) is { } already) return already;
             var job = repo.Add(new Job(0, mediaId, kind, JobState.Queued, 0, null, preset, clock.Now));
             if (secrets is not null) vault.Put(job.Id, secrets);
             JobChanged?.Invoke(this, job);
@@ -36,6 +41,16 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
             return repo.Get(job.Id) ?? job;
         }
     }
+
+    /// <summary>True when a job of this kind, for this item and preset, is waiting, paused or running.</summary>
+    public bool HasPending(long mediaId, JobKind kind, string preset)
+    {
+        lock (_gate) return Pending(mediaId, kind, preset) is not null;
+    }
+
+    Job? Pending(long mediaId, JobKind kind, string preset) =>
+        repo.All().FirstOrDefault(j => j.MediaId == mediaId && j.Kind == kind && j.State is JobState.Queued or JobState.Running or JobState.Paused or JobState.Waiting or JobState.Analyzing
+            && string.Equals(j.Preset, preset, StringComparison.Ordinal));
 
     public bool Pause(long id) => Act(id, job =>
     {
@@ -150,7 +165,11 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
         while (true)
         {
             var jobs = repo.All();
-            var next = Policy.NextToStart(jobs, jobs.Count(j => j.State == JobState.Running));
+            // A job whose last run is still ending (paused or canceled a moment ago, its tool not yet gone) isn't
+            // started again until that run is over: two runs of one job would share its part file (review 2026-11-07).
+            // When that run ends, the queue is pumped again.
+            var startable = jobs.Where(j => j.State != JobState.Queued || !_drives.ContainsKey(j.Id)).ToList();
+            var next = Policy.NextToStart(startable, jobs.Count(j => j.State == JobState.Running));
             if (next is null) return;
 
             if (next.Kind == JobKind.Captured && vault.Get(next.Id) is null)
@@ -165,7 +184,15 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
             long id = next.Id;
             var drive = Drive(repo.Get(id) ?? next, run);
             _drives[id] = drive;
-            _ = drive.ContinueWith(done => { lock (_gate) { if (_drives.GetValueOrDefault(id) == done) _drives.Remove(id); } }, TaskScheduler.Default);
+            _ = drive.ContinueWith(done =>
+            {
+                lock (_gate)
+                {
+                    if (_drives.GetValueOrDefault(id) != done) return;
+                    _drives.Remove(id);
+                    Pump();
+                }
+            }, TaskScheduler.Default);
         }
     }
 
@@ -183,7 +210,15 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
 
         lock (_gate)
         {
-            if (!_running.TryGetValue(job.Id, out var current) || current != run) return;
+            // This run is over, so the job may run again. A newer run of it can't exist: Pump starts none while this
+            // one's entry is here.
+            _drives.Remove(job.Id);
+            if (!_running.TryGetValue(job.Id, out var current) || current != run)
+            {
+                // Paused or canceled while it ran. Its report changes nothing, but a RESUME that came meanwhile can start now.
+                Pump();
+                return;
+            }
             _running.Remove(job.Id);
             run.Dispose();
             Finish(job.Id, outcome);

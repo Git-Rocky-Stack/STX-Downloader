@@ -14,6 +14,8 @@ namespace Stx.Tools.Tests;
 sealed class FakeWeb : HttpMessageHandler
 {
     public readonly Dictionary<string, byte[]> Files = new();
+    /// <summary>Addresses answered with a redirect to another address, as GitHub answers a release download.</summary>
+    public readonly Dictionary<string, string> Moves = new();
     public readonly List<Uri> Requests = new();
     public bool Offline;
 
@@ -21,6 +23,8 @@ sealed class FakeWeb : HttpMessageHandler
     {
         lock (Requests) Requests.Add(request.RequestUri!);
         if (Offline) throw new HttpRequestException("no route to host");
+        if (Moves.TryGetValue(request.RequestUri!.ToString(), out var to))
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = new Uri(to) } });
         return Task.FromResult(Files.TryGetValue(request.RequestUri!.ToString(), out var body)
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) }
             : new HttpResponseMessage(HttpStatusCode.NotFound));
@@ -254,6 +258,40 @@ public sealed class ToolManagerTests : IDisposable
         Assert.DoesNotContain(Directory.GetFiles(_root), f => f.EndsWith(".new.exe"));
     }
 
+    // Review 2026-11-07: with another job's yt-dlp still running, the rollback threw out of the job whose fallback had
+    // just worked, failing it; and it had already refused the update it then couldn't take back.
+    [Fact]
+    public async Task A_rollback_that_cant_happen_yet_changes_nothing_and_doesnt_throw()
+    {
+        var manager = Manager();
+        await manager.EnsureAsync();
+        PublishYtDlp(Encoding.UTF8.GetBytes("yt-dlp v2"));
+        await manager.UpdateYtDlpAsync();
+
+        using (File.Open(Installed("yt-dlp.exe"), FileMode.Open, FileAccess.Read, FileShare.Read))
+            await manager.RollbackAsync();
+
+        Assert.Equal("yt-dlp v2", File.ReadAllText(Installed("yt-dlp.exe")));
+        Assert.True(manager.UpdateUnproven);
+        Assert.False(File.Exists(Installed("rejected-hash.txt")));
+        await manager.RollbackAsync();
+        Assert.Equal("yt-dlp v1", File.ReadAllText(Installed("yt-dlp.exe")));
+    }
+
+    // Review 2026-11-07: a flag file held by an antivirus scan made a job that worked report a failure.
+    [Fact]
+    public async Task Marking_an_update_proven_never_throws()
+    {
+        var manager = Manager();
+        await manager.EnsureAsync();
+        PublishYtDlp(Encoding.UTF8.GetBytes("yt-dlp v2"));
+        await manager.UpdateYtDlpAsync();
+        using (File.Open(Installed("update-unproven"), FileMode.Open, FileAccess.Read, FileShare.None))
+            manager.MarkUpdateProven();
+        manager.MarkUpdateProven();
+        Assert.False(manager.UpdateUnproven);
+    }
+
     [Fact]
     public async Task Rollback_with_nothing_to_roll_back_to_is_harmless()
     {
@@ -372,6 +410,64 @@ public sealed class ToolManagerTests : IDisposable
         Assert.NotEmpty(_web.Requests);
         Assert.All(_web.Requests, u => Assert.Contains(u.Host, ToolVersions.UpdateHosts));
         Assert.DoesNotContain("youtube.com", ToolVersions.UpdateHosts);
+    }
+
+    // The real thing, through the updater's own client: GitHub's release download, every redirect checked against the
+    // tool hosts, and the publisher's sha256. A local gate (Category=Network), never CI's: it needs the internet.
+    [Fact, Trait("Category", "Network")]
+    public async Task The_real_yt_dlp_comes_through_the_checked_redirects()
+    {
+        File.WriteAllText(Installed("yt-dlp.exe"), "an old yt-dlp");
+        using var http = ToolManager.NewHttpClient();
+        var manager = new ToolManager(http, _root, new ToolOptions(true), _tools);
+        Assert.Equal(ToolHealth.Current, await manager.UpdateYtDlpAsync());
+        byte[] got = File.ReadAllBytes(Installed("yt-dlp.exe"));
+        Assert.True(got.Length > 5_000_000, $"only {got.Length} bytes");
+        Assert.Equal((byte)'M', got[0]);
+        Assert.Equal((byte)'Z', got[1]);
+    }
+
+    // 2026-11-07: BtbN/FFmpeg-Builds moved to FFmpeg-Builds/FFmpeg-Builds, and the old name only redirects. The
+    // address STX names must be the builds' home: GitHub answers it with the asset itself (a hop to its asset host),
+    // not with a move to another github.com address, and the list there names the zip STX installs.
+    [Fact, Trait("Category", "Network")]
+    public async Task FFmpeg_is_fetched_from_its_home_not_through_a_move()
+    {
+        using var http = ToolManager.NewHttpClient();
+        using var first = await http.GetAsync(FfmpegSource.Sums, TestContext.Current.CancellationToken);
+        Uri? hop = first.Headers.Location;
+        Assert.True(first.StatusCode == HttpStatusCode.Found && hop is not null && hop.Host != "github.com",
+            $"{FfmpegSource.Sums} answered {(int)first.StatusCode} to {hop}: the builds have moved again");
+        Assert.Contains(hop.Host, ToolVersions.UpdateHosts);
+
+        using var asset = await http.GetAsync(hop, TestContext.Current.CancellationToken);
+        string sums = await asset.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Matches("^[0-9a-f]{64}$", Checksums.Find(sums, FfmpegSource.ZipName));
+    }
+
+    // Review 2026-11-07: redirects were followed wherever they went. GitHub's own hop is followed; one off the list isn't.
+    [Fact]
+    public async Task A_redirect_is_followed_only_to_a_tool_host()
+    {
+        var manager = Manager();
+        await manager.EnsureAsync();
+        const string asset = "https://release-assets.githubusercontent.com/yt-dlp.exe";
+        PublishYtDlp(Encoding.UTF8.GetBytes("yt-dlp v2"));
+        _web.Files[asset] = _web.Files[ToolVersions.YtDlpExe];
+        _web.Files.Remove(ToolVersions.YtDlpExe);
+        _web.Moves[ToolVersions.YtDlpExe] = asset;
+        Assert.Equal(ToolHealth.Current, await manager.UpdateYtDlpAsync());
+        Assert.Equal("yt-dlp v2", File.ReadAllText(Installed("yt-dlp.exe")));
+
+        const string elsewhere = "https://downloads.example.net/yt-dlp.exe";
+        PublishYtDlp(Encoding.UTF8.GetBytes("yt-dlp v3"));
+        _web.Files[elsewhere] = _web.Files[ToolVersions.YtDlpExe];
+        _web.Files.Remove(ToolVersions.YtDlpExe);
+        _web.Moves[ToolVersions.YtDlpExe] = elsewhere;
+        _web.Requests.Clear();
+        Assert.Equal(ToolHealth.UpdatePending, await manager.UpdateYtDlpAsync());
+        Assert.DoesNotContain(_web.Requests, u => u.Host == "downloads.example.net");
+        Assert.Equal("yt-dlp v2", File.ReadAllText(Installed("yt-dlp.exe")));
     }
 
     [Fact]

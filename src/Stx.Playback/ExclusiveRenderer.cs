@@ -50,11 +50,12 @@ public sealed class ExclusiveRenderer : IDisposable
     readonly EventWaitHandle _ready = new(false, EventResetMode.AutoReset);
     readonly int _frameBytes;
     readonly int _bufferFrames;
-    Stream? _source;
+    Run? _run;
+    int _runs;
     Thread? _thread;
-    volatile bool _stopping;
     volatile bool _paused;
     long _framesWritten;
+    int _disposed;
 
     ExclusiveRenderer(MMDevice device, AudioClient client, DeviceFormat layout, int rate, int channels)
     {
@@ -80,8 +81,13 @@ public sealed class ExclusiveRenderer : IDisposable
     /// <summary>How long a frame waits in the device's buffer: what a picture shown with this sound must allow for.</summary>
     public TimeSpan Latency => TimeSpan.FromSeconds((double)_bufferFrames / Rate);
 
-    /// <summary>Raised once the stream runs dry and the last frame has been handed over. Raised off the pump thread.</summary>
-    public event EventHandler? Finished;
+    /// <summary>Which <see cref="Play"/> is current: each one is a new run. Zero before the first.</summary>
+    public int CurrentRun => Volatile.Read(ref _runs);
+
+    /// <summary>Raised once the stream runs dry and the last frame has been handed over, with the run that ended.
+    /// Raised off the pump thread; a handler compares the run with <see cref="CurrentRun"/>, since a seek may have
+    /// started a new one in between.</summary>
+    public event EventHandler<int>? Finished;
 
     /// <summary>Raised when the device or the stream fails mid-play: a DAC unplugged, the endpoint invalidated, the
     /// decoder gone. Raised off the pump thread, which has stopped. Without it, the throw would end the whole app.</summary>
@@ -93,39 +99,64 @@ public sealed class ExclusiveRenderer : IDisposable
     /// </summary>
     public static ExclusiveRenderer Open(int rate, int channels, IReadOnlyList<DeviceFormat> candidates)
     {
-        var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-        foreach (var layout in candidates)
+        using var enumerator = new MMDeviceEnumerator();
+        var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        try
         {
-            var format = new PcmFormat(rate, channels, layout);
-            var probe = device.AudioClient;
-            bool supported;
-            try { supported = probe.IsFormatSupported(AudioClientShareMode.Exclusive, format); }
-            catch (COMException e) when (e.HResult is AudclntEDeviceInUse or AudclntEExclusiveModeNotAllowed) { probe.Dispose(); throw Unavailable(e.HResult); }
-            if (!supported) { probe.Dispose(); continue; }
+            foreach (var layout in candidates)
+            {
+                var format = new PcmFormat(rate, channels, layout);
+                if (TryInitialize(device, format, rate) is not { } client) continue;
+                try { return new ExclusiveRenderer(device, client, layout, rate, channels); }
+                catch { client.Dispose(); throw; }
+            }
+        }
+        catch
+        {
+            // Independent review, finding 11: every failure but two known HRESULTs used to leave the device (and a
+            // realigned client) for the finalizer. Whatever ends the open now gives them back at once.
+            device.Dispose();
+            throw;
+        }
+        device.Dispose();
+        throw new ExclusiveUnavailableException($"SHARED: THE DEVICE CAN'T TAKE {rate / 1000.0:0.#} KHZ AS IT IS");
+    }
 
+    // An AudioClient initialized exclusively at the format, or null when the device doesn't take it. The client is
+    // disposed on every path that doesn't return it.
+    static AudioClient? TryInitialize(MMDevice device, PcmFormat format, int rate)
+    {
+        var probe = device.AudioClient;
+        try
+        {
+            if (!probe.IsFormatSupported(AudioClientShareMode.Exclusive, format)) { probe.Dispose(); return null; }
             long period = probe.DefaultDevicePeriod;
             try
             {
                 probe.Initialize(AudioClientShareMode.Exclusive, AudioClientStreamFlags.EventCallback, period, period, format, Guid.Empty);
-                return new ExclusiveRenderer(device, probe, layout, rate, channels);
+                return probe;
             }
             catch (COMException e) when (e.HResult == AudclntEBufferSizeNotAligned)
             {
                 // Windows' own remedy: ask how many frames it would take, and ask again for exactly that.
                 int frames = probe.BufferSize;
                 probe.Dispose();
-                var aligned = device.AudioClient;
+                probe = device.AudioClient;
                 long alignedPeriod = (long)(10_000_000.0 * frames / rate + 0.5);
-                aligned.Initialize(AudioClientShareMode.Exclusive, AudioClientStreamFlags.EventCallback, alignedPeriod, alignedPeriod, format, Guid.Empty);
-                return new ExclusiveRenderer(device, aligned, layout, rate, channels);
-            }
-            catch (COMException e) when (e.HResult is AudclntEDeviceInUse or AudclntEExclusiveModeNotAllowed)
-            {
-                probe.Dispose();
-                throw Unavailable(e.HResult);
+                probe.Initialize(AudioClientShareMode.Exclusive, AudioClientStreamFlags.EventCallback, alignedPeriod, alignedPeriod, format, Guid.Empty);
+                return probe;
             }
         }
-        throw new ExclusiveUnavailableException($"SHARED: THE DEVICE CAN'T TAKE {rate / 1000.0:0.#} KHZ AS IT IS");
+        catch (COMException e) when (e.HResult is AudclntEDeviceInUse or AudclntEExclusiveModeNotAllowed)
+        {
+            probe.Dispose();
+            throw Unavailable(e.HResult);
+        }
+        catch
+        {
+            probe.Dispose();
+            throw;
+        }
     }
 
     static ExclusiveUnavailableException Unavailable(int hresult) => new(hresult == AudclntEDeviceInUse
@@ -135,9 +166,10 @@ public sealed class ExclusiveRenderer : IDisposable
     /// <summary>Plays from <paramref name="source"/>, replacing anything playing. The stream is owned and closed by the caller.</summary>
     public void Play(Stream source)
     {
+        ObjectDisposedException.ThrowIf(_disposed != 0, this);
         StopThread();
-        _source = source;
-        _stopping = false;
+        var run = new Run(Interlocked.Increment(ref _runs), source, new byte[_bufferFrames * _frameBytes]);
+        _run = run;
         _paused = false;
         Interlocked.Exchange(ref _framesWritten, 0);
         _client.Reset();
@@ -145,61 +177,82 @@ public sealed class ExclusiveRenderer : IDisposable
         // hasn't asked for yet, right after the pre-fill below has filled it.
         _ready.Reset();
         // The first buffer is filled before starting, as exclusive event mode expects.
-        Fill(_bufferFrames);
-        _thread = new Thread(Pump) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "STX bit-perfect" };
+        Fill(run);
+        _thread = new Thread(() => Pump(run)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "STX bit-perfect" };
         _thread.Start();
         _client.Start();
     }
 
     public void Pause()
     {
+        ObjectDisposedException.ThrowIf(_disposed != 0, this);
         _paused = true;
         _client.Stop();
     }
 
     public void Resume()
     {
+        ObjectDisposedException.ThrowIf(_disposed != 0, this);
         _paused = false;
         _client.Start();
     }
 
-    void Pump()
+    /// <summary>How long the device may go without asking for sound while playing before STX says it stopped.</summary>
+    static readonly TimeSpan Stalled = TimeSpan.FromSeconds(2);
+
+    void Pump(Run run)
     {
         bool ended = false;
         try
         {
-            while (!_stopping)
+            while (!run.Stopping)
             {
-                if (!_ready.WaitOne(2000)) { if (_paused) continue; break; }
-                if (_stopping || _paused) continue;
+                if (!_ready.WaitOne(Stalled))
+                {
+                    if (_paused || run.Stopping) continue;
+                    // Review 2026-11-07: this used to end the pump quietly, leaving the plate on PLAYING with the time
+                    // frozen (a USB DAC that hangs does this). Now the plate says the device stopped.
+                    throw new TimeoutException("IT HASN'T ASKED FOR SOUND IN 2 SECONDS");
+                }
+                if (run.Stopping || _paused) continue;
                 if (ended) break;
-                ended = !Fill(_bufferFrames);
+                ended = !Fill(run);
             }
         }
-        catch (Exception e) when (e is COMException or IOException or ObjectDisposedException or InvalidOperationException)
+        catch (Exception e)
         {
-            if (!_stopping) Raise(() => Faulted?.Invoke(this, e));
+            // Every failure becomes Faulted. One thrown on this thread would end the whole app.
+            if (!run.Stopping) Raise(run, () => Faulted?.Invoke(this, e));
             return;
         }
-        if (ended && !_stopping) Raise(() => Finished?.Invoke(this, EventArgs.Empty));
+        if (ended && !run.Stopping) Raise(run, () => Finished?.Invoke(this, run.Id));
     }
 
     // Off the pump thread, so a handler that takes a lock the stopping thread holds can't keep this thread from ending.
-    static void Raise(Action raise) => ThreadPool.QueueUserWorkItem(_ => raise());
+    // A run halted meanwhile says nothing.
+    static void Raise(Run run, Action raise) => ThreadPool.QueueUserWorkItem(_ => { if (!run.Stopping) raise(); });
 
     /// <summary>Stops handing frames to the device and waits for the pump to end, so the stream can be closed safely.</summary>
-    public void Halt() => StopThread();
+    public void Halt()
+    {
+        if (_disposed == 0) StopThread();
+    }
 
     // One period's worth. Exclusive event mode always takes the whole buffer. Short reads are padded with silence,
-    // which ends the stream.
-    bool Fill(int frames)
+    // which ends the stream. The source is read before the device's buffer is taken, so a pump stuck in a read from a
+    // stalled share holds nothing of the device's; once halted, it never touches the device again (review 2026-11-07:
+    // a pump that outlived Halt's wait used to carry on beside the next one).
+    bool Fill(Run run)
     {
-        IntPtr buffer = _render.GetBuffer(frames);
+        int frames = _bufferFrames;
         int bytes = frames * _frameBytes;
-        var chunk = new byte[bytes];
+        var chunk = run.Chunk;
         int read = 0, n;
-        while (read < bytes && _source is { } source && (n = source.Read(chunk, read, bytes - read)) > 0) read += n;
+        while (read < bytes && !run.Stopping && (n = run.Source.Read(chunk, read, bytes - read)) > 0) read += n;
+        if (run.Stopping) return false;
         read -= read % _frameBytes;
+        Array.Clear(chunk, read, bytes - read);
+        IntPtr buffer = _render.GetBuffer(frames);
         Marshal.Copy(chunk, 0, buffer, bytes);
         _render.ReleaseBuffer(frames, read == 0 ? AudioClientBufferFlags.Silent : AudioClientBufferFlags.None);
         Interlocked.Add(ref _framesWritten, read / _frameBytes);
@@ -208,15 +261,29 @@ public sealed class ExclusiveRenderer : IDisposable
 
     void StopThread()
     {
-        _stopping = true;
+        if (_run is { } run) run.Stopping = true;
         _ready.Set();
+        // A pump stuck in a read can outlive this wait; it has stopped, and touches nothing more (see Fill).
         if (_thread is { } t && t != Thread.CurrentThread) t.Join(3000);
         _thread = null;
         try { _client.Stop(); } catch (COMException) { }
     }
 
+    // One Play: its stream, its own buffer (a pump left behind in a read must not write into the next one's), and
+    // whether it has been told to stop.
+    sealed class Run(int id, Stream source, byte[] chunk)
+    {
+        public int Id { get; } = id;
+        public Stream Source { get; } = source;
+        public byte[] Chunk { get; } = chunk;
+        volatile bool _stopping;
+        public bool Stopping { get => _stopping; set => _stopping = value; }
+    }
+
+    /// <summary>Lets the device go. Safe to call more than once; only the first call does anything.</summary>
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         StopThread();
         _render.Dispose();
         _client.Dispose();

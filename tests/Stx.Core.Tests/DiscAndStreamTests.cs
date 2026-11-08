@@ -198,6 +198,9 @@ public sealed class PlaybackTargetTests : IDisposable
     [InlineData(DiscKind.Dvd, @"E:\", "dvd:///E:/")]
     [InlineData(DiscKind.BluRay, @"C:\Films\Big Night.iso", "bluray:///C:/Films/Big%20Night.iso")]
     [InlineData(DiscKind.Dvd, @"C:\Фильмы\disc.iso", "dvd:///C:/%D0%A4%D0%B8%D0%BB%D1%8C%D0%BC%D1%8B/disc.iso")]
+    // Review finding 5: a disc on a network share keeps its two leading slashes, or VLC looks for it on this drive.
+    [InlineData(DiscKind.Dvd, @"\\nas\Films\My Film", "dvd://///nas/Films/My%20Film")]
+    [InlineData(DiscKind.BluRay, @"\\nas\Discs$\Big Night.iso", "bluray://///nas/Discs%24/Big%20Night.iso")]
     public void Disc_addresses_are_written_the_way_libvlc_reads_them(DiscKind kind, string path, string mrl)
     {
         if (!OperatingSystem.IsWindows() && path.EndsWith('\\')) return;

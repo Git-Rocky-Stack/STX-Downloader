@@ -29,5 +29,10 @@ public sealed class ClipboardWatcher(ClipboardOfferViewModel offer) : IDisposabl
         {
             // Another program is holding the clipboard. This copy simply isn't offered.
         }
+        catch (Exception ex)
+        {
+            // An async void handler: anything that escaped here would end the app. This copy isn't offered; why is logged.
+            Stx.Core.Logging.ErrorLog.Write("clipboard", ex);
+        }
     }
 }

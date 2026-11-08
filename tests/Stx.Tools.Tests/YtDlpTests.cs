@@ -294,6 +294,28 @@ public sealed class CredentialFileTests : IDisposable
         Assert.Empty(Directory.GetFiles(_root));
     }
 
+    // Review 2026-11-07: Dispose runs as a job ends; a file a scan held threw, and replaced the job's own outcome.
+    [Fact]
+    public void A_file_that_cant_be_deleted_yet_doesnt_throw_and_goes_at_the_next_launch()
+    {
+        var credentials = Make();
+        using (File.Open(credentials.ConfigPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            credentials.Dispose();
+            CredentialFile.DeleteLeftovers(_root);
+        }
+        CredentialFile.DeleteLeftovers(_root);
+        Assert.Empty(Directory.GetFiles(_root));
+    }
+
+    // The address is a bare line in yt-dlp's config, where "-o ..." would be an option.
+    [Theory]
+    [InlineData("-o C:/elsewhere/%(title)s")]
+    [InlineData("file:///C:/Windows/win.ini")]
+    [InlineData("not a link")]
+    public void Only_a_web_address_goes_in(string url) =>
+        Assert.Throws<ArgumentException>(() => CredentialFile.Create(null, new Dictionary<string, string>(), url, _root));
+
     [Fact]
     public void Leftovers_cleanup_with_no_folder_is_harmless() =>
         CredentialFile.DeleteLeftovers(Path.Combine(_root, "never-made"));

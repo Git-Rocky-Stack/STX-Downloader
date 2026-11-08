@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="STXDownloader.app"/>
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 and Windows 11. -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+    </application>
+  </compatibility>
+  <!-- Per-monitor DPI awareness (v2). Without it STX ran DPI-unaware: on a screen scaled past 100% Windows drew it at
+       96 DPI and stretched the bitmap, so text and art were soft, and full screen at 175% missed the display by a pixel
+       (found 2026-11-07 on a 2880x1800 panel at 175%; the reference PC's 96 DPI screen never shows it). WinUI renders
+       at the monitor's scale itself, and the primitives draw their art at XamlRoot.RasterizationScale. -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/PM</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
+    </windowsSettings>
+  </application>
+</assembly>

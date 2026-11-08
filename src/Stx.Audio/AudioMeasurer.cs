@@ -19,6 +19,7 @@ public sealed class AudioMeasurer(string ffmpegPath, string ffprobePath)
 
         int rate = probe.SampleRate is > 0 ? probe.SampleRate.Value : 48000;
         var spectrum = await Task.Run(() => Spectrum(path, rate, cancel), cancel).ConfigureAwait(false);
+        if (spectrum is null) return null;
         var loudness = LoudnessParser.Parse(await Output(ffmpegPath, LoudnessArgs(path), cancel).ConfigureAwait(false));
         return AudioFacts.Measured(probe, spectrum, loudness);
     }
@@ -33,7 +34,9 @@ public sealed class AudioMeasurer(string ffmpegPath, string ffprobePath)
         lock (text) return text.ToString();
     }
 
-    SpectrumResult Spectrum(string path, int rate, CancellationToken cancel)
+    // Null when FFmpeg stopped with an error before the end: what it gave until then isn't the file's spectrum, and
+    // used to be shown as "Measured" all the same (review 2026-11-07).
+    SpectrumResult? Spectrum(string path, int rate, CancellationToken cancel)
     {
         var start = new ProcessStartInfo(ffmpegPath)
         {
@@ -55,6 +58,6 @@ public sealed class AudioMeasurer(string ffmpegPath, string ffprobePath)
         var result = SpectrumAnalyzer.Analyze(process.StandardOutput.BaseStream, rate, AnalysisChannels);
         process.WaitForExit();
         cancel.ThrowIfCancellationRequested();
-        return result;
+        return process.ExitCode == 0 ? result : null;
     }
 }

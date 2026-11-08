@@ -7,6 +7,7 @@ using Stx.Bridge;
 using Stx.App.Platform;
 using Stx.Core.Files;
 using Stx.Core.Library;
+using Stx.Core.Logging;
 using Stx.Core.Playback;
 using Stx.Playback;
 using Stx.Core.Queue;
@@ -24,6 +25,8 @@ public sealed class Composition : IDisposable
 
     readonly SqliteConnection _db;
     readonly HttpClient _http;
+    // The updater's own: it follows redirects itself, to keep each one to the tool hosts.
+    readonly HttpClient _toolsHttp = ToolManager.NewHttpClient();
     readonly DispatcherQueue _ui;
     readonly DispatcherQueueTimer _retryTimer;
     readonly CancellationTokenSource _closing = new();
@@ -32,6 +35,8 @@ public sealed class Composition : IDisposable
     readonly SemaphoreSlim _measuring = new(1, 1);
     readonly IdenticalFileCheck _identical;
     readonly CollectionWatcher _watcher;
+    // A scan or a job leaves garbage an idle app never collects; it's given back once the work has been quiet.
+    readonly Stx.Core.Memory.MemoryReturn _memory = new(TimeSpan.FromSeconds(10));
     readonly StreamOpener _streams;
     PipeServer? _bridge;
     LibraryRowViewModel? _selectedRow;
@@ -52,10 +57,10 @@ public sealed class Composition : IDisposable
         _catalog = catalog;
         _identical = new IdenticalFileCheck(catalog.ExistingFacts, catalog.SetFileIdentity, File.Exists, File.Delete);
         var vault = new CaptureVault();
-        Tools = new ToolManager(_http, ToolManager.DefaultRoot(), new ToolOptions(Settings.Current.ToolUpdates), process);
+        Tools = new ToolManager(_toolsHttp, ToolManager.DefaultRoot(), new ToolOptions(Settings.Current.ToolUpdates), process);
 
         var runner = new YtDlpRunner(process, Tools, job => RequestFor(job, catalog), vault);
-        var probe = new Lazy<EncoderProbe>(() => new EncoderProbe(process, Tools.Paths.Ffmpeg ?? ""));
+        var probe = new Lazy<EncoderProbe>(() => new EncoderProbe(process, () => Tools.Paths.Ffmpeg));
         var converter = new ConversionRunner(
             new FfmpegRunner(process, Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), () => probe.Value.BestH264Async(),
                 new CopyCheck(new ProcessRunner(ProcessPriorityClass.BelowNormal), Path.Combine(ToolManager.DefaultRoot(), "ffmpeg.exe"), Path.Combine(ToolManager.DefaultRoot(), "ffprobe.exe")),
@@ -67,7 +72,8 @@ public sealed class Composition : IDisposable
         Queue = new QueueViewModel(Engine, catalog, shell, OnUi);
         SourceTruth = new SourceTruthViewModel(() => LookState.ReduceMotion);
         Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine, () => SourceTruth.SelectedOutput);
-        Library = new LibraryViewModel(catalog, Engine, shell, File.Exists, Play);
+        // The Library holds only the rows read so far; its list asks for more as it scrolls (IncrementalRows).
+        Library = new LibraryViewModel(catalog, Engine, shell, File.Exists, Play, rows: new Panels.IncrementalRows());
         // BIT-PERFECT's film route is fixed when LibVLC starts; its music route follows the setting from the next file.
         PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect())) { Passthrough = Settings.Current.BitPerfect };
         Player = new PlayerViewModel(new RoutingEngine(PlayerEngine, () => Settings.Current.BitPerfect, () => Tools.Paths.Ffmpeg, () => Tools.FfprobePath), OnUi);
@@ -82,8 +88,12 @@ public sealed class Composition : IDisposable
         // Copies being written (shrink, convert) carry a temporary name and are recorded by the queue once they're done.
         _watcher = new CollectionWatcher(catalog, path => FolderScan.IsUnder(path, Settings.Current.OutputFolder)
             || Path.GetFileName(path).StartsWith(FfmpegRunner.PartialPrefix, StringComparison.Ordinal));
-        _watcher.Changed += (_, _) => OnUi(() => _ = Library.RefreshAsync());
-        _watcher.Progress += (_, progress) => OnUi(() => Library.ShowScan(progress));
+        _watcher.Changed += (_, _) => OnUi(() => _ = ErrorLog.Observe(Library.RefreshAsync(), "library"));
+        _watcher.Progress += (_, progress) =>
+        {
+            OnUi(() => Library.ShowScan(progress));
+            if (progress.Done) _memory.WorkEnded();
+        };
 
         DefaultPlayer = new DefaultPlayerViewModel(new UserRegistry(), link => Process.Start(new ProcessStartInfo(link) { UseShellExecute = true }),
             Settings, Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "STXDownloader.exe"), Environment.OSVersion.Version.Build, UserRegistry.AssociationsChanged);
@@ -93,8 +103,8 @@ public sealed class Composition : IDisposable
         FirstRun.PropertyChanged += (_, _) => Source.ToolsReady = FirstRun.ToolsUsable(ToolsOnDisk());
         Settings.Changed += (_, settings) => Apply(settings);
 
-        Queue.FileRecorded += (_, media) => _ = SettleAsync(media);
-        converter.FileSaved += (_, media) => OnUi(() => _ = SettleAsync(media));
+        Queue.FileRecorded += (_, media) => _ = ErrorLog.Observe(SettleAsync(media), "saved file");
+        converter.FileSaved += (_, media) => OnUi(() => _ = ErrorLog.Observe(SettleAsync(media), "saved file"));
         converter.LogLine += (_, line) => OnUi(() => Queue.AddLog(line.JobId, line.Text));
         converter.ProgressChanged += (_, update) => ShowProgress(update);
         Source.PropertyChanged += (_, e) =>
@@ -111,7 +121,11 @@ public sealed class Composition : IDisposable
         _retryTimer = ui.CreateTimer();
         _retryTimer.Interval = TimeSpan.FromSeconds(1);
         _retryTimer.Tick += (_, _) => { Engine.Tick(); UpdateRetryTimer(); };
-        Engine.JobChanged += (_, _) => OnUi(UpdateRetryTimer);
+        Engine.JobChanged += (_, job) =>
+        {
+            OnUi(UpdateRetryTimer);
+            if (job.State is Stx.Core.Jobs.JobState.Completed or Stx.Core.Jobs.JobState.Failed or Stx.Core.Jobs.JobState.Canceled) _memory.WorkEnded();
+        };
         // A pending retry is real work, so it carries on while the window is hidden. A timer already running is left be.
         Activity.Register(() => Queue.HasWaitingJobs, () => { if (!_retryTimer.IsRunning) _retryTimer.Start(); }, () => _retryTimer.Stop(), keepRunningWhenHidden: true);
     }
@@ -140,11 +154,15 @@ public sealed class Composition : IDisposable
     /// <summary>Call once the window is up, because a first run downloads tools and that must not hold up the app opening.</summary>
     public async Task StartAsync()
     {
-        Queue.Load();
-        await Library.RefreshAsync();
+        // Review 2026-11-07: the loads ran outside the try, so a locked database or a damaged row faulted this task
+        // with nothing to see it, and the bridge, the tool check and the queue never started: a console that looked
+        // dead. Each step now stands on its own, says what failed, and the next one still runs.
+        Step("queue", Queue.Load);
+        try { await Library.RefreshAsync(); }
+        catch (Exception e) when (e is not OperationCanceledException) { Failed("library", e); }
         // The first scan runs in the background below normal priority; rows appear as it goes.
-        _watcher.Watch(Settings.Current.Watched);
-        Engine.RecoverAfterRestart();
+        Step("library watcher", () => _watcher.Watch(Settings.Current.Watched));
+        Step("queue", Engine.RecoverAfterRestart);
         try
         {
             // Tools already on disk can work at once, even while their update check is still going.
@@ -157,6 +175,23 @@ public sealed class Composition : IDisposable
         {
             // The app is closing.
         }
+        catch (Exception e)
+        {
+            Failed("tools", e);
+        }
+    }
+
+    void Step(string what, Action step)
+    {
+        try { step(); }
+        catch (Exception e) when (e is not OperationCanceledException) { Failed(what, e); }
+    }
+
+    // Written to the error log, and said on the status line, so a failure at startup is never silent.
+    void Failed(string what, Exception e)
+    {
+        ErrorLog.Write("startup: " + what, e);
+        OnUi(() => Status.Report(new ToolStatus(what, "couldn't start; details are in the error log")));
     }
 
     bool ToolsOnDisk() => File.Exists(Tools.YtDlpPath) && Tools.Paths.Ffmpeg is not null;
@@ -187,11 +222,11 @@ public sealed class Composition : IDisposable
         string? stored = _catalog.LoadFacts(row.FileId);
         if (FactsJson.IsNoAudio(stored)) SourceTruth.ShowNoAudio(row.Title);
         else if (FactsJson.Read(stored) is { } facts) SourceTruth.Show(row.Title, facts);
-        else if (!row.IsMissing) _ = MeasureAsync(new SavedMedia(row.MediaId, row.FileId, row.Path, row.Title));
+        else if (!row.IsMissing) _ = ErrorLog.Observe(MeasureAsync(new SavedMedia(row.MediaId, row.FileId, row.Path, row.Title)), "measuring");
         else SourceTruth.Clear();
         // Watched and opened files are indexed lightly. Their bytes are hashed the first time they're chosen, so a
         // later download of the same file is recognised.
-        if (row.Origin != MediaOrigin.Downloaded && !row.IsMissing) _ = HashOnFirstUseAsync(row);
+        if (row.Origin != MediaOrigin.Downloaded && !row.IsMissing) _ = ErrorLog.Observe(HashOnFirstUseAsync(row), "hashing");
     }
 
     async Task HashOnFirstUseAsync(LibraryRowViewModel row)
@@ -208,12 +243,11 @@ public sealed class Composition : IDisposable
         }
     }
 
-    /// <summary>Plays a Library row on the PLAYER plate. PREV and NEXT walk the Library in its order.</summary>
+    /// <summary>Plays a Library row on the PLAYER plate. PREV and NEXT walk the Library in its order, as its search narrows it, read from the database at each step.</summary>
     public void Play(LibraryRowViewModel row)
     {
         Select(row);
-        var list = Library.Rows.Where(r => r.CanOpen).Select(r => (r.Path, r.Title)).ToList();
-        Player.Play(row.Path, row.Title, list);
+        Player.Play(row.Path, row.Title, Library.PlayOrder());
     }
 
     /// <summary>
@@ -249,8 +283,19 @@ public sealed class Composition : IDisposable
         Player.Play(path, title, [(path, title)]);
     }
 
-    /// <summary>A file opened from outside STX joins the Library and plays.</summary>
-    public void OpenFromOutside(string path) => Play(Opened.Adopt(path));
+    /// <summary>A file opened from outside STX joins the Library and plays. Call it from the UI thread.</summary>
+    public async Task OpenFromOutsideAsync(string path)
+    {
+        LibraryRowViewModel row;
+        try { row = await Opened.AdoptAsync(path); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException or SqliteException)
+        {
+            ErrorLog.Write("open from outside", e);
+            Source.Report("THAT FILE COULDN'T BE ADDED TO THE LIBRARY. DETAILS ARE IN THE ERROR LOG.");
+            return;
+        }
+        Play(row);
+    }
 
     /// <summary>Converts the selected file to the output chosen on the rotary.</summary>
     public void ConvertSelected()
@@ -291,7 +336,7 @@ public sealed class Composition : IDisposable
     // One at a time and below normal priority, so measuring a batch never competes with what you're doing.
     async Task MeasureAsync(SavedMedia media)
     {
-        OnUi(() => _ = Library.RefreshAsync());
+        OnUi(() => _ = ErrorLog.Observe(Library.RefreshAsync(), "library"));
         if (Tools.Paths.Ffmpeg is not { } ffmpeg || Tools.FfprobePath is not { } ffprobe) return;
 
         await _measuring.WaitAsync(_closing.Token).ConfigureAwait(false);
@@ -301,6 +346,9 @@ public sealed class Composition : IDisposable
             _catalog.SaveFacts(media.FileId, facts is null ? FactsJson.NoAudio : FactsJson.Write(facts));
             OnUi(() =>
             {
+                // Review 2026-11-07: a measurement that finished after another row was chosen replaced that row's
+                // plate. It's stored either way; it's shown only if its file is still the one chosen, or none is.
+                if (_selectedRow is { } chosen && chosen.FileId != media.FileId) return;
                 if (facts is null) SourceTruth.ShowNoAudio(media.Title);
                 else SourceTruth.ShowFinishedAnalysis(media.Title, facts);
             });
@@ -318,6 +366,7 @@ public sealed class Composition : IDisposable
     public void Dispose()
     {
         _closing.Cancel();
+        _memory.Dispose();
         _bridge?.Dispose();
         _watcher.Dispose();
         // Stops playback and lets the decoder go before anything else closes.
@@ -326,6 +375,7 @@ public sealed class Composition : IDisposable
         Engine.StopAllAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         _retryTimer.Stop();
         _http.Dispose();
+        _toolsHttp.Dispose();
         _db.Dispose();
         _measuring.Dispose();
         _closing.Dispose();

@@ -6,7 +6,7 @@ using Xunit;
 namespace Stx.App.Tests;
 
 /// <summary>The catalog as the app has it: one store that both adds media and lists the library.</summary>
-sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
+sealed class SharedCatalog : InMemoryLibrary, IMediaCatalog, ICollectionCatalog
 {
     readonly MemoryCatalog _media = new();
     readonly Dictionary<long, MediaOrigin> _origins = new();
@@ -20,15 +20,22 @@ sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
     public void RememberCapture(string key, long mediaId) { }
     public long? RememberedCapture(string key) => null;
 
-    public IReadOnlyList<LibraryItem> Library() =>
-        [.. Items.Select(i => new LibraryItem(i.Id, i.Title, i.PageUrl, [.. Files.Select((f, n) => (f, n)).Where(x => x.f.Media == i.Id).Select(x => new LibraryFile(x.n + 1, x.f.Path, x.f.Format))], _origins.GetValueOrDefault(i.Id)))];
+    // Newest first, as the database lists them.
+    protected override IReadOnlyList<LibraryItem> AllItems() =>
+        [.. Items.AsEnumerable().Reverse().Select(i => new LibraryItem(i.Id, i.Title, i.PageUrl, [.. Files.Select((f, n) => (f, n)).Where(x => x.f.Media == i.Id).Select(x => new LibraryFile(x.n + 1, x.f.Path, x.f.Format))], _origins.GetValueOrDefault(i.Id)))];
 
     public IReadOnlyList<IndexedFile> IndexedFiles() => [.. Files.Select((f, n) => new IndexedFile(n + 1, f.Media, f.Path, null, null, _origins.GetValueOrDefault(f.Media)))];
 
+    /// <summary>When set, AddLocal waits for it: a slow disk or a busy database.</summary>
+    public ManualResetEventSlim? HoldAdd;
+
     public void AddLocal(IReadOnlyList<FoundFile> files, MediaOrigin origin)
     {
+        HoldAdd?.Wait(TimeSpan.FromSeconds(5));
         foreach (var file in files)
         {
+            // As the real catalog does: one row per path, whatever its case.
+            if (Files.Any(f => string.Equals(f.Path, file.Path, StringComparison.OrdinalIgnoreCase))) continue;
             long id = AddItem(null, null, Path.GetFileNameWithoutExtension(file.Path));
             _origins[id] = origin;
             AddFile(id, file.Path, null, SourceViewModel.OriginalFormat);
@@ -38,6 +45,7 @@ sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
     public void MoveFile(long fileId, string newPath) => throw new NotSupportedException();
     public void UpdateFacts(long fileId, long size, DateTimeOffset modified) => throw new NotSupportedException();
     public int ForgetWatchedUnder(string folder) => throw new NotSupportedException();
+    public void ForgetFile(long fileId) => throw new NotSupportedException();
 }
 
 public class OpenedFilesTests
@@ -53,10 +61,10 @@ public class OpenedFilesTests
     }
 
     [Fact]
-    public void Adopting_a_new_path_adds_one_item_and_one_file()
+    public async Task Adopting_a_new_path_adds_one_item_and_one_file()
     {
         var (opened, library) = Make();
-        var row = opened.Adopt(@"D:\Films\Big Night.mkv");
+        var row = await opened.AdoptAsync(@"D:\Films\Big Night.mkv");
         Assert.Single(_catalog.Items);
         Assert.Single(_catalog.Files);
         Assert.Equal(@"D:\Films\Big Night.mkv", row.Path);
@@ -64,42 +72,59 @@ public class OpenedFilesTests
     }
 
     [Fact]
-    public void Adopting_the_same_path_again_in_other_case_adds_nothing()
+    public async Task Adopting_the_same_path_again_in_other_case_adds_nothing()
     {
         var (opened, _) = Make();
-        var first = opened.Adopt(@"D:\Films\Big Night.mkv");
-        var again = opened.Adopt(@"d:\films\BIG NIGHT.MKV");
+        var first = await opened.AdoptAsync(@"D:\Films\Big Night.mkv");
+        var again = await opened.AdoptAsync(@"d:\films\BIG NIGHT.MKV");
         Assert.Single(_catalog.Items);
         Assert.Single(_catalog.Files);
         Assert.Equal(first.FileId, again.FileId);
     }
 
     [Fact]
-    public void The_adopted_row_is_titled_with_the_file_name()
+    public async Task The_adopted_row_is_titled_with_the_file_name()
     {
         var (opened, _) = Make();
-        Assert.Equal("Big Night", opened.Adopt(@"D:\Films\Big Night.mkv").Title);
+        Assert.Equal("Big Night", (await opened.AdoptAsync(@"D:\Films\Big Night.mkv")).Title);
         Assert.Equal(SourceViewModel.OriginalFormat, _catalog.Files[0].Format);
     }
 
     [Fact]
-    public void An_opened_file_says_so()
+    public async Task An_opened_file_says_so()
     {
         var (opened, _) = Make();
-        var row = opened.Adopt(@"D:\Films\Big Night.mkv");
+        var row = await opened.AdoptAsync(@"D:\Films\Big Night.mkv");
         Assert.Equal(MediaOrigin.Opened, row.Origin);
         Assert.Equal("MKV · OPENED", row.Status);
     }
 
     // A search narrowing the list mustn't make STX think a listed file is new.
     [Fact]
-    public void Adopting_while_a_search_hides_the_row_adds_nothing()
+    public async Task Adopting_while_a_search_hides_the_row_adds_nothing()
     {
         var (opened, library) = Make();
-        var first = opened.Adopt(@"D:\Films\Big Night.mkv");
-        library.Query = "something else";
+        var first = await opened.AdoptAsync(@"D:\Films\Big Night.mkv");
+        await library.SearchAsync("something else");
         Assert.Empty(library.Rows);
-        Assert.Equal(first.FileId, opened.Adopt(@"D:\Films\Big Night.mkv").FileId);
+        Assert.Equal(first.FileId, (await opened.AdoptAsync(@"D:\Films\Big Night.mkv")).FileId);
         Assert.Single(_catalog.Files);
+    }
+
+    // Review 2026-11-07 (and the 2026-11-05 review's finding 6): a file opened from Explorer was read from disk and
+    // written to the database on the UI thread, then the whole Library was rebuilt there; with tens of thousands of
+    // rows, or a file on a sleeping NAS, the window froze. The disk and database work now happens off the caller's thread.
+    [Fact]
+    public async Task Adopting_hands_back_at_once_while_the_database_is_busy()
+    {
+        var (opened, library) = Make();
+        using var busy = new ManualResetEventSlim();
+        _catalog.HoldAdd = busy;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var adopting = opened.AdoptAsync(@"D:\Films\Big Night.mkv");
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"the caller waited {clock.Elapsed}");
+        Assert.False(adopting.IsCompleted);
+        busy.Set();
+        Assert.Contains(await adopting, library.Rows);
     }
 }

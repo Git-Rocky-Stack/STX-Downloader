@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Stx.Core.Errors;
 using Stx.Core.Jobs;
+using Stx.Core.Logging;
 using Stx.Core.Queue;
 
 namespace Stx.Data;
@@ -61,7 +62,8 @@ public sealed class JobRepo(SqliteConnection connection) : IJobRepo
             command.CommandText = $"SELECT {Fields} FROM jobs ORDER BY id;";
             using var reader = command.ExecuteReader();
             var jobs = new List<Job>();
-            while (reader.Read()) jobs.Add(Read(reader));
+            while (reader.Read())
+                if (Read(reader) is { } job) jobs.Add(job);
             return jobs;
         }
     }
@@ -77,13 +79,19 @@ public sealed class JobRepo(SqliteConnection connection) : IJobRepo
         command.Parameters.AddWithValue("$created", job.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
     }
 
-    static Job Read(SqliteDataReader reader) => new(
-        reader.GetInt64(0),
-        reader.GetInt64(1),
-        Enum.Parse<JobKind>(reader.GetString(2)),
-        Enum.Parse<JobState>(reader.GetString(3)),
-        reader.GetInt32(4),
-        reader.IsDBNull(5) ? null : Enum.Parse<ErrorKind>(reader.GetString(5)),
-        reader.GetString(6),
-        DateTimeOffset.Parse(reader.GetString(7), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind));
+    // A row this version can't read (written by a newer STX, or damaged) is left out and logged. Review 2026-11-07:
+    // one such row made every read of the queue throw, and with it the queue's start, every pump and the plate.
+    // An error kind it doesn't know reads as a tool failure: the job itself is still sound.
+    static Job? Read(SqliteDataReader reader)
+    {
+        long id = reader.GetInt64(0);
+        if (!Enum.TryParse<JobKind>(reader.GetString(2), out var kind) || !Enum.TryParse<JobState>(reader.GetString(3), out var state)
+            || !DateTimeOffset.TryParse(reader.GetString(7), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var created))
+        {
+            ErrorLog.Write("queue", $"job {id} can't be read by this version (kind {reader.GetString(2)}, state {reader.GetString(3)}); it's left out");
+            return null;
+        }
+        ErrorKind? error = reader.IsDBNull(5) ? null : Enum.TryParse<ErrorKind>(reader.GetString(5), out var known) ? known : ErrorKind.ToolFailure;
+        return new(id, reader.GetInt64(1), kind, state, reader.GetInt32(4), error, reader.GetString(6), created);
+    }
 }

@@ -148,6 +148,28 @@ public class SourcePanelTests : ConsoleFixture
         Assert.Equal("", source.Link);
     }
 
+    // Waits for ever, as yt-dlp does on a host that accepts the connection and then says nothing.
+    sealed class StalledAnalyzer : ILinkAnalyzer
+    {
+        public async Task<LinkAnalysis> AnalyzeAsync(string url, CancellationToken cancel = default)
+        {
+            await Task.Delay(Timeout.Infinite, cancel);
+            throw new InvalidOperationException("unreachable");
+        }
+    }
+
+    // Review 2026-11-07: ANALYZE on a stalled site stayed busy with no way out.
+    [Fact]
+    public async Task Analyze_gives_up_on_a_stalled_site_and_says_so()
+    {
+        var source = new SourceViewModel(new StalledAnalyzer(), Catalog, Engine, fileExists: _ => true, analyzeLimit: TimeSpan.FromMilliseconds(300));
+        source.Link = "https://x/never";
+        var analyzing = source.AnalyzeCommand.ExecuteAsync(null);
+        Assert.True(await Task.WhenAny(analyzing, Task.Delay(TimeSpan.FromSeconds(10))) == analyzing, "ANALYZE never gave up");
+        Assert.False(source.IsBusy);
+        Assert.Equal(ErrorKind.Network.Message(), source.Message);
+    }
+
     [Fact]
     public async Task Playlist_link_asks_before_enqueuing_all()
     {
@@ -162,9 +184,26 @@ public class SourcePanelTests : ConsoleFixture
         Assert.Equal(2, source.PendingPlaylist.Available);
         Assert.Equal(1, source.PendingPlaylist.Unavailable);
 
-        source.ConfirmPlaylistCommand.Execute(null);
+        await source.ConfirmPlaylistCommand.ExecuteAsync(null);
         Assert.Equal(2, Jobs.All().Count);
         Assert.Null(source.PendingPlaylist);
+    }
+
+    // Review 2026-11-07: each entry read every saved row again and looked for each saved file on disk, on the UI
+    // thread. A 30-entry playlist against 20 saved files was 600 lookups; it's one look at each file now.
+    [Fact]
+    public async Task Confirming_a_playlist_looks_for_each_saved_file_once()
+    {
+        for (int i = 0; i < 20; i++) Catalog.AddFile(Catalog.AddItem($"https://x/saved{i}", $"saved{i}", $"Saved {i}"), $@"D:\Saved {i}.mp4", null, SourceViewModel.OriginalFormat);
+        int lookups = 0;
+        var entries = Enumerable.Range(0, 30).Select(i => new PlaylistEntry($"new{i}", $"New {i}", $"https://x/new{i}", true)).Append(new PlaylistEntry("saved3", "Saved 3", "https://x/saved3", true)).ToArray();
+        var source = new SourceViewModel(new ScriptedAnalyzer(_ => LinkAnalysis.Found("Mix", entries)), Catalog, Engine, fileExists: _ => { Interlocked.Increment(ref lookups); return true; });
+        source.Link = "https://x/list";
+        await source.AnalyzeCommand.ExecuteAsync(null);
+        await source.ConfirmPlaylistCommand.ExecuteAsync(null);
+        Assert.Equal(20, lookups);
+        Assert.Equal(30, Jobs.All().Count);
+        Assert.Equal("1 already saved, so skipped.", source.Message);
     }
 
     [Fact]
@@ -388,12 +427,15 @@ public class QueuePanelTests : ConsoleFixture
         var job = Start();
         var item = Item(job.Id);
 
+        // A stopped tool reports back as it ends; a job runs again only once its last run has (review 2026-11-07).
         Queue.Pause(item);
         Assert.Equal(JobState.Paused, Jobs.Get(job.Id)!.State);
+        Runner.Finish(job.Id, JobOutcome.Failure(Stx.Core.Errors.ErrorKind.ToolFailure));
         Queue.Resume(item);
         Assert.Equal(JobState.Running, Jobs.Get(job.Id)!.State);
         Queue.Cancel(item);
         Assert.Equal(JobState.Canceled, Jobs.Get(job.Id)!.State);
+        Runner.Finish(job.Id, JobOutcome.Failure(Stx.Core.Errors.ErrorKind.ToolFailure));
         Queue.Retry(item);
         Assert.Equal(JobState.Running, Jobs.Get(job.Id)!.State);
     }

@@ -17,6 +17,8 @@ public sealed class MusicEngine(string ffmpeg) : IPlaybackEngine
     PcmSource? _source;
     TimeSpan _offset;
     PlaybackState _state = PlaybackState.Idle;
+    // The decoder's last words on stderr, for the log when it dies before the end of the file.
+    string _decoderSaid = "";
     string? _error;
     Timer? _clock;
 
@@ -76,7 +78,8 @@ public sealed class MusicEngine(string ffmpeg) : IPlaybackEngine
         var start = new ProcessStartInfo(ffmpeg) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (string arg in BitPerfect.FfmpegArgs(_path, _renderer!.Layout, from)) start.ArgumentList.Add(arg);
         _decoder = Process.Start(start)!;
-        _decoder.ErrorDataReceived += (_, _) => { };
+        _decoderSaid = "";
+        _decoder.ErrorDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) _decoderSaid = e.Data; };
         _decoder.BeginErrorReadLine();
         _offset = from;
         _renderer.Play(_decoder.StandardOutput.BaseStream);
@@ -84,15 +87,29 @@ public sealed class MusicEngine(string ffmpeg) : IPlaybackEngine
         _clock ??= new Timer(_ => Raise(), null, 250, 250);
     }
 
-    void OnFinished(object? sender, EventArgs e)
+    /// <summary>What the plate says when FFmpeg stops before the end of the file: it vanished, or it's damaged.</summary>
+    public const string DecodeFailed = "THE FILE COULDN'T BE READ TO ITS END";
+
+    void OnFinished(object? sender, int run)
     {
+        bool failed;
         lock (_gate)
         {
-            if (!ReferenceEquals(sender, _renderer)) return;
-            _offset = Length;
+            // Review 2026-11-07: an end queued just before a seek near the end used to stop the seek's new run.
+            if (sender is not ExclusiveRenderer renderer || !ReferenceEquals(renderer, _renderer) || renderer.CurrentRun != run) return;
+            // The stream ran dry. That is the end of the file only if FFmpeg says it finished: a file deleted or
+            // damaged mid-play also runs the stream dry, and used to read as ENDED.
+            failed = _decoder is { } decoder && decoder.WaitForExit(2000) && decoder.ExitCode != 0;
+            if (failed)
+            {
+                Stx.Core.Logging.ErrorLog.Write("bit-perfect", $"FFmpeg exited {_decoder!.ExitCode} on {_path}: {_decoderSaid}");
+                _offset = Position;
+                _error = DecodeFailed;
+            }
+            else _offset = Length;
             Release();
         }
-        Set(PlaybackState.Ended);
+        Set(failed ? PlaybackState.Failed : PlaybackState.Ended);
     }
 
     // The device went away or the decoder died mid-play. The device goes back to Windows and the plate says so.
@@ -114,7 +131,19 @@ public sealed class MusicEngine(string ffmpeg) : IPlaybackEngine
         {
             if (_renderer is null)
             {
-                if (_source is { } source && _state is PlaybackState.Ended or PlaybackState.Idle) Open(_path, source);
+                // RoutingEngine replays through its own Open, which falls back to shared. Called directly, a device
+                // that can't be had still says why instead of throwing at the plate.
+                if (_source is { } source && _state is PlaybackState.Ended or PlaybackState.Idle)
+                {
+                    try { Open(_path, source); }
+                    catch (Exception e) when (e is ExclusiveUnavailableException or System.Runtime.InteropServices.COMException or System.ComponentModel.Win32Exception)
+                    {
+                        // A decoder that failed to start may leave the device held: it goes back to Windows.
+                        Release();
+                        _error = e is ExclusiveUnavailableException ? e.Message : "THE DEVICE COULDN'T BE OPENED EXCLUSIVELY";
+                        Set(PlaybackState.Failed);
+                    }
+                }
                 return;
             }
             if (_state == PlaybackState.Paused) { _renderer.Resume(); Set(PlaybackState.Playing); }

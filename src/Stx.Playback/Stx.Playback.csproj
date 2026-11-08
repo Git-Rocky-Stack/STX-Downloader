@@ -11,8 +11,8 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- The core API only. The app takes LibVLCSharp.WinUI, whose LibVLCSharp.dll has the same identity (3.10.2.0) plus the VideoView. -->
-    <PackageReference Include="LibVLCSharp" Version="3.10.2" />
-    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="LibVLCSharp" />
+    <PackageReference Include="NAudio.Wasapi" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Stx.Core\Stx.Core.csproj" />
@@ -22,7 +22,7 @@
        It runs again whenever engine.json or Get-Engine.ps1 is newer than ready.stamp. With only an Exists() check,
        a machine that already had an engine kept it after engine.json changed (Phase 4's DVD plugins never arrived). -->
   <Target Name="StxPrepareEngine" BeforeTargets="GetCopyToOutputDirectoryItems;CopyFilesToOutputDirectory"
-          Inputs="$(MSBuildThisFileDirectory)..\..\tools\vlc\engine.json;$(MSBuildThisFileDirectory)..\..\tools\vlc\Get-Engine.ps1"
+          Inputs="$(MSBuildThisFileDirectory)..\..\tools\vlc\engine.json;$(MSBuildThisFileDirectory)..\..\tools\vlc\Get-Engine.ps1;$(MSBuildThisFileDirectory)..\..\tools\vlc\Make-Sf3.cs"
           Outputs="$(StxEngineDir)ready.stamp">
     <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\vlc\Get-Engine.ps1&quot;" />
   </Target>

@@ -67,7 +67,16 @@ public sealed class DefaultPlayerViewModel : ObservableObject
     void Choose()
     {
         // The installer registers STX already. A copy run from the zip, or a registration damaged since, is put right here.
-        if (FileAssociations.Register(_registry, _exePath)) _associationsChanged();
+        // A policy can lock the user's file types (review 2026-11-07): the refusal used to escape the pad's command.
+        // It's logged, and Windows' page still opens, since the installer's registration may well be there.
+        try
+        {
+            if (FileAssociations.Register(_registry, _exePath)) _associationsChanged();
+        }
+        catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            Stx.Core.Logging.ErrorLog.Write("default player", e);
+        }
         _launch(FileAssociations.DefaultAppsLink(_windowsBuild));
     }
 }

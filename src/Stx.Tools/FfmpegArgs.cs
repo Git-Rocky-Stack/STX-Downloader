@@ -121,6 +121,9 @@ public static class FfmpegArgs
         // MP4's own subtitle format doesn't go into MKV; it's turned into SRT. Everything else is copied as it is.
         bool mp4Text = Path.GetExtension(request.InputPath).ToLowerInvariant() is ".mp4" or ".m4v" or ".mov";
         args.AddRange(["-map", "0:v:0", "-map", "0:a?", "-map", "0:s?", "-map", "0:t?"]);
+        // Measured 2026-11-07 on clips from Blender's open films, scored with VMAF against their originals
+        // (docs/PERFORMANCE.md, "Shrink's encoder settings"): these two give the same quality, AV1's copy the smaller,
+        // and keep live action at VMAF 95 to 97; a detailed 10 Mb/s 1080p source keeps about 90 at a twelfth of its size.
         args.AddRange(codec == ShrinkCodec.Av1
             ? ["-c:v", "libsvtav1", "-preset", "6", "-crf", "30", "-pix_fmt", "yuv420p10le"]
             : ["-c:v", "libx265", "-preset", "medium", "-crf", "24", "-pix_fmt", "yuv420p10le", "-x265-params", "log-level=error"]);

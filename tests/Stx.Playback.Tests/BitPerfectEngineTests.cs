@@ -154,7 +154,7 @@ public sealed class BitPerfectDeviceTests : IDisposable
     [Fact]
     public void Letting_go_as_a_track_ends_does_not_wait_on_the_end_handler()
     {
-        // Disposed once, inside the lock: a second Dispose would throw and hide the assertion.
+        // Disposed once, inside the lock, where the race is.
         var renderer = ExclusiveRenderer.Open(48000, 2, BitPerfect.Candidates(16));
         var gate = new object();
         using var entered = new ManualResetEventSlim();
@@ -187,6 +187,72 @@ public sealed class BitPerfectDeviceTests : IDisposable
         Assert.True(Fixture.Within(TimeSpan.FromSeconds(3), () => engine.Position > TimeSpan.FromSeconds(10.5)), $"state {engine.State}, position {engine.Position}");
         Assert.Equal(PlaybackState.Playing, engine.State);
         Assert.EndsWith("BIT-PERFECT", engine.AudioReadout);
+    }
+
+    // Review 2026-11-07: a decoder that died early (the file deleted, a damaged share) ran the stream dry, which read as
+    // the end of the track. FFmpeg's exit code tells the two apart. A file that isn't there is the quickest such death.
+    [Fact]
+    public void A_file_ffmpeg_cant_read_to_its_end_fails_and_says_so()
+    {
+        using var music = new MusicEngine(Tool("ffmpeg"));
+        music.Open(Path.Combine(_dir, "gone.flac"), new PcmSource("flac", 16, 48000, 2, false, 4));
+        Assert.True(Fixture.Within(TimeSpan.FromSeconds(8), () => music.State is PlaybackState.Failed or PlaybackState.Ended), $"state {music.State}");
+        Assert.Equal(PlaybackState.Failed, music.State);
+        Assert.Equal(MusicEngine.DecodeFailed, music.Error);
+    }
+
+    // Review 2026-11-07: a pump stuck reading a stalled source outlived Halt's 3 second wait, and the next Play set the
+    // shared stop flag back, so the old pump carried on beside the new one, writing into the same device.
+    [Fact]
+    public void A_pump_left_in_a_stalled_read_never_writes_again()
+    {
+        using var renderer = ExclusiveRenderer.Open(48000, 2, BitPerfect.Candidates(16));
+        using var stalled = new StallingStream(48000 * 4 / 2, TimeSpan.FromSeconds(6)); // half a second, then 6 s of nothing
+        renderer.Play(stalled);
+        Assert.True(stalled.Stalled.Wait(TimeSpan.FromSeconds(5)), "the source never stalled");
+        renderer.Halt();
+        using var ended = new ManualResetEventSlim();
+        renderer.Finished += (_, run) => { if (run == renderer.CurrentRun) ended.Set(); };
+        renderer.Play(new MemoryStream(new byte[48000 * 4 / 4]));
+        Assert.True(ended.Wait(TimeSpan.FromSeconds(5)), "the new run never ended");
+        long written = renderer.FramesWritten;
+        Thread.Sleep(TimeSpan.FromSeconds(6)); // the stalled read returns in here
+        Assert.Equal(written, renderer.FramesWritten);
+    }
+
+    // Gives some bytes, then blocks once for the stall before giving more: a share that stopped answering.
+    sealed class StallingStream(int before, TimeSpan stall) : Stream
+    {
+        int _given;
+        public ManualResetEventSlim Stalled { get; } = new();
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_given >= before && !Stalled.IsSet) { Stalled.Set(); Thread.Sleep(stall); }
+            int n = Math.Min(count, Stalled.IsSet ? count : before - _given);
+            Array.Clear(buffer, offset, n);
+            _given += n;
+            return n;
+        }
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => _given; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        protected override void Dispose(bool disposing) { if (disposing) Stalled.Dispose(); base.Dispose(disposing); }
+    }
+
+    // Handoff 2026-11-05, item 4: a second Dispose signalled a wait handle the first had already disposed.
+    [Fact]
+    public void Disposing_the_renderer_twice_is_harmless()
+    {
+        var renderer = ExclusiveRenderer.Open(48000, 2, BitPerfect.Candidates(16));
+        renderer.Dispose();
+        renderer.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => renderer.Play(Stream.Null));
     }
 
     // Shared mode still works, and the device goes back to Windows when STX stops.

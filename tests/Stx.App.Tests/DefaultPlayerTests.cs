@@ -8,8 +8,14 @@ namespace Stx.App.Tests;
 sealed class RegistrySpy : IUserRegistry
 {
     public readonly Dictionary<string, string> Values = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>When true, every write is refused, as Group Policy refuses one to a locked Software\Classes.</summary>
+    public bool Locked;
     public string? Read(string key, string? name) => Values.GetValueOrDefault(key + "|" + name);
-    public void Write(string key, string? name, string value) => Values[key + "|" + name] = value;
+    public void Write(string key, string? name, string value)
+    {
+        if (Locked) throw new UnauthorizedAccessException($"Access to the registry key '{key}' is denied.");
+        Values[key + "|" + name] = value;
+    }
     public void Choose(string extension, string progId) => Values[$@"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{extension}\UserChoice|ProgId"] = progId;
 }
 
@@ -47,6 +53,17 @@ public sealed class DefaultPlayerTests : IDisposable
         Assert.NotNull(_registry.Read(FileAssociations.CapabilitiesKey, "ApplicationName"));
         Assert.False(player.ShowOffer);
         Assert.False(Make().ShowOffer);
+    }
+
+    // Review 2026-11-07: a policy-locked Software\Classes threw out of the pad's command.
+    [Fact]
+    public void A_locked_registry_still_opens_default_apps_and_doesnt_throw()
+    {
+        _registry.Locked = true;
+        var player = Make();
+        player.ChooseCommand.Execute(null);
+        Assert.Equal(["ms-settings:defaultapps?registeredAppUser=STX%20Downloader"], _launched);
+        Assert.Equal(0, _notified);
     }
 
     [Fact]

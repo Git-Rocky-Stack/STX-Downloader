@@ -11,9 +11,11 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.v3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Stx.ViewModels\Stx.ViewModels.csproj" />
+    <!-- The Library's 50,000-row search test runs the view-model on the real database, as the app does. -->
+    <ProjectReference Include="..\..\src\Stx.Data\Stx.Data.csproj" />
   </ItemGroup>
 </Project>

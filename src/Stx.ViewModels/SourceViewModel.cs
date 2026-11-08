@@ -39,26 +39,29 @@ public sealed class SourceViewModel : ObservableObject
     readonly QueueEngine _engine;
     readonly Func<OutputChoice> _chosenOutput;
     readonly Func<string, bool> _fileExists;
+    readonly TimeSpan _analyzeLimit;
     AudioFacts? _reported;
     string _link = "", _message = "", _nextStep = "";
     bool _busy;
     PlaylistOffer? _pending;
 
-    public SourceViewModel(ILinkAnalyzer analyzer, IMediaCatalog catalog, QueueEngine engine, Func<OutputChoice>? chosenOutput = null, Func<string, bool>? fileExists = null)
+    /// <param name="analyzeLimit">How long ANALYZE waits for yt-dlp before saying the site isn't answering.</param>
+    public SourceViewModel(ILinkAnalyzer analyzer, IMediaCatalog catalog, QueueEngine engine, Func<OutputChoice>? chosenOutput = null, Func<string, bool>? fileExists = null, TimeSpan? analyzeLimit = null)
     {
         _fileExists = fileExists ?? File.Exists;
+        _analyzeLimit = analyzeLimit ?? TimeSpan.FromSeconds(90);
         _chosenOutput = chosenOutput ?? (() => OutputChoice.Original);
         _analyzer = analyzer;
         _catalog = catalog;
         _engine = engine;
         AnalyzeCommand = new AsyncRelayCommand(AnalyzeAsync);
-        ConfirmPlaylistCommand = new RelayCommand(ConfirmPlaylist);
+        ConfirmPlaylistCommand = new AsyncRelayCommand(ConfirmPlaylistAsync);
         DeclinePlaylistCommand = new RelayCommand(() => PendingPlaylist = null);
         JustThisVideoCommand = new AsyncRelayCommand(JustThisVideoAsync);
     }
 
     public IAsyncRelayCommand AnalyzeCommand { get; }
-    public IRelayCommand ConfirmPlaylistCommand { get; }
+    public IAsyncRelayCommand ConfirmPlaylistCommand { get; }
     public IRelayCommand DeclinePlaylistCommand { get; }
     public IAsyncRelayCommand JustThisVideoCommand { get; }
 
@@ -97,11 +100,18 @@ public sealed class SourceViewModel : ObservableObject
         }
 
         IsBusy = true;
+        // Review 2026-11-07: a yt-dlp that stalled on a dead host kept ANALYZE busy, with no way out, until it ended.
+        // Past the limit it's stopped (its whole process tree) and the plate says the site isn't answering.
+        using var limit = new CancellationTokenSource(_analyzeLimit);
         try
         {
-            var analysis = await _analyzer.AnalyzeAsync(url);
+            var analysis = await _analyzer.AnalyzeAsync(url, limit.Token);
             if (analysis.Error is { } kind) Say(kind.Message(), kind.NextStep());
-            else Accept(analysis, url);
+            else await AcceptAsync(analysis, url);
+        }
+        catch (OperationCanceledException) when (limit.IsCancellationRequested)
+        {
+            Say(ErrorKind.Network.Message(), ErrorKind.Network.NextStep());
         }
         finally
         {
@@ -109,7 +119,7 @@ public sealed class SourceViewModel : ObservableObject
         }
     }
 
-    void Accept(LinkAnalysis analysis, string url)
+    async Task AcceptAsync(LinkAnalysis analysis, string url)
     {
         ReportedAudio = analysis.BestAudio is { } best ? ReportedFacts.From(best) : null;
         if (analysis.Entries.Count > 1)
@@ -124,7 +134,7 @@ public sealed class SourceViewModel : ObservableObject
             Say(ErrorKind.PrivateOrUnavailable.Message(), ErrorKind.PrivateOrUnavailable.NextStep());
             return;
         }
-        if (IsDuplicate(entry))
+        if (IsDuplicate(entry, await SavedAsync()))
         {
             Say("This is already saved in that format.", "");
             return;
@@ -141,13 +151,18 @@ public sealed class SourceViewModel : ObservableObject
         await AnalyzeAsync();
     }
 
-    void ConfirmPlaylist()
+    async Task ConfirmPlaylistAsync()
     {
         if (PendingPlaylist is not { } offer) return;
+        // What's saved is read once, off the UI thread, and each entry checked against that. It used to be read again,
+        // and every saved file looked for on disk, for each entry: a long playlist against a big Library froze the
+        // window (review 2026-11-07).
+        var saved = await SavedAsync();
+        if (!ReferenceEquals(offer, PendingPlaylist)) return;
         int skipped = 0;
         foreach (var entry in offer.Entries.Where(e => e.Available))
         {
-            if (IsDuplicate(entry)) skipped++;
+            if (IsDuplicate(entry, saved)) skipped++;
             else Enqueue(entry.Url ?? offer.PageUrl, entry);
         }
         PendingPlaylist = null;
@@ -155,12 +170,13 @@ public sealed class SourceViewModel : ObservableObject
         Say(skipped > 0 ? $"{skipped} already saved, so skipped." : "", "");
     }
 
-    // A file you've since deleted doesn't count as saved.
-    bool IsDuplicate(PlaylistEntry entry)
+    // A file you've since deleted doesn't count as saved. Read off the UI thread: it looks for every saved file on disk.
+    Task<List<MediaFact>> SavedAsync() => Task.Run(() => _catalog.ExistingFacts().Where(f => f.Path is null || _fileExists(f.Path)).ToList());
+
+    bool IsDuplicate(PlaylistEntry entry, IReadOnlyList<MediaFact> saved)
     {
         var output = _chosenOutput();
         string format = output == OutputChoice.Original ? OriginalFormat : output.ToString();
-        var saved = _catalog.ExistingFacts().Where(f => f.Path is null || _fileExists(f.Path));
         return Dedupe.Decide(entry.Id, null, format, saved) == DedupeDecision.Duplicate;
     }
 

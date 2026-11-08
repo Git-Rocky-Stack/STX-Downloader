@@ -14,14 +14,16 @@
     <AssemblyTitle>STX Downloader</AssemblyTitle>
     <RootNamespace>Stx.App</RootNamespace>
     <ApplicationIcon>Assets\stx.ico</ApplicationIcon>
+    <!-- Per-monitor DPI awareness: see the manifest. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
     <!-- The VideoView that LibVLC draws into (spike S1). Its LibVLCSharp.dll carries the core API too, with the same
          identity (3.10.2.0) as the core package Stx.Playback uses, so that package's own copy is left out here. -->
-    <PackageReference Include="LibVLCSharp.WinUI" Version="3.10.2" />
-    <PackageReference Include="LibVLCSharp" Version="3.10.2" ExcludeAssets="compile;runtime" />
+    <PackageReference Include="LibVLCSharp.WinUI" />
+    <PackageReference Include="LibVLCSharp" ExcludeAssets="compile;runtime" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Stx.Look\Stx.Look.csproj" />

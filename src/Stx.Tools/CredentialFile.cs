@@ -41,7 +41,14 @@ public sealed class CredentialFile : IDisposable
         }
         foreach (var (key, value) in headers)
             config.Append("--add-headers ").AppendLine(Quote($"{key}:{value}"));
-        if (!string.IsNullOrEmpty(url)) config.AppendLine(Quote(url));
+        // The address is a bare line in yt-dlp's config, where one starting with "-" would be read as an option. Every
+        // caller passes a web address already; this keeps it so for any later one (review 2026-11-07).
+        if (!string.IsNullOrEmpty(url))
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var address) || address.Scheme is not ("http" or "https"))
+                throw new ArgumentException("Only a web address goes in a credential file.", nameof(url));
+            config.AppendLine(Quote(url));
+        }
 
         string configPath = Path.Combine(root, name + ".conf");
         WritePrivate(configPath, config.ToString());
@@ -53,13 +60,22 @@ public sealed class CredentialFile : IDisposable
     {
         root ??= DefaultRoot();
         if (!Directory.Exists(root)) return;
-        foreach (string file in Directory.GetFiles(root, Prefix + "*")) File.Delete(file);
+        // One file held by a scan mustn't stop STX starting: it goes at the next launch instead.
+        foreach (string file in Directory.GetFiles(root, Prefix + "*")) TryDelete(file);
     }
 
+    /// <summary>Deletes the files. One that can't go now (an antivirus scan holding it) goes at the next launch; this
+    /// runs as a job ends, so it must never replace the job's outcome with an exception (review 2026-11-07).</summary>
     public void Dispose()
     {
-        File.Delete(ConfigPath);
-        if (CookiePath is not null) File.Delete(CookiePath);
+        TryDelete(ConfigPath);
+        if (CookiePath is not null) TryDelete(CookiePath);
+    }
+
+    static void TryDelete(string path)
+    {
+        try { File.Delete(path); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
 
     // A line break would start a new option, and a stray quote would end this one.
