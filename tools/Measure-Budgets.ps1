@@ -52,10 +52,19 @@ function Send-Capture([string] $json) {
     finally { $pipe.Dispose() }
 }
 
+# Your own settings and Library are moved aside while the measured app runs, and put back however this ends. One try
+# covers everything from the first move (review 2026-11-07: a launch that failed, or a -WatchedFolder that wasn't
+# there, left them in the temp folder). The restore touches only what this script moved, or made where you had none.
+$moved = @(); $absent = @(); $p = $null
+$failure = $null
+try {
 if ($realApp) {
     if (Get-Process STXDownloader -ErrorAction SilentlyContinue) { throw 'Close STX Downloader first: this replaces its settings while measuring.' }
     New-Item -ItemType Directory -Force $kept, $data | Out-Null
-    foreach ($n in $names) { $f = Join-Path $data $n; if (Test-Path -LiteralPath $f) { Move-Item -LiteralPath $f (Join-Path $kept $n) } }
+    foreach ($n in $names) {
+        $f = Join-Path $data $n
+        if (Test-Path -LiteralPath $f) { Move-Item -LiteralPath $f (Join-Path $kept $n); $moved += $n } else { $absent += $n }
+    }
     # The app stores LookMode as a number, and it ignores a settings file it can't read, so this must match exactly.
     $settings = @{ LookMode = $(if ($Mode -eq 'light') { 1 } else { 0 }); TrayMode = ($Scenario -eq 'hidden') }
     if ($OutputFolder) { New-Item -ItemType Directory -Force $OutputFolder | Out-Null; $settings.OutputFolder = $OutputFolder }
@@ -69,8 +78,6 @@ else {
 
 $cores = [Environment]::ProcessorCount
 $p = if ($launch.Count) { Start-Process $exe -ArgumentList $launch -PassThru } else { Start-Process $exe -PassThru }
-$failure = $null
-try {
     Start-Sleep -Seconds $SettleSeconds
     $p.Refresh()
     if ($Scenario -eq 'hidden' -and $p.MainWindowHandle -ne 0) { throw 'The window is showing, so this would not measure hidden.' }
@@ -134,13 +141,25 @@ try {
     }
 }
 finally {
-    # Taking the whole tree, so no download carries on after the measurement.
-    & taskkill.exe /PID $p.Id /T /F 2>&1 | Out-Null
-    if ($realApp) {
+    if ($p) {
+        # Taking the whole tree, so no download carries on after the measurement.
+        & taskkill.exe /PID $p.Id /T /F 2>&1 | Out-Null
         Start-Sleep -Seconds 2
-        if ($KeepDatabaseIn) { New-Item -ItemType Directory -Force $KeepDatabaseIn | Out-Null; foreach ($n in 'stx.db', 'stx.db-wal') { $f = Join-Path $data $n; if (Test-Path -LiteralPath $f) { Copy-Item -LiteralPath $f $KeepDatabaseIn -Force } } }
-        foreach ($n in $names) { $f = Join-Path $data $n; if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Confirm:$false } }
-        foreach ($n in $names) { $f = Join-Path $kept $n; if (Test-Path -LiteralPath $f) { Move-Item -LiteralPath $f (Join-Path $data $n) } }
+    }
+    if ($realApp) {
+        if ($p -and $KeepDatabaseIn) { New-Item -ItemType Directory -Force $KeepDatabaseIn | Out-Null; foreach ($n in 'stx.db', 'stx.db-wal') { $f = Join-Path $data $n; if (Test-Path -LiteralPath $f) { Copy-Item -LiteralPath $f $KeepDatabaseIn -Force } } }
+        foreach ($n in $names) {
+            $f = Join-Path $data $n
+            if ($n -in $moved) {
+                # Yours, moved aside: the measured run's copy goes and yours comes back.
+                if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Confirm:$false }
+                Move-Item -LiteralPath (Join-Path $kept $n) $f
+            }
+            elseif ($n -in $absent -and (Test-Path -LiteralPath $f)) {
+                # You had none; the measured run made it.
+                Remove-Item -LiteralPath $f -Confirm:$false
+            }
+        }
         Remove-Item -LiteralPath $kept -Recurse -Confirm:$false -ErrorAction SilentlyContinue
     }
 }

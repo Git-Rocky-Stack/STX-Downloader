@@ -11,8 +11,8 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- The core API only. The app takes LibVLCSharp.WinUI, whose LibVLCSharp.dll has the same identity (3.10.2.0) plus the VideoView. -->
-    <PackageReference Include="LibVLCSharp" Version="3.10.2" />
-    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="LibVLCSharp" />
+    <PackageReference Include="NAudio.Wasapi" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Stx.Core\Stx.Core.csproj" />

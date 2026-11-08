@@ -8,4 +8,8 @@
     <Copyright>Copyright (c) 2026 Rocky Elsalaymeh, Strategia-X</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
+  <!-- A warning is a defect waiting: the build fails on one, so none can pile up unseen (review 2026-11-07). -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
 </Project>
