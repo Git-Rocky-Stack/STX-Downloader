@@ -86,21 +86,25 @@ public static class FileAssociations
     /// Which registered types Windows opens with STX: the ProgId of each type's user choice, the newer
     /// UserChoiceLatest key first (Windows 11 24H2 and later), then UserChoice.
     /// </summary>
-    public static DefaultState Read(IUserRegistry registry)
+    public static DefaultState Read(IUserRegistry registry) =>
+        new(MediaTypes.All.Count(extension => IsOurs(ChosenProgId(registry, extension))), MediaTypes.All.Count);
+
+    /// <summary>
+    /// The ProgId the user chose to open a type with, or null when they never chose. Where Windows 11 keeps the newer
+    /// choice isn't documented, so both shapes seen in the wild are read. A test holds this to Windows' own answer
+    /// (AssocQueryString) on every type, on whatever Windows runs it (first on build 26300, 2026-11-07).
+    /// </summary>
+    public static string? ChosenProgId(IUserRegistry registry, string extension)
     {
-        int ours = 0;
-        foreach (string extension in MediaTypes.All)
-        {
-            string key = $@"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{extension}";
-            // Where Windows 11 keeps the newer choice isn't documented, so both shapes seen in the wild are read.
-            string? chosen = registry.Read(key + @"\UserChoiceLatest\ProgId", "ProgId") ?? registry.Read(key + @"\UserChoiceLatest", "ProgId")
-                ?? registry.Read(key + @"\UserChoice", "ProgId");
-            if (chosen is VideoProgId or AudioProgId || (chosen?.EndsWith(@"\" + ExeName, StringComparison.OrdinalIgnoreCase) ?? false)
-                || string.Equals(chosen, "Applications\\" + ExeName, StringComparison.OrdinalIgnoreCase))
-                ours++;
-        }
-        return new DefaultState(ours, MediaTypes.All.Count);
+        string key = $@"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{extension}";
+        return registry.Read(key + @"\UserChoiceLatest\ProgId", "ProgId") ?? registry.Read(key + @"\UserChoiceLatest", "ProgId")
+            ?? registry.Read(key + @"\UserChoice", "ProgId");
     }
+
+    /// <summary>Whether a ProgId is STX's: one of its own two, or the exe itself as "Open with" names it.</summary>
+    public static bool IsOurs(string? progId) =>
+        progId is VideoProgId or AudioProgId || (progId?.EndsWith(@"\" + ExeName, StringComparison.OrdinalIgnoreCase) ?? false)
+        || string.Equals(progId, "Applications\\" + ExeName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The Default Apps page to open. Windows 11 (build 22000 and later) can open STX's own page in it; Windows 10
