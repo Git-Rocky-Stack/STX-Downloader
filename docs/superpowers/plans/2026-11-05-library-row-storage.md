@@ -6,7 +6,8 @@
 
 ## ASSUMPTIONS (unread or unmeasured, check first)
 
-- The SQLite that Microsoft.Data.Sqlite bundles here has FTS5 with the **trigram** tokenizer (SQLite 3.34 or later). Search today is a substring match (`ong` finds `Song`); FTS5's default tokenizer matches only whole tokens or prefixes, which would change what search finds. Step 1 checks the version and stops if trigram is missing.
+- ~~The SQLite that Microsoft.Data.Sqlite bundles here has FTS5 with the **trigram** tokenizer (SQLite 3.34 or later).~~ **Checked 2026-11-07:** Microsoft.Data.Sqlite 10.0.14 bundles SQLite 3.53.3 with FTS5 compiled in; a trigram table over title, file name and folder matched `een` in "Blue in Green" (a substring) and `GREEN` (case doesn't matter), so search can keep finding what it finds today. **One constraint:** trigram can't serve a query under three characters, so a one- or two-character search needs a plain `LIKE` over the same columns (a scan, measured in step 1 at 50,000 rows).
+- **Two review fixes this plan builds on** (2026-11-07): the catalog keeps one row per path (`MediaRepo.AddLocal`), and opening from Explorer is async (`OpenedFiles.AdoptAsync`), so `Find(path)` moving to a query in step 2 is a change of where it reads, not of when.
 - WinUI's `ListView` loads more rows through `ISupportIncrementalLoading` as you scroll, with the current item containers (`src/Stx.App/Panels/LibraryPanel.cs:116`). Not yet tried in this app.
 - The estimate (2 to 4 working days) is a guess.
 

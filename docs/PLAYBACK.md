@@ -18,7 +18,7 @@ STX ships the **official VLC 3.0.24 build for 64-bit Windows**, the same zip Vid
 
 VLC 3.0.24's engine crashes the whole program on Dirac / VC-2 video. That happens in the official desktop build too, with a real video window, and with a genuine Dirac sample from FFmpeg's archive as well as one made by FFmpeg. If STX passed such a file to the engine, STX would close.
 
-So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:275`), and the rest of the console keeps working.
+So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:304`), and the rest of the console keeps working. When LibVLC can't finish reading a file's tracks (a slow share, a parse that times out or fails), STX doesn't take the file as safe: it reads the first megabyte itself for Dirac's sequence header, `BBCD` and parse code 0, which FFmpeg writes within the first few kilobytes in MKV, MOV, MP4, MPEG-TS, NUT and AVI (`src/Stx.Core/Playback/DiracSniff.cs`; added 2026-11-07). Network streams aren't sniffed, since that would mean a second connection before every play.
 
 Dirac is rare. It's mostly found in BBC archive material. VLC 3.0.24 doesn't play it safely either.
 
@@ -32,7 +32,7 @@ Windows refuses a one-channel stream in WASAPI shared mode (`0x88890008`, `AUDCL
 
 ### Discs start at the main title, and encrypted ones are refused first
 
-Discs, disc folders and disc images go to VLC's DVD and Blu-ray readers as `dvd:///` or `bluray:///` addresses (`src/Stx.Core/Playback/PlaybackTarget.cs`). Before that, STX checks the disc itself (`src/Stx.Core/Playback/DiscCheck.cs`):
+Discs, disc folders and disc images go to VLC's DVD and Blu-ray readers as `dvd:///` or `bluray:///` addresses (`src/Stx.Core/Playback/PlaybackTarget.cs`). One on a network share keeps the share's two leading slashes, `dvd://///nas/Films/My%20Film/`: the plain form reached VLC's DVD reader as `nas\Films\...`, a path on the current drive, so a disc on a share never opened. Checked on 2026-11-07 against LibVLC 3.0.24 with a disc folder reached as `\\localhost\C$\...`; the reader then read the folder's `VIDEO_TS.IFO`, as it does for the same folder on C: (`tests/Stx.Playback.Tests/LibVlcEngineTests.cs`, Category=Network). Before that, STX checks the disc itself (`src/Stx.Core/Playback/DiscCheck.cs`):
 
 - **DVD:** a sample of sectors spread through every VOB file (or through the image) is read. CSS sets the PES scrambling bits on every sector it scrambles; an unencrypted disc leaves them clear.
 - **Blu-ray:** an `AACS` or `BDSVM` folder, which every protected disc carries, or AACS's copy-permission bits at the start of an m2ts's aligned units. In an image, those names are looked for in its directory area.
@@ -44,7 +44,7 @@ The check runs inside the engine, so nothing reaches VLC's readers unchecked, wh
 
 ### Streams connect out only
 
-PLAY STREAM plays an address (`src/Stx.ViewModels/StreamOpener.cs`). Adaptive streams (`.m3u8`, `.mpd`) and direct media play as they are. A radio playlist (`.pls`, `.m3u`, `.xspf`) is read by STX, which plays its first stream and keeps the rest for NEXT. An address that doesn't say what it is gets its headers asked for, and nothing more. A web page is sent to ANALYZE. UDP, RTP and SAP would need STX to listen on a port, so they're refused (`src/Stx.Core/Playback/PlaybackTarget.cs`), and RTSP is told to stay on its one TCP connection (`:rtsp-tcp`).
+PLAY STREAM plays an address (`src/Stx.ViewModels/StreamOpener.cs`). Adaptive streams (`.m3u8`, `.mpd`) and direct media play as they are. A radio playlist (`.pls`, `.m3u`, `.xspf`) is read by STX, which plays its first stream and keeps the rest for NEXT. An address that doesn't say what it is gets its headers asked for, and nothing more. A web page is sent to ANALYZE. UDP, RTP and SAP would need STX to listen on a port, so they're refused (`src/Stx.Core/Playback/PlaybackTarget.cs`), and RTSP is told to stay on its one TCP connection (`:rtsp-tcp`). A stream that fails says which way: **THAT STREAM COULDN'T BE OPENED** if nothing played, **THE STREAM WAS CUT OFF** if it had been playing (`src/Stx.Playback/LibVlcEngine.cs:23`; added 2026-11-07, when it said "THIS FILE COULDN'T BE PLAYED", or nothing).
 
 ### BIT-PERFECT doesn't use VLC's audio output for music
 
@@ -61,6 +61,8 @@ So, with Rocky's choice:
 - **A film's PCM stays shared, by Rocky's choice (2026-11-05).** The spec's route sent it through VLC's audio callbacks into exclusive mode. VLC 3's callback output gives VLC no timing back (`amem.c` sets `aout->time_get = NULL`), so VLC's drift correction never runs for it (`src/audio_output/dec.c`, `aout_DecSynchronize`, which returns when timing is unknown). The picture would keep VLC's clock and the sound the device's, and the two would drift apart over a film; the only cures, dropping or repeating samples or resampling, would end bit-perfect anyway. The callbacks also take 16-bit only, so a 24-bit soundtrack couldn't go that way at all. (Read from VLC's 3.0.x branch, not the 3.0.24 tag.)
 
 **On hardware (reference PC, 2026-11-05).** The Device-category tests in `tests/Stx.Playback.Tests/BitPerfectEngineTests.cs` held its Realtek exclusively: 16/48 and 24/48 BIT-PERFECT, the device back with Windows after STOP, a track ending, seeking while held, and letting go just as a track ends. That Realtek takes 48 kHz only in exclusive mode (asked of it directly with NAudio, 44.1 to 192 kHz), so the 16/44.1 and 24/96 rows play shared there and say "THE DEVICE CAN'T TAKE … KHZ AS IT IS"; they need a DAC that takes those rates. Tests that open the device run one at a time (`tests/Stx.Playback.Tests/SoundDeviceCollection.cs`): a bit-perfect test holding it had pushed a shared one onto DirectSound. Still not proven: a loopback bit comparison, which needs a hardware loopback (an S/PDIF out wired to an in), because Windows' own loopback capture hears nothing from an exclusive stream.
+
+**On a second PC (2026-11-07):** a Core Ultra 7 258V's "Speakers (SoundWire Audio)", on Intel Smart Sound Technology, take 44.1 and 96 kHz exclusively, and all 13 Device tests pass there, the **16/44.1 and 24/96 BIT-PERFECT** rows included: the first time those rates reached a device bit-perfect. New the same day, each break-checked on that device: disposing the renderer twice, a decode that dies before the end (FAILED with a message, not ENDED), and a pump left in a stalled read, which before the fix wrote 173,760 frames beside the next run.
 
 ### ENHANCE changes only the picture on screen
 

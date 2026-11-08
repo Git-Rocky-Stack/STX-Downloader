@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased: the 2026-11-07 review, and the rest of the open findings
+
+**Not in a published release yet.** A whole-codebase review by four independent reviewers, each finding checked in the code before anything changed, and the four findings the 2026-11-05 handoff left unchecked. Every fix below has a test that failed without it (each break-checked by undoing the fix and running the test), unless it says otherwise. Run on a second PC (Core Ultra 7 258V, Arc 140V, Intel Smart Sound speakers); the report is `docs/superpowers/reports/2026-11-07-review-report.md`.
+
+### The Library
+
+- **A file could be listed twice.** The first scan and the folder watcher each decided from their own reading of the index and both added a new file; an overflow rescan and the watcher's own timer could do the same. Now one row per file is the catalog's rule, in any case of the path (`src/Stx.Data/MediaRepo.cs:235`), the scan and the watcher take turns (`src/Stx.Core/Library/CollectionWatcher.cs:28`), and a migration merges the duplicates already made, moving any shrink copy or job to the row that stays and never removing a download (`src/Stx.Data/Migrations.cs:70`).
+- **A busy database could close the app.** The watcher's timer caught only three kinds of error, not SQLite's; the changes are now kept and tried again (`CollectionWatcher.cs:257`).
+- **One failed scan stopped every later one**, a removed folder's scan carried on adding rows, a folder missing at launch was never watched, and renaming onto a listed file left two rows (`CollectionWatcher.cs:98`, `:134`, `:307`).
+- **Opening a file from Explorer froze the window** on a big Library or a sleeping NAS: the disk and database work, and a full rebuild of the Library, ran on the UI thread (`src/Stx.ViewModels/OpenedFiles.cs:14`).
+
+### The player
+
+- **A stream that fails says why:** never reached, or cut off (`src/Stx.Playback/LibVlcEngine.cs:23`). It used to say "THIS FILE COULDN'T BE PLAYED", or nothing.
+- **STOP during an open, a throw while opening, and `file:` addresses.** A file still being read started after STOP; a throw left the plate on OPENING; a `file:` address was handed to LibVLC unconverted (`LibVlcEngine.cs:333`, `:288`, `:250`).
+- **The Dirac guard no longer fails open.** When LibVLC couldn't finish reading a file's tracks, the file was taken as safe and could reach the decoder that crashes the process; STX now reads Dirac's signature from the file itself (`LibVlcEngine.cs:304`, `src/Stx.Core/Playback/DiracSniff.cs:21`). Streams aren't sniffed; see the report.
+- **A disc on a network share opens.** `\\nas\Films\My Film` reached VLC's DVD reader as `nas\Films\...`; checked against LibVLC 3.0.24 with a disc folder on `\\localhost\C$`, the new address reaches the reader as the share (`src/Stx.Core/Playback/PlaybackTarget.cs:55`). Blu-ray's address is made the same way but wasn't run; no real disc was played.
+- **BIT-PERFECT:** disposing the renderer twice no longer throws, a failed open no longer leaves the device's COM objects behind, a device that stops asking for sound is reported instead of freezing the time, a pump stuck reading a stalled share can no longer write beside the next one (it wrote 173,760 frames before the fix), and a late end can't stop a seek (`src/Stx.Playback/ExclusiveRenderer.cs:284`, `:116`, `:215`, `:245`). A file FFmpeg can't read to its end fails with a message instead of reading as ENDED (`src/Stx.Playback/MusicEngine.cs:91`). PLAY on a finished track whose device another app took plays shared instead of throwing; STOP during the probe and closing during an open are safe (`src/Stx.Playback/RoutingEngine.cs:161`, `:174`, `:198`).
+- **A failed measurement isn't "Measured"** (`src/Stx.Audio/AudioMeasurer.cs:39`), and one that finishes late no longer replaces the row you chose since (`src/Stx.App/Composition.cs:339`).
+
+### Downloads, Shrink and tools
+
+- **SHRINK twice queued the same encode twice**, and RESUME straight after PAUSE ran two tools on one part file (`src/Stx.Core/Queue/QueueEngine.cs:34`, `:168`).
+- **A long playlist no longer freezes ADD**: what's saved is read once, off the UI thread, not once per entry (640 file lookups became 20 in the test) (`src/Stx.ViewModels/SourceViewModel.cs:154`). ANALYZE gives up on a stalled site after 90 seconds (`:103`).
+- **The yt-dlp update can't leave no yt-dlp**: one `File.Replace` instead of two moves, and a rollback that can't happen yet changes nothing instead of failing the job it rescued (`src/Stx.Tools/ToolManager.cs:164`, `:184`). Tool downloads now refuse any redirect off GitHub's hosts or HTTPS (`:64`); proven live against GitHub. The encoder probe no longer keeps an empty answer from before FFmpeg arrived (`src/Stx.Tools/EncoderProbe.cs:19`). Credential files can't take an address that isn't a web link, and their cleanup can't replace a job's outcome (`src/Stx.Tools/CredentialFile.cs:49`, `:69`).
+
+### The app
+
+- **An error log**, `%LOCALAPPDATA%\STXDownloader\logs\errors.log`, scrubbed of tokens and kept under 1 MB (`src/Stx.Core/Logging/ErrorLog.cs:9`). There was nowhere for background failures to go, which is why so many were swallowed.
+- **Nothing that escapes is lost:** the UI thread, a crash and unobserved tasks are all logged; the tray icon goes with a crash (`src/Stx.App/App.xaml.cs:13`). A failure at startup no longer leaves a console that looks dead (`src/Stx.App/Composition.cs:144`).
+- **The tray icon comes back after Explorer restarts**, a hidden start shows the window if the icon couldn't be added, its icon handle isn't leaked, and its menu closes properly (`src/Stx.App/Platform/Tray.cs:38`).
+- **The browser and "Open with" listeners survive a bad message** (`src/Stx.Bridge/PipeServer.cs:32`, `src/Stx.Bridge/OpenRequests.cs:74`); the extension always answers the popup (`extension/worker.js:93`).
+- **Settings survive a power cut and a damaged file** is kept as `settings.json.damaged` (`src/Stx.Core/Settings/AppSettings.cs:88`, `:117`). A job row this version can't read is skipped, not fatal to the queue (`src/Stx.Data/JobRepo.cs:85`). A policy-locked registry no longer throws from DEFAULT PLAYER (`src/Stx.ViewModels/DefaultPlayerViewModel.cs:70`).
+
+### Build
+
+- Warnings are errors, solution-wide (`Directory.Build.props`), and package versions live in one place (`Directory.Packages.props`). CI's token is read-only and its actions are pinned to commits, kept current by Dependabot (`.github/workflows/build.yml`, `.github/dependabot.yml`).
+- `Measure-Budgets.ps1` can no longer strand your own Library in the temp folder, or delete it (`tools/Measure-Budgets.ps1:55`; proven with stand-in files). `Publish.ps1 -Version` now reaches the binaries, not only the file names (`tools/Publish.ps1:31`; not run here, which has no Inno Setup or signing).
+
 ## Unreleased: the whole collection, the default player, discs, streams, bit-perfect sound, ENHANCE and Shrink
 
 **Not in a published release yet.** Phases 2 to 7 of the player. The report, with what was and wasn't tested, is `docs/superpowers/reports/2026-11-05-player-phases-2-7-report.md`.
