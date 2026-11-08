@@ -130,6 +130,30 @@ public class LibVlcEngineTests
         Assert.Equal(0, engine.Decoded.Pictures);
     }
 
+    // Review 2026-11-07: a Dirac stream reached the decoder, since LibVLC's check reads local files only. Served from
+    // this PC, it's refused with the same message, and nothing is decoded.
+    [Fact]
+    public void A_dirac_stream_is_refused_without_a_crash()
+    {
+        using var server = new LocalHttp(Fixture.File("tiny-dirac.mkv"), "video/x-matroska");
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(server.Url);
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+        Assert.Equal(LibVlcEngine.DiracRefused, engine.Error);
+        Assert.Equal(0, engine.Decoded.Pictures);
+    }
+
+    // The check lets other streams through: the same server with an H.264 file plays it.
+    [Fact]
+    public void A_stream_that_isnt_dirac_plays()
+    {
+        using var server = new LocalHttp(Fixture.File("moving.mp4"), "video/mp4");
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(server.Url);
+        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > 10), $"state {engine.State}, {engine.Decoded.Pictures} pictures");
+        Assert.Null(engine.Error);
+    }
+
     // A window hidden in the tray stops decoding pictures; the sound carries on (Review Focus 5).
     [Fact]
     public void Hidden_video_stops_decoding_pictures_but_not_sound()

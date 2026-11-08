@@ -16,7 +16,10 @@ public readonly record struct Decoded(int Pictures, int AudioBlocks, int Shown =
 public sealed class LibVlcEngine : IPlaybackEngine
 {
     /// <summary>What the plate says for Dirac / VC-2, which crashes VLC 3.0.24's engine (the official desktop build too).</summary>
-    public const string DiracRefused = "DIRAC VIDEO CAN'T BE PLAYED SAFELY";
+    public const string DiracRefused = DiracSniff.Refused;
+
+    // Reads the start of an http(s) stream for Dirac before LibVLC is given it (DiracSniff.InStreamAsync).
+    static readonly HttpClient StreamCheck = new();
 
     /// <summary>What the plate says when a stream fails before a sound or picture arrived: the address answered with
     /// nothing STX can play, or didn't answer at all.</summary>
@@ -229,7 +232,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
     void Play(string path)
     {
         int generation = _generation;
-        _opening = Task.Run(() =>
+        _opening = Task.Run(async () =>
         {
             Media? media = null;
             try
@@ -255,6 +258,8 @@ public sealed class LibVlcEngine : IPlaybackEngine
                     _targetKind = target.Kind;
                 }
                 var (mono, dirac) = Inspect(media, target);
+                // LibVLC reads local files' tracks only, so a stream is checked from its first bytes (review 2026-11-07).
+                if (!dirac && target.Kind == TargetKind.Stream) dirac = await DiracSniff.InStreamAsync(StreamCheck, target.Location).ConfigureAwait(false);
                 if (dirac)
                 {
                     media.Dispose();
