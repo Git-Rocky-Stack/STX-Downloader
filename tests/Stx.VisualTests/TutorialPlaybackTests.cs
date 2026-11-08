@@ -41,9 +41,10 @@ public class TutorialPlaybackTests
     {
         using var x = new Bitmap(a);
         using var y = new Bitmap(b);
+        var area = CaptureArea.In(Picture, x);
         int changed = 0, total = 0;
-        for (int row = Picture.Top; row < Picture.Bottom; row += 2)
-        for (int col = Picture.Left; col < Picture.Right; col += 2)
+        for (int row = area.Top; row < area.Bottom; row += 2)
+        for (int col = area.Left; col < area.Right; col += 2)
         {
             Color p = x.GetPixel(col, row), q = y.GetPixel(col, row);
             if (Math.Abs(p.R - q.R) > 12 || Math.Abs(p.G - q.G) > 12 || Math.Abs(p.B - q.B) > 12) changed++;
@@ -56,9 +57,10 @@ public class TutorialPlaybackTests
     static double Lit(string file)
     {
         using var image = new Bitmap(file);
+        var area = CaptureArea.In(Picture, image);
         int lit = 0, total = 0;
-        for (int row = Picture.Top; row < Picture.Bottom; row += 2)
-        for (int col = Picture.Left; col < Picture.Right; col += 2)
+        for (int row = area.Top; row < area.Bottom; row += 2)
+        for (int col = area.Left; col < area.Right; col += 2)
         {
             Color p = image.GetPixel(col, row);
             if (p.R + p.G + p.B > 3 * 60) lit++;

@@ -14,8 +14,9 @@ namespace Stx.App.Gallery;
 /// --gallery=player plays tests/fixtures/playback/moving.mp4, player-audio plays tiny-audio.flac, player-full starts
 /// in full screen. --hold pauses on the first picture so a capture is the same every time.
 /// Env: STX_PLAYER_FILE plays another file; STX_PLAYER_PERF = eco|balanced|max|software (hardware decoding off);
-/// STX_PLAYER_LOG writes a line twice a
-/// second (state, time, swap chains, decoder, pictures shown and lost, sound path, LibVLC errors).
+/// STX_PLAYER_THREADS sets the decoder threads; STX_PLAYER_ENHANCE = sharpen|upscale turns ENHANCE on; STX_PLAYER_LOG writes a line twice a second (state, time,
+/// swap chains, decoder, pictures shown and lost, sound path, what ENHANCE VLC's log confirms, whether this GPU has
+/// super resolution, LibVLC errors).
 /// </summary>
 internal static class PlayerGallery
 {
@@ -31,7 +32,17 @@ internal static class PlayerGallery
             "software" => new PerformanceProfile(false, 2, EnhanceLevel.Off),
             _ => PerformanceProfile.For(PlaybackPerformance.Balanced, hardware),
         };
+        // STX_PLAYER_THREADS sets the decoder's thread count outright, for measuring it.
+        if (int.TryParse(Environment.GetEnvironmentVariable("STX_PLAYER_THREADS"), out int threads)) profile = profile with { DecoderThreads = threads };
         var engine = new LibVlcEngine(profile);
+        // Set before the swap chain arrives, so the first LibVLC already has it, as the app does.
+        engine.Enhance = Environment.GetEnvironmentVariable("STX_PLAYER_ENHANCE") switch
+        {
+            "sharpen" => EnhanceLevel.Sharpen,
+            "upscale" => EnhanceLevel.Upscale,
+            _ => EnhanceLevel.Off,
+        };
+        bool superResolution = Enhance.SuperResolution(HardwareProbe.Gpu());
         var queue = window.DispatcherQueue;
         var player = new PlayerViewModel(engine, run => queue.TryEnqueue(() => run()));
         // About the width of the rack's right column.
@@ -73,12 +84,20 @@ internal static class PlayerGallery
             var started = DateTime.Now;
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             timer.Tick += (_, _) => File.AppendAllText(log, string.Create(CultureInfo.InvariantCulture,
-                $"t={(DateTime.Now - started).TotalSeconds:F1} state={engine.State} time={engine.Position.TotalMilliseconds:F0} full={player.IsFullScreen} swapchains={panel.Surface.Initializations} decoder={engine.Decoded.Pictures}/{engine.Decoder} shown={engine.Decoded.Shown} lost={engine.Decoded.Lost} sound={engine.AudioStream} errors={engine.LoggedErrors.Count} {string.Join(" | ", engine.LoggedErrors.TakeLast(2))}{Environment.NewLine}"));
+                $"t={(DateTime.Now - started).TotalSeconds:F1} state={engine.State} time={engine.Position.TotalMilliseconds:F0} full={player.IsFullScreen} swapchains={panel.Surface.Initializations} decoder={engine.Decoded.Pictures}/{engine.Decoder} shown={engine.Decoded.Shown} lost={engine.Decoded.Lost} sound={engine.AudioStream} enhance={engine.EnhanceSeen?.ToString() ?? "none"} gpusuper={superResolution} window={Rect(window.AppWindow.Position.X, window.AppWindow.Position.Y, window.AppWindow.Size.Width, window.AppWindow.Size.Height)} display={Display(window)} errors={engine.LoggedErrors.Count} {string.Join(" | ", engine.LoggedErrors.TakeLast(2))}{Environment.NewLine}"));
             timer.Start();
         }
 
         var scroller = new ScrollViewer { Content = panel };
         return scroller;
+    }
+
+    static string Rect(int x, int y, int width, int height) => string.Create(CultureInfo.InvariantCulture, $"{width}x{height}@{x},{y}");
+
+    static string Display(Window window)
+    {
+        var bounds = DisplayArea.GetFromWindowId(window.AppWindow.Id, DisplayAreaFallback.Nearest).OuterBounds;
+        return Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height);
     }
 
     static string Fixture(string name)

@@ -26,7 +26,7 @@ public sealed partial class MainWindow : Window
     {
         Title = "STX Downloader";
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "stx.ico"));
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1360, 920));
+        Platform.WindowSize.Set(AppWindow, 1360, 920);
         TitleStrip.Paint(AppWindow);
         _app = new Composition(DispatcherQueue);
         StartsHidden = startHidden && _app.Settings.Current.TrayMode;
