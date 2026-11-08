@@ -66,6 +66,20 @@ jobs:
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: 10.0.x
+      # Core's bit-perfect decode tests run FFmpeg: the same release STX downloads on Windows, in its Linux build,
+      # checked against its publisher's sha256.
+      - name: Install FFmpeg
+        shell: bash
+        run: |
+          base=https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest
+          archive=ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "$base/$archive"
+          curl -fsSL -o "$RUNNER_TEMP/ffmpeg.sha256" "$base/checksums.sha256"
+          want=$(grep " $archive\$" "$RUNNER_TEMP/ffmpeg.sha256" | cut -d' ' -f1)
+          got=$(sha256sum "$RUNNER_TEMP/$archive" | cut -d' ' -f1)
+          [ -n "$want" ] && [ "$got" = "$want" ] || { echo "FFmpeg's sha256 is $got; its publisher says $want"; exit 1; }
+          tar -xJf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          dirname "$(find "$RUNNER_TEMP" -name ffmpeg -type f -path '*/bin/*' | head -1)" >> "$GITHUB_PATH"
       - name: Test
         shell: bash
         run: |
