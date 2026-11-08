@@ -22,7 +22,13 @@ sealed class MemoryCollection : ICollectionCatalog
         lock (_gate)
         {
             AddCalls++;
-            foreach (var f in files) { long id = _next++; _files.Add(new IndexedFile(id, id, f.Path, f.Size, f.Modified, origin)); }
+            // As the real catalog does: one row per path, whatever its case.
+            foreach (var f in files)
+            {
+                if (_files.Any(k => string.Equals(k.Path, f.Path, StringComparison.OrdinalIgnoreCase))) continue;
+                long id = _next++;
+                _files.Add(new IndexedFile(id, id, f.Path, f.Size, f.Modified, origin));
+            }
         }
     }
 
@@ -41,6 +47,11 @@ sealed class MemoryCollection : ICollectionCatalog
     public int ForgetWatchedUnder(string folder)
     {
         lock (_gate) return _files.RemoveAll(f => f.Origin == MediaOrigin.Watched && FolderScan.IsUnder(f.Path, folder));
+    }
+
+    public void ForgetFile(long fileId)
+    {
+        lock (_gate) _files.RemoveAll(f => f.FileId == fileId && f.Origin != MediaOrigin.Downloaded);
     }
 }
 

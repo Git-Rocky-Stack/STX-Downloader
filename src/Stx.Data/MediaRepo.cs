@@ -232,12 +232,21 @@ public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog, ILib
             using var file = connection.CreateCommand();
             file.Transaction = transaction;
             file.CommandText = "INSERT INTO media_files (media_id, path, hash, format, size, modified) VALUES ($media, $path, NULL, 'Original', $size, $modified);";
+            // One row per file. The scan and the watcher can both find a file that's new to them (review 2026-11-07),
+            // so whatever already has a row for the path, in any case, keeps it, and the file isn't added again. The
+            // lookup sees rows this same transaction added, so a batch that names a file twice adds it once.
+            using var known = connection.CreateCommand();
+            known.Transaction = transaction;
+            known.CommandText = "SELECT 1 FROM media_files WHERE path = $path COLLATE NOCASE LIMIT 1;";
+            var knownPath = known.Parameters.Add("$path", SqliteType.Text);
             var media = file.Parameters.Add("$media", SqliteType.Integer);
             var path = file.Parameters.Add("$path", SqliteType.Text);
             var size = file.Parameters.Add("$size", SqliteType.Integer);
             var modified = file.Parameters.Add("$modified", SqliteType.Text);
             foreach (var found in files)
             {
+                knownPath.Value = found.Path;
+                if (known.ExecuteScalar() is not null) continue;
                 title.Value = Path.GetFileNameWithoutExtension(found.Path);
                 media.Value = Convert.ToInt64(item.ExecuteScalar());
                 path.Value = found.Path;
@@ -295,6 +304,25 @@ public sealed class MediaRepo(SqliteConnection connection) : IMediaCatalog, ILib
             }
             transaction.Commit();
             return doomed.Count;
+        }
+    }
+
+    public void ForgetFile(long fileId)
+    {
+        lock (connection)
+        {
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.Parameters.AddWithValue("$id", fileId);
+            command.CommandText = "SELECT f.media_id FROM media_files f JOIN media_items i ON i.id = f.media_id WHERE f.id = $id AND i.origin <> 'downloaded';";
+            if (command.ExecuteScalar() is not long media) return;
+            command.Parameters.AddWithValue("$media", media);
+            command.CommandText =
+                "DELETE FROM media_files WHERE id = $id;" +
+                "DELETE FROM media_items WHERE id = $media AND NOT EXISTS (SELECT 1 FROM media_files WHERE media_id = $media);";
+            command.ExecuteNonQuery();
+            transaction.Commit();
         }
     }
 

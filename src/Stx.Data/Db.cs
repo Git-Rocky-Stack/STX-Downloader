@@ -12,10 +12,19 @@ public static class Db
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString());
-        connection.Open();
-        Execute(connection, "PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
-        Migrations.Apply(connection);
-        return connection;
+        try
+        {
+            connection.Open();
+            Execute(connection, "PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
+            Migrations.Apply(connection);
+            return connection;
+        }
+        catch
+        {
+            // A step that fails is rolled back by its transaction; the file isn't left open behind it.
+            connection.Dispose();
+            throw;
+        }
     }
 
     public static int Version(SqliteConnection connection)

@@ -29,6 +29,8 @@ sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
     {
         foreach (var file in files)
         {
+            // As the real catalog does: one row per path, whatever its case.
+            if (Files.Any(f => string.Equals(f.Path, file.Path, StringComparison.OrdinalIgnoreCase))) continue;
             long id = AddItem(null, null, Path.GetFileNameWithoutExtension(file.Path));
             _origins[id] = origin;
             AddFile(id, file.Path, null, SourceViewModel.OriginalFormat);
@@ -38,6 +40,7 @@ sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
     public void MoveFile(long fileId, string newPath) => throw new NotSupportedException();
     public void UpdateFacts(long fileId, long size, DateTimeOffset modified) => throw new NotSupportedException();
     public int ForgetWatchedUnder(string folder) => throw new NotSupportedException();
+    public void ForgetFile(long fileId) => throw new NotSupportedException();
 }
 
 public class OpenedFilesTests

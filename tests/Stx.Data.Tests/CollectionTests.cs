@@ -143,4 +143,86 @@ public sealed class CollectionTests : IDisposable
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(20), $"Took {clock.Elapsed}.");
         Assert.Equal(20_000, repo.Library().Count);
     }
+
+    // Review 2026-11-07: the first scan and the watcher could each find a file new to them and both add it.
+    [Fact]
+    public void A_file_already_indexed_isnt_added_again_whatever_its_case()
+    {
+        using var db = Db.Open(DbPath);
+        var repo = new MediaRepo(db);
+        repo.AddLocal([new FoundFile(P("Music", "Song.flac"), 10, When)], MediaOrigin.Watched);
+        repo.AddLocal([new FoundFile(P("music", "SONG.FLAC"), 10, When), new FoundFile(P("Music", "Other.flac"), 10, When)], MediaOrigin.Watched);
+        repo.AddLocal([new FoundFile(P("Music", "Song.flac"), 10, When)], MediaOrigin.Opened);
+        Assert.Equal(2, repo.IndexedFiles().Count);
+    }
+
+    [Fact]
+    public void A_batch_that_names_a_file_twice_adds_it_once()
+    {
+        using var db = Db.Open(DbPath);
+        var repo = new MediaRepo(db);
+        repo.AddLocal([new FoundFile(P("Music", "Song.flac"), 10, When), new FoundFile(P("Music", "song.flac"), 10, When)], MediaOrigin.Watched);
+        Assert.Single(repo.IndexedFiles());
+    }
+
+    // The duplicates already made are merged by step 4: the later row goes, what hung off it moves to the first.
+    [Fact]
+    public void Duplicate_rows_left_by_the_race_are_merged_and_nothing_else_is_lost()
+    {
+        using (var db = Db.Open(DbPath))
+        {
+            Exec(db,
+                // A watched file indexed twice; a shrink copy and a job hang off the second row.
+                "INSERT INTO media_items (id, title, origin) VALUES (10, 'Song', 'watched'), (11, 'Song', 'watched');" +
+                "INSERT INTO media_files (id, media_id, path, format) VALUES (100, 10, 'D:\\Music\\Song.flac', 'Original'), (101, 11, 'd:\\music\\SONG.flac', 'Original'), (102, 11, 'D:\\Music\\Song.opus', 'Shrink Opus');" +
+                "INSERT INTO jobs (media_id, kind, state, preset, created_at) VALUES (11, 'Convert', 'Queued', 'x', '2026-11-07');" +
+                // A download and a watched row for the same path: the download is never the one removed.
+                "INSERT INTO media_items (id, page_url, source_id, title, origin) VALUES (20, 'https://example.com/v', 'v', 'Saved', 'downloaded');" +
+                "INSERT INTO media_items (id, title, origin) VALUES (21, 'Saved', 'watched');" +
+                "INSERT INTO media_files (id, media_id, path, format) VALUES (200, 20, 'D:\\Saved.mp4', 'Original'), (201, 21, 'D:\\Saved.mp4', 'Original');" +
+                // A file that isn't duplicated stays as it is.
+                "INSERT INTO media_items (id, title, origin) VALUES (30, 'Alone', 'watched');" +
+                "INSERT INTO media_files (id, media_id, path, format) VALUES (300, 30, 'D:\\Alone.flac', 'Original');" +
+                "PRAGMA user_version = 3;");
+        }
+        SqliteConnection.ClearAllPools();
+
+        using var again = Db.Open(DbPath);
+        Assert.Equal(Migrations.Latest, Db.Version(again));
+        Assert.Equal(["100:10", "102:10", "200:20", "300:30"], Rows(again, "SELECT id || ':' || media_id FROM media_files ORDER BY id;"));
+        Assert.Equal(["10", "20", "30"], Rows(again, "SELECT id FROM media_items ORDER BY id;"));
+        Assert.Equal(["10"], Rows(again, "SELECT media_id FROM jobs;"));
+    }
+
+    // Review 2026-11-07: one job row this version can't read (a state a newer STX wrote) made every read of the queue throw.
+    [Fact]
+    public void A_job_this_version_cant_read_is_left_out_and_the_rest_still_load()
+    {
+        using var db = Db.Open(DbPath);
+        var jobs = new JobRepo(db);
+        var good = jobs.Add(new Job(0, 1, JobKind.Link, Stx.Core.Jobs.JobState.Queued, 0, null, "original", When));
+        Exec(db, "INSERT INTO jobs (media_id, kind, state, preset, created_at) VALUES (2, 'Link', 'Teleporting', 'original', '2026-11-07T00:00:00Z');" +
+                 "INSERT INTO jobs (media_id, kind, state, error_kind, preset, created_at) VALUES (3, 'Link', 'Failed', 'SolarFlare', 'original', '2026-11-07T00:00:00Z');");
+        var all = jobs.All();
+        Assert.Equal(2, all.Count);
+        Assert.Contains(all, j => j.Id == good.Id);
+        Assert.Equal(Stx.Core.Errors.ErrorKind.ToolFailure, all.Single(j => j.MediaId == 3).Error);
+    }
+
+    static void Exec(SqliteConnection db, string sql)
+    {
+        using var command = db.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
+    }
+
+    static List<string> Rows(SqliteConnection db, string sql)
+    {
+        using var command = db.CreateCommand();
+        command.CommandText = sql;
+        using var reader = command.ExecuteReader();
+        var rows = new List<string>();
+        while (reader.Read()) rows.Add(Convert.ToString(reader.GetValue(0), System.Globalization.CultureInfo.InvariantCulture)!);
+        return rows;
+    }
 }
