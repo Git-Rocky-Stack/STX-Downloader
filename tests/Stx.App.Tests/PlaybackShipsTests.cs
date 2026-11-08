@@ -19,7 +19,7 @@ public class PlaybackShipsTests
     public void A_release_cannot_leave_the_engine_or_the_soundfont_out()
     {
         string publish = File.ReadAllText(Path.Combine(Root(), "tools", "Publish.ps1"));
-        foreach (string needed in new[] { @"libvlc\win-x64\libvlc.dll", @"libvlc\win-x64\libvlccore.dll", @"libvlc\win-x64\plugins\plugins.dat", @"libvlc\soundfonts\FluidR3_GM.sf2", @"libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt" })
+        foreach (string needed in new[] { @"libvlc\win-x64\libvlc.dll", @"libvlc\win-x64\libvlccore.dll", @"libvlc\win-x64\plugins\plugins.dat", @"libvlc\soundfonts\FluidR3_GM.sf3", @"libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt" })
             Assert.Contains($"'{needed}'", publish);
     }
 
@@ -29,7 +29,7 @@ public class PlaybackShipsTests
         Assert.True(File.Exists(Built("STXDownloader.exe")), "Build the Release app first.");
         Assert.True(File.Exists(Built("libvlc", "win-x64", "libvlc.dll")));
         Assert.True(Directory.EnumerateFiles(Built("libvlc", "win-x64", "plugins"), "*.dll", SearchOption.AllDirectories).Count() > 250);
-        Assert.True(File.Exists(Built("libvlc", "soundfonts", "FluidR3_GM.sf2")));
+        Assert.True(File.Exists(Built("libvlc", "soundfonts", "FluidR3_GM.sf3")));
     }
 
     // Spike S1, finding F3: only the x64 engine ships, and nothing that runs site scripts. Phase 4 (Rocky): the DVD

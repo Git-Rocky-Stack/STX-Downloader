@@ -50,10 +50,12 @@ foreach ($doc in 'THIRD_PARTY.md', 'PERFORMANCE.md', 'REAL-SITE-CHECKS.md') { Co
 Get-ChildItem -LiteralPath $stage -Filter *.pdb -Recurse | Remove-Item -Confirm:$false
 
 foreach ($needed in 'STXDownloader.exe', 'STXDownloader.pri', 'App.xbf', 'Themes\Generic.xbf', 'STXNativeHost.exe', 'Assets\badge.png', 'Assets\stx.ico', 'Assets\tutorial.mp4', 'Assets\tutorial-poster.png',
-    'libvlc\win-x64\libvlc.dll', 'libvlc\win-x64\libvlccore.dll', 'libvlc\win-x64\plugins\plugins.dat', 'libvlc\soundfonts\FluidR3_GM.sf2', 'libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt',
+    'libvlc\win-x64\libvlc.dll', 'libvlc\win-x64\libvlccore.dll', 'libvlc\win-x64\plugins\plugins.dat', 'libvlc\soundfonts\FluidR3_GM.sf3', 'libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt',
     'extension\manifest.json', 'extension\icons\icon-128.png', 'tools\Register-NativeHost.ps1') {
     if (-not (Test-Path -LiteralPath (Join-Path $stage $needed))) { throw "Missing from the release: $needed" }
 }
+# The SoundFont ships as SF3 (2026-11-07); the 148 MB SF2 it's made from must never ride along.
+if (Get-ChildItem -LiteralPath $stage -Filter *.sf2 -Recurse) { throw 'An .sf2 is in the release; STX ships FluidR3_GM.sf3' }
 
 if ($Sign) {
     # Only what this project built. Microsoft's own files already carry Microsoft's signature.

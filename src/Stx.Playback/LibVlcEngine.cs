@@ -28,8 +28,8 @@ public sealed class LibVlcEngine : IPlaybackEngine
     /// <summary>What the plate says when a stream that was playing fails: the connection or the station went away.</summary>
     public const string StreamCutOff = "THE STREAM WAS CUT OFF. CHECK YOUR CONNECTION, THEN PLAY IT AGAIN.";
 
-    /// <summary>The General MIDI SoundFont shipped beside the engine (tools/vlc/engine.json).</summary>
-    public static string ShippedSoundFont => Path.Combine(AppContext.BaseDirectory, "libvlc", "soundfonts", "FluidR3_GM.sf2");
+    /// <summary>The General MIDI SoundFont shipped beside the engine: FluidR3_GM as SoundFont 3 (tools/vlc/engine.json).</summary>
+    public static string ShippedSoundFont => Path.Combine(AppContext.BaseDirectory, "libvlc", "soundfonts", "FluidR3_GM.sf3");
 
     static readonly Lazy<bool> NativeReady = new(() => { LibVLCSharp.Shared.Core.Initialize(); return true; });
 

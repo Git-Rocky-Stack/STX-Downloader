@@ -44,10 +44,19 @@ public class EngineFilesTests
         Assert.Empty(Directory.EnumerateFiles(Engine("win-x64"), "*bdplus*", SearchOption.AllDirectories));
     }
 
+    // FluidR3_GM ships as SoundFont 3 (2026-11-07): its samples in Ogg Vorbis, 148 MB down to 27 MB.
     [Fact]
     public void The_soundfont_ships_with_its_license()
     {
-        Assert.True(new FileInfo(Engine("soundfonts", "FluidR3_GM.sf2")).Length > 100_000_000);
+        long size = new FileInfo(Engine("soundfonts", "FluidR3_GM.sf3")).Length;
+        Assert.InRange(size, 20_000_000, 40_000_000);
+        // The engine as fetched (.engine/<version>), not this folder, which can keep an older build's SF2.
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "STXDownloader.sln"))) dir = dir.Parent;
+        string version = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir!.FullName, "tools", "vlc", "engine.json"))).RootElement.GetProperty("version").GetString()!;
+        string fetched = Path.Combine(dir.FullName, ".engine", version, "libvlc", "soundfonts");
+        Assert.True(File.Exists(Path.Combine(fetched, "FluidR3_GM.sf3")), fetched);
+        Assert.Empty(Directory.EnumerateFiles(fetched, "*.sf2"));
         Assert.Contains("MIT license", File.ReadAllText(Engine("soundfonts", "FluidR3_GM-COPYRIGHT.txt")));
     }
 }

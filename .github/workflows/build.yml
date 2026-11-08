@@ -20,11 +20,12 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24
-      # The VLC engine and SoundFont the player ships (tools/vlc/engine.json), downloaded once and reused.
+      # The VLC engine and SoundFont the player ships (tools/vlc/engine.json), downloaded, and the SoundFont converted to
+      # SF3 with the FFmpeg build engine.json pins, once, then reused.
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: .engine
-          key: engine-${{ hashFiles('tools/vlc/engine.json', 'tools/vlc/Get-Engine.ps1') }}
+          key: engine-${{ hashFiles('tools/vlc/engine.json', 'tools/vlc/Get-Engine.ps1', 'tools/vlc/Make-Sf3.cs') }}
       # The FFmpeg tests (bit-perfect decoding, Phase 5; shrink copies, Phase 7) run the build STX itself downloads
       # (src/Stx.Tools/FfmpegSource.cs), checked against its publisher's sha256, so they prove that build has the encoders.
       - name: Install FFmpeg (the build STX downloads)
