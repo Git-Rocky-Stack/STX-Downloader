@@ -34,9 +34,9 @@ jobs:
           $base = 'https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest'
           $zip = 'ffmpeg-n9.0-latest-win64-gpl-9.0.zip'
           $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg'
-          Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip)
+          Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip) -MaximumRetryCount 6 -RetryIntervalSec 20
           # GitHub serves the checksum list as binary, so it's saved and read as lines rather than taken from .Content.
-          Invoke-WebRequest "$base/checksums.sha256" -OutFile (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256')
+          Invoke-WebRequest "$base/checksums.sha256" -OutFile (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256') -MaximumRetryCount 6 -RetryIntervalSec 20
           $want = (Get-Content (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256') | Where-Object { $_ -match [regex]::Escape($zip) } | Select-Object -First 1) -split '\s+' | Select-Object -First 1
           $got = (Get-FileHash (Join-Path $env:RUNNER_TEMP $zip) -Algorithm SHA256).Hash
           if (-not $want -or $got -ne $want) { throw "FFmpeg's sha256 is $got; its publisher says $want" }
@@ -73,8 +73,8 @@ jobs:
         run: |
           base=https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest
           archive=ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz
-          curl -fsSL -o "$RUNNER_TEMP/$archive" "$base/$archive"
-          curl -fsSL -o "$RUNNER_TEMP/ffmpeg.sha256" "$base/checksums.sha256"
+          curl -fsSL --retry 6 --retry-delay 20 --retry-all-errors -o "$RUNNER_TEMP/$archive" "$base/$archive"
+          curl -fsSL --retry 6 --retry-delay 20 --retry-all-errors -o "$RUNNER_TEMP/ffmpeg.sha256" "$base/checksums.sha256"
           want=$(grep " $archive\$" "$RUNNER_TEMP/ffmpeg.sha256" | cut -d' ' -f1)
           got=$(sha256sum "$RUNNER_TEMP/$archive" | cut -d' ' -f1)
           [ -n "$want" ] && [ "$got" = "$want" ] || { echo "FFmpeg's sha256 is $got; its publisher says $want"; exit 1; }

@@ -19,7 +19,8 @@ function Fetch($url, $sha) {
     $file = Join-Path $downloads (Split-Path $url -Leaf)
     if (-not (Test-Path $file) -or (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant() -ne $sha) {
         Write-Host "STX engine: downloading $url"
-        Invoke-WebRequest -Uri $url -OutFile $file -UserAgent 'STX-build/1.0'
+        # GitHub's release downloads answer 504 now and then (seen 2026-11-08); a failed request is tried again.
+        Invoke-WebRequest -Uri $url -OutFile $file -UserAgent 'STX-build/1.0' -MaximumRetryCount 6 -RetryIntervalSec 20
         $actual = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
         if ($actual -ne $sha) { Remove-Item $file; throw "$url has sha256 $actual; engine.json pins $sha. Nothing was kept." }
     }
