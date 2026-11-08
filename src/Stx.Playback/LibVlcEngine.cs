@@ -163,6 +163,9 @@ public sealed class LibVlcEngine : IPlaybackEngine
     /// <summary>Errors LibVLC logged since the last <see cref="Open"/>, newest last.</summary>
     public IReadOnlyList<string> LoggedErrors => [.. _errors];
 
+    /// <summary>Every line LibVLC logs, as module and message, for diagnosis (the player gallery's STX_PLAYER_VLCLOG). Raised on LibVLC's log thread.</summary>
+    public event Action<string, string>? Logged;
+
     public PlaybackState State => _state;
     public string? Error => _error;
     public TimeSpan Position => _player is { } p && p.Time > 0 ? TimeSpan.FromMilliseconds(p.Time) : TimeSpan.Zero;
@@ -426,6 +429,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
 
     void OnLog(object? sender, LogEventArgs e)
     {
+        Logged?.Invoke(e.Module ?? "", e.Message);
         if (e.Level == LogLevel.Error && !Harmless.Contains($"{e.Module}: {e.Message}"))
         {
             _errors.Enqueue($"{e.Module}: {e.Message}");

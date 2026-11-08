@@ -14,7 +14,7 @@ namespace Stx.App.Gallery;
 /// --gallery=player plays tests/fixtures/playback/moving.mp4, player-audio plays tiny-audio.flac, player-full starts
 /// in full screen. --hold pauses on the first picture so a capture is the same every time.
 /// Env: STX_PLAYER_FILE plays another file; STX_PLAYER_PERF = eco|balanced|max|software (hardware decoding off);
-/// STX_PLAYER_THREADS sets the decoder threads; STX_PLAYER_ENHANCE = sharpen|upscale turns ENHANCE on; STX_PLAYER_LOG writes a line twice a second (state, time,
+/// STX_PLAYER_VLCLOG writes every line VLC logs to a file; STX_PLAYER_THREADS sets the decoder threads; STX_PLAYER_ENHANCE = sharpen|upscale turns ENHANCE on; STX_PLAYER_LOG writes a line twice a second (state, time,
 /// swap chains, decoder, pictures shown and lost, sound path, what ENHANCE VLC's log confirms, whether this GPU has
 /// super resolution, LibVLC errors).
 /// </summary>
@@ -43,6 +43,11 @@ internal static class PlayerGallery
             _ => EnhanceLevel.Off,
         };
         bool superResolution = Enhance.SuperResolution(HardwareProbe.Gpu());
+        if (Environment.GetEnvironmentVariable("STX_PLAYER_VLCLOG") is { Length: > 0 } vlcLog)
+        {
+            var writing = new object();
+            engine.Logged += (module, message) => { lock (writing) File.AppendAllText(vlcLog, $"{module}: {message}{Environment.NewLine}"); };
+        }
         var queue = window.DispatcherQueue;
         var player = new PlayerViewModel(engine, run => queue.TryEnqueue(() => run()));
         // About the width of the rack's right column.
