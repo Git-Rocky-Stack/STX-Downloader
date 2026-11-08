@@ -1,5 +1,6 @@
 using System.IO.Pipes;
 using System.Text;
+using Stx.Core.Logging;
 
 namespace Stx.Bridge;
 
@@ -68,9 +69,16 @@ public sealed class OpenRequestServer : IDisposable
             {
                 // A broken or oversized message is dropped; the next launch still gets through.
             }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // Review 2026-11-07: anything else, from the pipe or from handing the path on, ended the listener, and
+                // every later "Open with" was lost until a restart. It's logged and the next one is listened for.
+                ErrorLog.Write("open requests", e);
+            }
             await pipe.DisposeAsync().ConfigureAwait(false);
-            if (_stop.IsCancellationRequested) break;
-            pipe = PipeServer.CreatePipe(_name);
+            if (_stop.IsCancellationRequested) return;
+            if (await PipeServer.RecreateAsync(_name, "open requests", _stop.Token).ConfigureAwait(false) is not { } next) return;
+            pipe = next;
         }
         await pipe.DisposeAsync().ConfigureAwait(false);
     }

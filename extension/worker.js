@@ -90,8 +90,15 @@ async function send({ items, page, withCookies }) {
   }
 }
 
+// Always answers. Review 2026-11-07: a send that threw before reaching the app (cookies it couldn't read, say) never
+// answered, and the popup waited on "Sending..." for good.
+const sendFailed = { ok: false, error: 'Internal', message: "STX Downloader couldn't send that. Try again; if it keeps happening, reload the page." };
+
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (message?.type !== 'send' || !mayCapture(sender, chrome.runtime.id, chrome.runtime.getURL(''))) return false;
-  send(message).then(reply);
+  send(message).then(reply, error => {
+    console.warn('STX send failed', error);
+    reply(sendFailed);
+  });
   return true;
 });

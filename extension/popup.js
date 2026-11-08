@@ -10,7 +10,13 @@ function page() {
 async function save(items, withCookies, button) {
   button.disabled = true;
   statusLine.textContent = 'Sending to STX Downloader…';
-  const reply = await chrome.runtime.sendMessage({ type: 'send', items, page: page(), withCookies });
+  let reply;
+  try {
+    reply = await chrome.runtime.sendMessage({ type: 'send', items, page: page(), withCookies });
+  } catch {
+    // The worker stopped mid-send (review 2026-11-07: the button stayed disabled for good). It comes back below.
+    reply = undefined;
+  }
   if (reply?.ok) {
     statusLine.textContent = sentMessage(reply);
   } else {

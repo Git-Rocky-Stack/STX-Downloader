@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using Stx.Core.Logging;
 
 namespace Stx.Bridge;
 
@@ -21,6 +22,28 @@ public sealed class PipeServer(string name, Func<string, string> handle, TimeSpa
         security.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().User!, PipeAccessRights.FullControl, AccessControlType.Allow));
         security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.NetworkSid, null), PipeAccessRights.FullControl, AccessControlType.Deny));
         return NamedPipeServerStreamAcl.Create(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
+    }
+
+    /// <summary>
+    /// A fresh pipe for the next client. Creating one can fail for a moment (a handle limit, a pipe a crashed copy left
+    /// behind); before the review of 2026-11-07 that ended the listener for the rest of the session. It's tried again,
+    /// waiting longer each time up to 30 seconds, until it works or the app closes, when this returns null.
+    /// </summary>
+    internal static async Task<NamedPipeServerStream?> RecreateAsync(string name, string where, CancellationToken stop)
+    {
+        var wait = TimeSpan.FromMilliseconds(250);
+        while (!stop.IsCancellationRequested)
+        {
+            try { return CreatePipe(name); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                ErrorLog.Write(where, e);
+                try { await Task.Delay(wait, stop).ConfigureAwait(false); }
+                catch (OperationCanceledException) { return null; }
+                wait = TimeSpan.FromTicks(Math.Min(wait.Ticks * 2, TimeSpan.FromSeconds(30).Ticks));
+            }
+        }
+        return null;
     }
 
     public void Start()
@@ -46,10 +69,16 @@ public sealed class PipeServer(string name, Func<string, string> handle, TimeSpa
                 {
                     // One bad or silent client can't stop the next one.
                 }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    // Nothing a client does may end the listener; what it was is kept for the log.
+                    ErrorLog.Write("browser bridge", e);
+                }
 
                 // A fresh instance each time, because a pipe left broken by a client can't always be reused.
                 if (_stop.IsCancellationRequested) break;
-                var next = NextPipe(pipe);
+                pipe.Dispose();
+                if (await RecreateAsync(name, "browser bridge", _stop.Token).ConfigureAwait(false) is not { } next) return;
                 pipe = next;
             }
         }
@@ -61,12 +90,6 @@ public sealed class PipeServer(string name, Func<string, string> handle, TimeSpa
         {
             pipe.Dispose();
         }
-    }
-
-    NamedPipeServerStream NextPipe(NamedPipeServerStream old)
-    {
-        old.Dispose();
-        return CreatePipe(name);
     }
 
     async Task ServeAsync(NamedPipeServerStream pipe)
