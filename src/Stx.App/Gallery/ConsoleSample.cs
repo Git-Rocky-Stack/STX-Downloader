@@ -125,9 +125,9 @@ internal static class ConsoleSample
             Task.FromResult(Stx.Tools.ToolHealth.Missing);
     }
 
-    sealed class SampleLibrary : ILibraryCatalog
+    sealed class SampleLibrary : InMemoryLibrary
     {
-        public IReadOnlyList<LibraryItem> Library() =>
+        protected override IReadOnlyList<LibraryItem> AllItems() =>
         [
             new(1, "Sample music video", "https://example.com/1", [new LibraryFile(1, @"D:\Media\Sample.mp4", "Original"), new LibraryFile(2, @"D:\Media\Sample.flac", "Flac")]),
             new(2, "Sample moved file", "https://example.com/2", [new LibraryFile(3, @"D:\moved\Webinar.mkv", "Original")]),

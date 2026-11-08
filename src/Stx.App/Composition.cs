@@ -35,6 +35,8 @@ public sealed class Composition : IDisposable
     readonly SemaphoreSlim _measuring = new(1, 1);
     readonly IdenticalFileCheck _identical;
     readonly CollectionWatcher _watcher;
+    // A scan or a job leaves garbage an idle app never collects; it's given back once the work has been quiet.
+    readonly Stx.Core.Memory.MemoryReturn _memory = new(TimeSpan.FromSeconds(10));
     readonly StreamOpener _streams;
     PipeServer? _bridge;
     LibraryRowViewModel? _selectedRow;
@@ -70,7 +72,8 @@ public sealed class Composition : IDisposable
         Queue = new QueueViewModel(Engine, catalog, shell, OnUi);
         SourceTruth = new SourceTruthViewModel(() => LookState.ReduceMotion);
         Source = new SourceViewModel(new YtDlpLinkAnalyzer(process, () => Tools.YtDlpPath, () => Tools.Paths), catalog, Engine, () => SourceTruth.SelectedOutput);
-        Library = new LibraryViewModel(catalog, Engine, shell, File.Exists, Play);
+        // The Library holds only the rows read so far; its list asks for more as it scrolls (IncrementalRows).
+        Library = new LibraryViewModel(catalog, Engine, shell, File.Exists, Play, rows: new Panels.IncrementalRows());
         // BIT-PERFECT's film route is fixed when LibVLC starts; its music route follows the setting from the next file.
         PlayerEngine = new LibVlcEngine(PerformanceProfile.For(Settings.Current.Performance, HardwareProbe.Detect())) { Passthrough = Settings.Current.BitPerfect };
         Player = new PlayerViewModel(new RoutingEngine(PlayerEngine, () => Settings.Current.BitPerfect, () => Tools.Paths.Ffmpeg, () => Tools.FfprobePath), OnUi);
@@ -86,7 +89,11 @@ public sealed class Composition : IDisposable
         _watcher = new CollectionWatcher(catalog, path => FolderScan.IsUnder(path, Settings.Current.OutputFolder)
             || Path.GetFileName(path).StartsWith(FfmpegRunner.PartialPrefix, StringComparison.Ordinal));
         _watcher.Changed += (_, _) => OnUi(() => _ = ErrorLog.Observe(Library.RefreshAsync(), "library"));
-        _watcher.Progress += (_, progress) => OnUi(() => Library.ShowScan(progress));
+        _watcher.Progress += (_, progress) =>
+        {
+            OnUi(() => Library.ShowScan(progress));
+            if (progress.Done) _memory.WorkEnded();
+        };
 
         DefaultPlayer = new DefaultPlayerViewModel(new UserRegistry(), link => Process.Start(new ProcessStartInfo(link) { UseShellExecute = true }),
             Settings, Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "STXDownloader.exe"), Environment.OSVersion.Version.Build, UserRegistry.AssociationsChanged);
@@ -114,7 +121,11 @@ public sealed class Composition : IDisposable
         _retryTimer = ui.CreateTimer();
         _retryTimer.Interval = TimeSpan.FromSeconds(1);
         _retryTimer.Tick += (_, _) => { Engine.Tick(); UpdateRetryTimer(); };
-        Engine.JobChanged += (_, _) => OnUi(UpdateRetryTimer);
+        Engine.JobChanged += (_, job) =>
+        {
+            OnUi(UpdateRetryTimer);
+            if (job.State is Stx.Core.Jobs.JobState.Completed or Stx.Core.Jobs.JobState.Failed or Stx.Core.Jobs.JobState.Canceled) _memory.WorkEnded();
+        };
         // A pending retry is real work, so it carries on while the window is hidden. A timer already running is left be.
         Activity.Register(() => Queue.HasWaitingJobs, () => { if (!_retryTimer.IsRunning) _retryTimer.Start(); }, () => _retryTimer.Stop(), keepRunningWhenHidden: true);
     }
@@ -232,12 +243,11 @@ public sealed class Composition : IDisposable
         }
     }
 
-    /// <summary>Plays a Library row on the PLAYER plate. PREV and NEXT walk the Library in its order.</summary>
+    /// <summary>Plays a Library row on the PLAYER plate. PREV and NEXT walk the Library in its order, as its search narrows it, read from the database at each step.</summary>
     public void Play(LibraryRowViewModel row)
     {
         Select(row);
-        var list = Library.Rows.Where(r => r.CanOpen).Select(r => (r.Path, r.Title)).ToList();
-        Player.Play(row.Path, row.Title, list);
+        Player.Play(row.Path, row.Title, Library.PlayOrder());
     }
 
     /// <summary>
@@ -356,6 +366,7 @@ public sealed class Composition : IDisposable
     public void Dispose()
     {
         _closing.Cancel();
+        _memory.Dispose();
         _bridge?.Dispose();
         _watcher.Dispose();
         // Stops playback and lets the decoder go before anything else closes.

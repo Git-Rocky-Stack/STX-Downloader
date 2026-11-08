@@ -86,13 +86,62 @@ public static class Migrations
             AND NOT EXISTS (SELECT 1 FROM media_files f WHERE f.media_id = media_items.id);
         DROP TABLE stx_duplicates;
         """,
+        // Library rows out of memory (plan 2026-11-05): the Library is counted, paged and searched here, so the app
+        // holds only the rows on screen.
+        // - path_key and title_key are the path and title with every letter's case folded (stx_fold, CaseKey.Of in
+        //   .NET). SQLite's NOCASE folds A to Z only, so "CAFÉ" and "café" were two paths to it and one file to
+        //   Windows. A search word, folded the same way, is found with instr: exactly OrdinalIgnoreCase's rule, the
+        //   in-memory search's, at any length.
+        // - listed marks the one row shown for a path: the first saved (two links can lead to one file). Testing it
+        //   per row, with a lookup for an earlier row, cost 120 ms over 50,000 rows once the database outgrew
+        //   SQLite's page cache; a flag costs nothing to read. media_files_listed walks the listed rows in the
+        //   Library's order: the newest item first, then its files as saved.
+        // - The triggers keep all three through every write, foreign-key cascades included, so no writer can leave
+        //   them out. They call stx_fold, which Db.AddFunctions gives every connection STX opens.
+        // A Library made by hand in a test may lack the NOCASE index, hence IF EXISTS.
+        """
+        ALTER TABLE media_files ADD COLUMN path_key TEXT;
+        ALTER TABLE media_files ADD COLUMN listed INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE media_items ADD COLUMN title_key TEXT;
+        UPDATE media_files SET path_key = stx_fold(path);
+        UPDATE media_items SET title_key = stx_fold(title);
+        CREATE INDEX media_files_path_key ON media_files(path_key, id);
+        DROP INDEX IF EXISTS media_files_path;
+        UPDATE media_files SET listed = (id = (SELECT min(k.id) FROM media_files k WHERE k.path_key = media_files.path_key));
+        CREATE INDEX media_files_listed ON media_files(media_id DESC, id) WHERE listed = 1;
+        CREATE TRIGGER media_files_added AFTER INSERT ON media_files BEGIN
+            UPDATE media_files SET path_key = stx_fold(new.path) WHERE id = new.id;
+            UPDATE media_files SET listed = (id = (SELECT min(k.id) FROM media_files k WHERE k.path_key = media_files.path_key))
+                WHERE path_key = stx_fold(new.path);
+        END;
+        CREATE TRIGGER media_files_moved AFTER UPDATE OF path ON media_files BEGIN
+            UPDATE media_files SET path_key = stx_fold(new.path) WHERE id = new.id;
+            UPDATE media_files SET listed = (id = (SELECT min(k.id) FROM media_files k WHERE k.path_key = media_files.path_key))
+                WHERE path_key IN (old.path_key, stx_fold(new.path));
+        END;
+        CREATE TRIGGER media_files_gone AFTER DELETE ON media_files BEGIN
+            UPDATE media_files SET listed = (id = (SELECT min(k.id) FROM media_files k WHERE k.path_key = media_files.path_key))
+                WHERE path_key = old.path_key;
+        END;
+        CREATE TRIGGER media_items_added AFTER INSERT ON media_items BEGIN
+            UPDATE media_items SET title_key = stx_fold(new.title) WHERE id = new.id;
+        END;
+        CREATE TRIGGER media_items_retitled AFTER UPDATE OF title ON media_items BEGIN
+            UPDATE media_items SET title_key = stx_fold(new.title) WHERE id = new.id;
+        END;
+        """,
     ];
 
     public static int Latest => Steps.Length;
 
-    public static void Apply(SqliteConnection connection)
+    public static void Apply(SqliteConnection connection) => Apply(connection, Steps.Length);
+
+    /// <summary>Brings the schema up to step <paramref name="through"/> and no further: how a test makes the Library an older STX left.</summary>
+    public static void Apply(SqliteConnection connection, int through)
     {
-        for (int version = Db.Version(connection); version < Steps.Length; version++)
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(through, Steps.Length);
+        Db.AddFunctions(connection);
+        for (int version = Db.Version(connection); version < through; version++)
         {
             using var transaction = connection.BeginTransaction();
             using (var step = connection.CreateCommand())

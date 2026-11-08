@@ -6,7 +6,7 @@ using Xunit;
 namespace Stx.App.Tests;
 
 /// <summary>The catalog as the app has it: one store that both adds media and lists the library.</summary>
-sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
+sealed class SharedCatalog : InMemoryLibrary, IMediaCatalog, ICollectionCatalog
 {
     readonly MemoryCatalog _media = new();
     readonly Dictionary<long, MediaOrigin> _origins = new();
@@ -20,8 +20,9 @@ sealed class SharedCatalog : IMediaCatalog, ILibraryCatalog, ICollectionCatalog
     public void RememberCapture(string key, long mediaId) { }
     public long? RememberedCapture(string key) => null;
 
-    public IReadOnlyList<LibraryItem> Library() =>
-        [.. Items.Select(i => new LibraryItem(i.Id, i.Title, i.PageUrl, [.. Files.Select((f, n) => (f, n)).Where(x => x.f.Media == i.Id).Select(x => new LibraryFile(x.n + 1, x.f.Path, x.f.Format))], _origins.GetValueOrDefault(i.Id)))];
+    // Newest first, as the database lists them.
+    protected override IReadOnlyList<LibraryItem> AllItems() =>
+        [.. Items.AsEnumerable().Reverse().Select(i => new LibraryItem(i.Id, i.Title, i.PageUrl, [.. Files.Select((f, n) => (f, n)).Where(x => x.f.Media == i.Id).Select(x => new LibraryFile(x.n + 1, x.f.Path, x.f.Format))], _origins.GetValueOrDefault(i.Id)))];
 
     public IReadOnlyList<IndexedFile> IndexedFiles() => [.. Files.Select((f, n) => new IndexedFile(n + 1, f.Media, f.Path, null, null, _origins.GetValueOrDefault(f.Media)))];
 
@@ -104,7 +105,7 @@ public class OpenedFilesTests
     {
         var (opened, library) = Make();
         var first = await opened.AdoptAsync(@"D:\Films\Big Night.mkv");
-        library.Query = "something else";
+        await library.SearchAsync("something else");
         Assert.Empty(library.Rows);
         Assert.Equal(first.FileId, (await opened.AdoptAsync(@"D:\Films\Big Night.mkv")).FileId);
         Assert.Single(_catalog.Files);

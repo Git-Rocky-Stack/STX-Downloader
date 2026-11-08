@@ -27,6 +27,14 @@ public static class Db
         }
     }
 
+    /// <summary>
+    /// The .NET function the schema calls: stx_fold, which folds a path's or a title's case for its key, every letter
+    /// and not only A to Z as SQLite's own NOCASE does (<see cref="Stx.Core.Queue.CaseKey"/>). The Library's triggers
+    /// call it on every write, so every connection that writes the Library needs it. Adding it again replaces it.
+    /// </summary>
+    public static void AddFunctions(SqliteConnection connection) =>
+        connection.CreateFunction<string?, string?>("stx_fold", Stx.Core.Queue.CaseKey.Of, isDeterministic: true);
+
     public static int Version(SqliteConnection connection)
     {
         using var command = connection.CreateCommand();

@@ -28,7 +28,7 @@ public sealed class CollectionTests : IDisposable
         var repo = new MediaRepo(db);
         repo.AddLocal([new FoundFile(P("Music", "Blue in Green.flac"), 31_000_000, When)], MediaOrigin.Watched);
 
-        var item = Assert.Single(repo.Library());
+        var item = Assert.Single(All(repo));
         Assert.Equal("Blue in Green", item.Title);
         Assert.Equal(MediaOrigin.Watched, item.Origin);
         Assert.Null(item.PageUrl);
@@ -43,7 +43,7 @@ public sealed class CollectionTests : IDisposable
         using var db = Db.Open(DbPath);
         var repo = new MediaRepo(db);
         repo.AddFile(repo.AddItem("https://example.com/v", "v1", "Saved"), P("Videos", "STX Downloader", "Saved.mp4"), null, "Original");
-        Assert.Equal(MediaOrigin.Downloaded, Assert.Single(repo.Library()).Origin);
+        Assert.Equal(MediaOrigin.Downloaded, Assert.Single(All(repo)).Origin);
     }
 
     // Before this step, a row with no link and no source id could only have been opened from File Explorer.
@@ -72,7 +72,7 @@ public sealed class CollectionTests : IDisposable
         SqliteConnection.ClearAllPools();
 
         using var db = Db.Open(DbPath);
-        var origins = new MediaRepo(db).Library().ToDictionary(i => i.Title!, i => i.Origin);
+        var origins = All(new MediaRepo(db)).ToDictionary(i => i.Title!, i => i.Origin);
         Assert.Equal(MediaOrigin.Downloaded, origins["Downloaded one"]);
         Assert.Equal(MediaOrigin.Opened, origins["Opened one"]);
     }
@@ -87,10 +87,10 @@ public sealed class CollectionTests : IDisposable
 
         repo.MoveFile(id, P("Videos", "Holiday 2026.mp4"));
 
-        var item = Assert.Single(repo.Library());
+        var item = Assert.Single(All(repo));
         Assert.Equal("Holiday 2026", item.Title);
-        Assert.Equal(P("Videos", "Holiday 2026.mp4"), item.Files.Single().Path);
-        Assert.Equal(id, item.Files.Single().Id);
+        Assert.Equal(P("Videos", "Holiday 2026.mp4"), item.Path);
+        Assert.Equal(id, item.FileId);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public sealed class CollectionTests : IDisposable
         var repo = new MediaRepo(db);
         long file = repo.AddFile(repo.AddItem("https://example.com/v", "v1", "The Real Title"), P("Videos", "x.mp4"), null, "Original");
         repo.MoveFile(file, P("Videos", "renamed.mp4"));
-        Assert.Equal("The Real Title", repo.Library().Single().Title);
+        Assert.Equal("The Real Title", All(repo).Single().Title);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class CollectionTests : IDisposable
 
         Assert.Equal(2, repo.ForgetWatchedUnder(P("Music", "")));
 
-        var left = repo.Library().Select(i => i.Files.Single().Path).Order(StringComparer.Ordinal).ToList();
+        var left = All(repo).Select(i => i.Path).Order(StringComparer.Ordinal).ToList();
         Assert.Equal(new[] { P("Music", "opened.mp3"), P("Music", "saved.mp3"), P("Music2", "c.mp3") }.Order(StringComparer.Ordinal), left);
     }
 
@@ -141,7 +141,7 @@ public sealed class CollectionTests : IDisposable
         var clock = System.Diagnostics.Stopwatch.StartNew();
         for (int start = 0; start < files.Count; start += 500) repo.AddLocal(files.Skip(start).Take(500).ToList(), MediaOrigin.Watched);
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(20), $"Took {clock.Elapsed}.");
-        Assert.Equal(20_000, repo.Library().Count);
+        Assert.Equal(20_000, All(repo).Count);
     }
 
     // Review 2026-11-07: the first scan and the watcher could each find a file new to them and both add it.
@@ -169,8 +169,10 @@ public sealed class CollectionTests : IDisposable
     [Fact]
     public void Duplicate_rows_left_by_the_race_are_merged_and_nothing_else_is_lost()
     {
-        using (var db = Db.Open(DbPath))
+        using (var db = new SqliteConnection($"Data Source={DbPath}"))
         {
+            db.Open();
+            Migrations.Apply(db, 3);
             Exec(db,
                 // A watched file indexed twice; a shrink copy and a job hang off the second row.
                 "INSERT INTO media_items (id, title, origin) VALUES (10, 'Song', 'watched'), (11, 'Song', 'watched');" +
@@ -182,8 +184,7 @@ public sealed class CollectionTests : IDisposable
                 "INSERT INTO media_files (id, media_id, path, format) VALUES (200, 20, 'D:\\Saved.mp4', 'Original'), (201, 21, 'D:\\Saved.mp4', 'Original');" +
                 // A file that isn't duplicated stays as it is.
                 "INSERT INTO media_items (id, title, origin) VALUES (30, 'Alone', 'watched');" +
-                "INSERT INTO media_files (id, media_id, path, format) VALUES (300, 30, 'D:\\Alone.flac', 'Original');" +
-                "PRAGMA user_version = 3;");
+                "INSERT INTO media_files (id, media_id, path, format) VALUES (300, 30, 'D:\\Alone.flac', 'Original');");
         }
         SqliteConnection.ClearAllPools();
 
@@ -208,6 +209,8 @@ public sealed class CollectionTests : IDisposable
         Assert.Contains(all, j => j.Id == good.Id);
         Assert.Equal(Stx.Core.Errors.ErrorKind.ToolFailure, all.Single(j => j.MediaId == 3).Error);
     }
+
+    static IReadOnlyList<LibraryEntry> All(MediaRepo repo) => repo.Rows(LibrarySearch.All, null, int.MaxValue);
 
     static void Exec(SqliteConnection db, string sql)
     {

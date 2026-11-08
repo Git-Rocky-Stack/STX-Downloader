@@ -210,10 +210,11 @@ public class SourceTruthTests
     }
 }
 
-sealed class LibraryCatalog : ILibraryCatalog
+sealed class LibraryCatalog : InMemoryLibrary
 {
+    /// <summary>Newest first, as the database lists them.</summary>
     public readonly List<LibraryItem> Stored = new();
-    public IReadOnlyList<LibraryItem> Library() => Stored;
+    protected override IReadOnlyList<LibraryItem> AllItems() => Stored;
 }
 
 public class LibraryTests
