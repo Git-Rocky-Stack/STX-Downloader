@@ -26,7 +26,9 @@ Dirac is rare. It's mostly found in BBC archive material. VLC 3.0.24 doesn't pla
 
 ### MIDI plays with a bundled SoundFont
 
-VLC plays MIDI through FluidSynth, which needs a SoundFont. VLC doesn't ship one, and Windows' built-in `gm.dls` can't be loaded by it. STX ships **FluidR3_GM** by Frank Wen, under the MIT license. Its copyright file is shipped beside it, as `libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt`. STX passes it to the engine when the engine starts (`src/Stx.Playback/LibVlcEngine.cs:22`, `src/Stx.Playback/LibVlcOptions.cs:28`).
+VLC plays MIDI through FluidSynth, which needs a SoundFont. VLC doesn't ship one, and Windows' built-in `gm.dls` can't be loaded by it. STX ships **FluidR3_GM** by Frank Wen, under the MIT license. Its copyright file is shipped beside it, as `libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt`. STX passes it to the engine when the engine starts (`src/Stx.Playback/LibVlcEngine.cs:32`, `src/Stx.Playback/LibVlcOptions.cs:28`).
+
+**It ships as SoundFont 3** (2026-11-07): `FluidR3_GM.sf3`, the same font with each of its 1,418 samples compressed in Ogg Vorbis, 148 MB down to 27 MB. The build makes it from the pinned SoundFont 2 (`tools/vlc/Make-Sf3.cs`, with an FFmpeg build `tools/vlc/engine.json` pins; the result's sha256 is pinned too, so a change to either fails the build). The format is FluidSynth 2's own (`fluid_sffile.c`, `fluid_defsfont.c`): version 3, each sample its own Ogg stream flagged `0x10`, its start and end byte offsets into the sample chunk, its loop points counted from the sample's start. VLC 3.0.24's FluidSynth reads it: its plugin carries libsndfile and libVorbis. **Checked by ear's proxy:** a ten-second MIDI file (piano, strings, hi-hats, and organ, flute and strings held eight seconds so their loops sound) rendered through VLC with the SF2 and with the SF3 came out with a waveform correlation of 0.9998, the difference 33 dB below the music, and each second's level within 0.1 dB; an SF3 with its loop points left as SF2 has them correlated 0.30. `tests/Stx.Playback.Tests/MidiTests.cs` holds the shipped SF3 to the SF2's levels.
 
 ### Mono sound reaches WASAPI in stereo
 
@@ -73,6 +75,10 @@ Spike S6 read VLC 3.0.24's source. UPSCALE is VLC's Direct3D 11 super resolution
 Both are options of the whole engine: VLC makes the video output under the player, not the file (VLC's own source, input/resource.c line 241), so a file's own options don't reach it. Turning the knob restarts LibVLC in place; the video view takes the new player, and the file carries on from where it was. The readout under the knob says what VLC's own log confirms is running.
 
 **Seen on hardware (2026-11-07).** SHARPEN loading is tested in CI from VLC's log. UPSCALE was seen running on an Intel Arc 140V: VLC's log says "Using Super Resolution scaler" with the player on screen (`tests/Stx.VisualTests/EnhanceSeenTests.cs`, which skips on a GPU without super resolution). Not seen on an RTX.
+
+### HDR10 reaches an HDR screen as HDR
+
+On a screen with Windows' HDR on (seen 2026-11-07 on a laptop panel, 10 bits per channel), VLC's Direct3D 11 output, drawing into STX's WinUI swap chain, offers the screen's Rec.2020 colour spaces and chooses Rec.2020 with the PQ curve (SMPTE ST 2084) for an HDR10 file, in P010 at 10 bits, so HDR video isn't flattened to SDR. `tests/Stx.VisualTests/HdrTests.cs` checks VLC's own log for that choice, and skips on a screen that isn't in HDR mode. Whether the picture's brightness matches another player's wasn't measured.
 
 ## The parity corpus
 

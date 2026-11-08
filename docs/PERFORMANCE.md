@@ -75,6 +75,24 @@ Playback has no budget, but it is measured. `tests/Stx.VisualTests/PlayerPlaybac
 
 **On the Core Ultra laptop (2026-11-07), the 4K60 test fails about half its runs.** Its panel runs at 60 Hz (2880x1800, Arc 140V, mains power, High performance). Each run either loses nothing after its first second, or loses 3 to 4 pictures a second all the way through (about 6%), in a window as in full screen, with GPU or software decoding, at any decoder thread count from 1 to 8 (each run's outcome is set when it starts, so single runs at different settings look like a pattern and aren't). With VLC told not to drop late pictures, none are lost but only about 55 a second reach the screen in those runs, the same as when they're dropped, and late pictures would carry the picture away from the sound; so that option wasn't kept. What limits those runs is VLC 3.0.24's Direct3D 11 output presenting into WinUI's swap chain on this GPU and panel, not decoding. Not fixed: it needs a newer VLC output or a measured change to how the swap chain presents.
 
+## Shrink's encoder settings
+
+SHRINK encodes video with SVT-AV1 preset 6 at CRF 30, or x265 medium at CRF 24, both 10-bit (`src/Stx.Tools/FfmpegArgs.cs:127`). Checked on 2026-11-07 (Core Ultra laptop) against real footage: three clips cut from Blender's open films (CC BY), copied from their H.264 releases as a downloaded file would be, the first 10 seconds of each encoded as SHRINK encodes it at a ladder of CRFs and scored with VMAF (FFmpeg's libvmaf, default model) against its original. VMAF 95 and up is usually indistinguishable from the original, 90 and up good.
+
+```
+clip                          codec CRF  kbps  size   VMAF  worst 5%
+Tears of Steel 720p (4.3 Mb/s) AV1   30   1133  0.26   95.7   93.1
+  another scene                AV1   30   1275  0.30   97.3   94.2
+Tears of Steel 720p            HEVC  24   1445  0.34   94.9   91.9
+  another scene                HEVC  24   1198  0.28   96.1   92.2
+Sintel 1080p (10.1 Mb/s, CG)   AV1   30    793  0.08   90.1   85.3
+Sintel 1080p                   HEVC  24    937  0.09   90.2   85.8
+Sintel 1080p                   AV1   24   1346  0.13   92.4   88.1
+Sintel 1080p                   HEVC  20   1807  0.18   93.4   89.5
+```
+
+**The settings stay.** The two codecs are matched: on the CG clip they give the same quality, AV1's copy 15% smaller; on live action AV1's is better and smaller. Three CRF steps down buys about one VMAF point for a copy 25 to 40% larger. A detailed, high-bitrate source (the Sintel clip) stays near VMAF 90 at either codec's setting, a twelfth of its size; reaching 93 there takes CRF 20 to 24 and gives up most of the saving, so no single CRF suits both kinds of source. Making each copy aim at a quality instead (encoding samples to choose the CRF per file) would be a new feature, not a new setting. The full ladder (CRF 24 to 36 for AV1, 20 to 28 for HEVC) was recorded during the run; encode times aren't given, since other work shared the CPU.
+
 ## Every primitive at once
 
 A stress page, more than any real screen shows.

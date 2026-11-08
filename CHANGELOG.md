@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased: the Library's rows out of memory, Dirac streams, high-DPI screens
+## Unreleased: the Library's rows out of memory, Dirac streams, high-DPI and HDR screens, a 27 MB SoundFont
 
 **Not in a published release yet.** The rest of 2026-11-07, on the Core Ultra 7 258V laptop (Arc 140V, a 2880x1800 panel at 175%). Every change below has a test that failed without it, unless it says otherwise.
 
@@ -18,13 +18,17 @@
 
 - **A Dirac stream is refused, not played.** VLC 3.0.24 crashes on Dirac in FFmpeg's decoder (`Assertion frame->data[i] failed at src/libavcodec/decode.c:1628`, then abort), with each Dirac plugin taken out, with one decoding thread and with hardware decoding off, so no engine setting avoids it. LibVLC's own check reads local files only; an http(s) stream that may carry video is now read from its start, up to a megabyte or 2 seconds, before LibVLC is given it. Sound, playlists, manifests and pages aren't read, and an address naming a sound file isn't even asked (`src/Stx.Core/Playback/DiracSniff.cs:33`, `src/Stx.Playback/LibVlcEngine.cs:262`). Tested with a stream served from this PC; without the check, the test host crashed.
 - **UPSCALE seen running** on the Arc 140V: VLC's log confirms its Super Resolution scaler, in a test that skips on a GPU without it (`tests/Stx.VisualTests/EnhanceSeenTests.cs`).
+- **HDR10 reaches an HDR screen as HDR:** VLC's output chooses Rec.2020 with the PQ curve, 10 bits, through STX's swap chain; checked from VLC's own log on a laptop panel with Windows' HDR on (`tests/Stx.VisualTests/HdrTests.cs`; skipped on a screen without HDR).
+- **The SoundFont is 27 MB, not 148.** FluidR3_GM ships as SoundFont 3, its samples in Ogg Vorbis, made at build time from the pinned SoundFont 2 by `tools/vlc/Make-Sf3.cs` with a pinned FFmpeg build; the result's sha256 is pinned too (`tools/vlc/engine.json:29`). Rendered through VLC, a ten-second MIDI file with held, looping notes matches the SoundFont 2's within 0.1 dB a second, correlation 0.9998 (`tests/Stx.Playback.Tests/MidiTests.cs`, which also held MIDI to working for the first time: nothing played MIDI in the tests before). The licence (MIT) is unchanged; MuseScore's SF3 font, whose licence was the question, isn't used.
 
 ### The app
 
+- **DEFAULT PLAYER reads Windows 24H2's choices as Windows does:** a test reads each type's chosen app as STX does and compares it with Windows' own answer (AssocQueryString), read only, on whatever Windows runs it; on build 26300 all agree (`src/Stx.Core/Library/FileAssociations.cs:97`, `tests/Stx.App.Tests/DefaultAppsLiveTests.cs`).
 - **Sharp on high-DPI screens.** STX had no application manifest, so it ran DPI-unaware: on a screen scaled past 100% Windows drew it at 96 DPI and stretched it, so text and art were soft, and at 175% full screen missed the display by a pixel. It's per-monitor DPI aware now (`src/Stx.App/app.manifest:17`), and windows are sized in device-independent pixels, kept inside the display's work area (`src/Stx.App/Platform/WindowSize.cs:15`): a 1360x920 window at 150% was 2040x1380, more than a 1920x1080 screen holds.
 
 ### Build and tests
 
+- **Shrink's encoder settings, checked against real footage:** clips from Blender's open films, scored with VMAF against their originals. SVT-AV1 CRF 30 and x265 CRF 24 give the same quality, AV1's copy the smaller; live action keeps VMAF 95 to 97; a detailed 10 Mb/s source keeps about 90 at a twelfth of its size. The settings stay; the numbers are in `docs/PERFORMANCE.md`.
 - **FFmpeg's builds moved** from BtbN/FFmpeg-Builds to FFmpeg-Builds/FFmpeg-Builds; STX and CI name the new owner, and a Network test fails if that address ever answers with a move again (`src/Stx.Tools/FfmpegSource.cs:12`).
 - **The projects that aren't Windows-only run on Linux in CI** (Look, Art, Core, Data; `.github/workflows/build.yml`). Not yet run: it runs once this branch is pushed.
 - **A test that failed since 2026-11-05:** the baseline size check still asked 944x601 of the settings and Library images after their taller baselines were approved (`tests/Stx.VisualTests/BaselineTests.cs:36`). The playback tests' picture regions now scale with the capture, for high-DPI screens (`tests/Stx.VisualTests/CaptureArea.cs`).

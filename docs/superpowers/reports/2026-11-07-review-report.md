@@ -37,13 +37,12 @@ Not the reference PC. A Core Ultra 7 258V (8 cores), Intel Arc 140V graphics, "S
 - **`MediaRepo.DeleteItem`, the synchronous `NativeMessaging` wrappers and the `playlists` tables** have no caller in the app. The first two are what tests use (the cascade test, the framing tests); dropping the tables would be a migration with nothing to gain.
 - **Sync-over-async at shutdown (`Composition.cs`) and in `SingleInstance`:** every awaited call uses `ConfigureAwait(false)` and each has a time limit, so neither can deadlock.
 
-## Recommendations, not done
+## Recommendations, done later the same day
 
-- **The FFmpeg builds moved.** `github.com/BtbN/FFmpeg-Builds` now redirects to `github.com/FFmpeg-Builds/FFmpeg-Builds` (traced 2026-11-07). Everything works through GitHub's redirect, but `src/Stx.Tools/FfmpegSource.cs` and CI should name the new owner: a redirect lasts only until someone creates a repository under the old name.
-- **Streams aren't checked for Dirac.** LibVLC's local parse skips network streams, and sniffing a stream would mean a second connection before every play. A Dirac stream is rare; it would still crash VLC 3.0.24.
-- **The Arc 140V's super resolution is claimed by the rule, not yet seen running.** `Enhance.SuperResolution` says Arc has it, and the probe test now checks the probe against the rule on whatever PC runs it (it used to assert the reference PC's answer). Seeing "Using Super Resolution scaler" in VLC's log needs the real app on screen, here.
+- **The FFmpeg builds moved.** `github.com/BtbN/FFmpeg-Builds` redirects to `github.com/FFmpeg-Builds/FFmpeg-Builds` (traced 2026-11-07). STX and CI now name the new owner, and a Network test fails if that address ever answers with a move (`src/Stx.Tools/FfmpegSource.cs:12`).
+- **Streams are checked for Dirac.** An http(s) stream that may carry video is read from its start, up to a megabyte or 2 seconds, before LibVLC is given it; sound isn't read. No engine setting avoids the crash: VLC aborts in FFmpeg's decoder (`decode.c:1628`) with each Dirac plugin taken out, with one thread and with hardware decoding off (`src/Stx.Core/Playback/DiracSniff.cs:33`).
+- **The Arc 140V's super resolution was seen running:** "Using Super Resolution scaler" in VLC's log with the player on screen (`tests/Stx.VisualTests/EnhanceSeenTests.cs`).
 
-## Still open from the handoff
+## The open items, afterwards
 
-1. **Library row storage**, so the idle app holds under 150 MB at 50,000 rows (`docs/superpowers/plans/2026-11-05-library-row-storage.md`). Not started this session: the review's fixes came first, and two of them (the one-row-per-path rule and the async open) change what that plan builds on.
-2. Encoder settings, the SF3 SoundFont's licence, Linux test runs, and the hardware this PC lacks too (discs, a receiver, RTX, a clean machine for the installer, high-DPI and HDR screens).
+Library row storage, the encoder settings, the SoundFont, Linux runs and what this laptop's hardware could cover were all taken on after the review; `CHANGELOG.md` (its first section) has each, and `docs/superpowers/handoffs/2026-11-07-handoff.md` has what's left and why. The last full run here (2026-11-08), all passing: CI suites 1,410 (Look 177, Art 69, Core 438, Data 48, Tools 199, Audio 69, Bridge 57, App 301, Playback 52), device 13, network 4 (the live yt-dlp update, FFmpeg's home, the radio stream, the share disc), extension 60. The visual suite's behaviour tests pass here too (ENHANCE, HDR10, full screen, playback); its 96 DPI pixel baselines can't match this 175% HDR screen.
