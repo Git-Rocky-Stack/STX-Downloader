@@ -138,8 +138,14 @@ public sealed class LibraryViewModel : ObservableObject
             if (!quiet) Message = "This file already has that shrink copy.";
             return false;
         }
+        string plan = new ConversionPlan(preset.Output, row.FileId, preset.Name).ToString();
+        if (_engine.HasPending(row.MediaId, JobKind.Convert, plan))
+        {
+            if (!quiet) Message = "That shrink copy is already in the queue.";
+            return false;
+        }
         if (!quiet) Message = "";
-        _engine.Enqueue(row.MediaId, JobKind.Convert, new ConversionPlan(preset.Output, row.FileId, preset.Name).ToString());
+        _engine.Enqueue(row.MediaId, JobKind.Convert, plan);
         return true;
     }
 

@@ -94,6 +94,7 @@ public sealed partial class MainWindow : Window
 
         var handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _tray = new Tray(handle, ShowFromTray, Quit);
+        App.Fatal += () => _tray.SetVisible(false);
         _clipboard = new ClipboardWatcher(_app.Clipboard);
         ApplyBackgroundChoices(_app.Settings.Current);
         _app.Settings.Changed += (_, current) => ApplyBackgroundChoices(current);
@@ -103,7 +104,7 @@ public sealed partial class MainWindow : Window
         Activated += (_, e) => { if (e.WindowActivationState != WindowActivationState.Deactivated) _app.DefaultPlayer.Refresh(); };
         AppWindow.Closing += OnClosing;
         Closed += (_, _) => Shutdown();
-        _ = _app.StartAsync();
+        _ = Stx.Core.Logging.ErrorLog.Observe(_app.StartAsync(), "startup");
     }
 
     public bool StartsHidden { get; }
@@ -138,7 +139,7 @@ public sealed partial class MainWindow : Window
     public void OpenFromOutside(string path)
     {
         ShowFromTray();
-        _app.OpenFromOutside(path);
+        _ = Stx.Core.Logging.ErrorLog.Observe(_app.OpenFromOutsideAsync(path), "open from outside");
         _player.StartBringIntoView();
     }
 
@@ -162,6 +163,9 @@ public sealed partial class MainWindow : Window
         _player.StartBringIntoView();
     }
 
+    /// <summary>Something failed on the UI thread and was caught at the top: the status line says so.</summary>
+    public void ReportRecovered() => _app.Status.Report(new Stx.Tools.ToolStatus("STX", "recovered from a problem; details are in the error log"));
+
     /// <summary>Brings the window back, from the tray or from a second launch.</summary>
     public void ShowFromTray()
     {
@@ -172,7 +176,9 @@ public sealed partial class MainWindow : Window
 
     void ApplyBackgroundChoices(AppSettings settings)
     {
-        _tray.SetVisible(settings.TrayMode);
+        // A tray icon Windows wouldn't add (the taskbar not up yet at sign-in) must not leave a hidden window with no
+        // way back to it: the window is shown, and the icon is added when the taskbar announces itself.
+        if (!_tray.SetVisible(settings.TrayMode) && settings.TrayMode && !AppWindow.IsVisible) ShowFromTray();
         _clipboard.SetEnabled(settings.ClipboardDetect);
     }
 

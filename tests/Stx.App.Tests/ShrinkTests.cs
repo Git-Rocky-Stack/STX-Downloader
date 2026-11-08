@@ -128,6 +128,24 @@ public class ShrinkTests
         Assert.True(library.QueueShrink(library.Rows.Single(r => r.FileId == 1)));
         Assert.Equal("convert:Mkv:1:Shrink HEVC", Assert.Single(jobs.All()).Preset);
     }
+
+    // Review 2026-11-07: SHRINK pressed twice queued the same encode twice. The second press says it's queued already.
+    [Fact]
+    public void Shrink_pressed_twice_queues_one_copy_and_says_so()
+    {
+        var catalog = new LibraryCatalog();
+        catalog.Stored.Add(new LibraryItem(1, "Big Night", null, [new LibraryFile(1, @"D:\f\a.mkv", "Original")]));
+        var jobs = new MemoryJobs();
+        var engine = new QueueEngine(jobs, new HandRunner(), new QueuePolicy(), new SystemClock(), new CaptureVault());
+        var library = new LibraryViewModel(catalog, engine, new ShellSpy(), _ => true, _ => { });
+        library.Refresh();
+        var row = library.Rows.Single();
+
+        Assert.True(library.QueueShrink(row));
+        Assert.False(library.QueueShrink(row));
+        Assert.Equal("That shrink copy is already in the queue.", library.Message);
+        Assert.Single(jobs.All());
+    }
 }
 
 /// <summary>
