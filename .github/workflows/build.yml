@@ -55,3 +55,19 @@ jobs:
           }
       - name: Test extension
         run: node --test "extension/test/*.test.js"
+
+  # The projects that aren't Windows-only (Look, Art, Core, Data) are tested on Linux too, so their rules can't lean
+  # on Windows by accident: a path's separators, a drive letter, a file system that ignores case.
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          dotnet-version: 10.0.x
+      - name: Test
+        shell: bash
+        run: |
+          for project in Look Art Core Data; do
+            dotnet test --project "tests/Stx.$project.Tests" -c Release --filter-not-trait "Category=Device" --filter-not-trait "Category=Corpus" --filter-not-trait "Category=Network"
+          done
