@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased: the Library's rows out of memory, Dirac streams, high-DPI screens
+
+**Not in a published release yet.** The rest of 2026-11-07, on the Core Ultra 7 258V laptop (Arc 140V, a 2880x1800 panel at 175%). Every change below has a test that failed without it, unless it says otherwise.
+
+### The Library holds only what's on screen (plan 2026-11-05)
+
+- **Counted, paged and searched in the database.** The Library used to read every row into memory, and keep a lower-case copy of each for search. Now the database answers how many rows there are, a page of them in the Library's order, and a search (`src/Stx.Core/Queue/IMediaCatalog.cs:28`, `src/Stx.Data/MediaRepo.cs:136`); the list reads a page at first and the next as it scrolls (`src/Stx.App/Panels/IncrementalRows.cs:12`, `src/Stx.ViewModels/LibraryViewModel.cs:389`). Rows that didn't change stay the same objects, as before, and whether a file is still on disk is checked for the rows read, not all 50,000.
+- **Search finds what it found before, every letter's case folded:** the database keeps each path and title with its case folded as Windows folds it (`CaseKey`, `src/Stx.Core/Queue/IMediaCatalog.cs:81`; migration step 5, `src/Stx.Data/Migrations.cs:89`). SQLite's NOCASE folds A to Z only, so "CAFÉ" and "café" were two paths to the one-row-per-file rule; now they're one. A test holds the database to the in-memory rules on 400 generated items and 27 searches (`tests/Stx.Data.Tests/LibraryRowsTests.cs`).
+- **The plan said a trigram FTS5 index; it isn't one.** Measured at 50,000 rows: a common word took 150 ms through it, a word under three letters needed a second path, and it added 7 MB to the database. A walk of the folded keys with SQLite's own `instr` takes about 20 ms (`MediaRepo.cs:221`). A file is listed under the first row saved for its path through a stored flag the triggers keep: looking for an earlier row, row by row, cost 130 ms per count once the database outgrew SQLite's page cache, and 880 ms at 200,000 rows, against 20 and 85 ms (`MediaRepo.cs:126`).
+- **Typing a search at 50,000 rows**, through the view-model on the real database, stays under the 150 ms budget per keystroke, and the search runs off the UI thread; an answer for a word already typed past never reaches the screen (`tests/Stx.App.Tests/LibraryCollectionTests.cs`).
+- **PREV and NEXT walk the Library from the database**, past the rows read so far and past files gone from disk, off the UI thread; two quick presses step twice (`LibraryViewModel.cs:433`, `src/Stx.ViewModels/PlayerViewModel.cs:96`).
+- **Memory a scan leaves behind goes back.** With the rows gone, what was left at 50,000 rows was 45 MB of dead objects from the first scan, which an idle app never collects. Once a scan or a job has been quiet for 10 seconds, one compacting collection returns it (`src/Stx.Core/Memory/MemoryReturn.cs:10`, `src/Stx.App/Composition.cs:95`).
+- **Measured** (this laptop, idle, private MB): 50,000 rows **235.3 before, 163.6 after**; an empty Library 178.0 before, 165.4 after. At 50,000 rows the Library now costs nothing over an empty one. This laptop's empty app is over the 150 MB budget on its own; the reference PC's was 117.5, so its 50,000-row run should now pass there, which is still to be measured (`docs/PERFORMANCE.md`).
+
+### The player
+
+- **A Dirac stream is refused, not played.** VLC 3.0.24 crashes on Dirac in FFmpeg's decoder (`Assertion frame->data[i] failed at src/libavcodec/decode.c:1628`, then abort), with each Dirac plugin taken out, with one decoding thread and with hardware decoding off, so no engine setting avoids it. LibVLC's own check reads local files only; an http(s) stream that may carry video is now read from its start, up to a megabyte or 2 seconds, before LibVLC is given it. Sound, playlists, manifests and pages aren't read, and an address naming a sound file isn't even asked (`src/Stx.Core/Playback/DiracSniff.cs:33`, `src/Stx.Playback/LibVlcEngine.cs:262`). Tested with a stream served from this PC; without the check, the test host crashed.
+- **UPSCALE seen running** on the Arc 140V: VLC's log confirms its Super Resolution scaler, in a test that skips on a GPU without it (`tests/Stx.VisualTests/EnhanceSeenTests.cs`).
+
+### The app
+
+- **Sharp on high-DPI screens.** STX had no application manifest, so it ran DPI-unaware: on a screen scaled past 100% Windows drew it at 96 DPI and stretched it, so text and art were soft, and at 175% full screen missed the display by a pixel. It's per-monitor DPI aware now (`src/Stx.App/app.manifest:17`), and windows are sized in device-independent pixels, kept inside the display's work area (`src/Stx.App/Platform/WindowSize.cs:15`): a 1360x920 window at 150% was 2040x1380, more than a 1920x1080 screen holds.
+
+### Build and tests
+
+- **FFmpeg's builds moved** from BtbN/FFmpeg-Builds to FFmpeg-Builds/FFmpeg-Builds; STX and CI name the new owner, and a Network test fails if that address ever answers with a move again (`src/Stx.Tools/FfmpegSource.cs:12`).
+- **The projects that aren't Windows-only run on Linux in CI** (Look, Art, Core, Data; `.github/workflows/build.yml`). Not yet run: it runs once this branch is pushed.
+- **A test that failed since 2026-11-05:** the baseline size check still asked 944x601 of the settings and Library images after their taller baselines were approved (`tests/Stx.VisualTests/BaselineTests.cs:36`). The playback tests' picture regions now scale with the capture, for high-DPI screens (`tests/Stx.VisualTests/CaptureArea.cs`).
+
 ## Unreleased: the 2026-11-07 review, and the rest of the open findings
 
 **Not in a published release yet.** A whole-codebase review by four independent reviewers, each finding checked in the code before anything changed, and the four findings the 2026-11-05 handoff left unchecked. Every fix below has a test that failed without it (each break-checked by undoing the fix and running the test), unless it says otherwise. Run on a second PC (Core Ultra 7 258V, Arc 140V, Intel Smart Sound speakers); the report is `docs/superpowers/reports/2026-11-07-review-report.md`.
@@ -15,7 +44,7 @@
 
 - **A stream that fails says why:** never reached, or cut off (`src/Stx.Playback/LibVlcEngine.cs:23`). It used to say "THIS FILE COULDN'T BE PLAYED", or nothing.
 - **STOP during an open, a throw while opening, and `file:` addresses.** A file still being read started after STOP; a throw left the plate on OPENING; a `file:` address was handed to LibVLC unconverted (`LibVlcEngine.cs:333`, `:288`, `:250`).
-- **The Dirac guard no longer fails open.** When LibVLC couldn't finish reading a file's tracks, the file was taken as safe and could reach the decoder that crashes the process; STX now reads Dirac's signature from the file itself (`LibVlcEngine.cs:304`, `src/Stx.Core/Playback/DiracSniff.cs:21`). Streams aren't sniffed; see the report.
+- **The Dirac guard no longer fails open.** When LibVLC couldn't finish reading a file's tracks, the file was taken as safe and could reach the decoder that crashes the process; STX now reads Dirac's signature from the file itself (`LibVlcEngine.cs:304`, `src/Stx.Core/Playback/DiracSniff.cs:21`). Streams were sniffed later the same day (the section above).
 - **A disc on a network share opens.** `\\nas\Films\My Film` reached VLC's DVD reader as `nas\Films\...`; checked against LibVLC 3.0.24 with a disc folder on `\\localhost\C$`, the new address reaches the reader as the share (`src/Stx.Core/Playback/PlaybackTarget.cs:55`). Blu-ray's address is made the same way but wasn't run; no real disc was played.
 - **BIT-PERFECT:** disposing the renderer twice no longer throws, a failed open no longer leaves the device's COM objects behind, a device that stops asking for sound is reported instead of freezing the time, a pump stuck reading a stalled share can no longer write beside the next one (it wrote 173,760 frames before the fix), and a late end can't stop a seek (`src/Stx.Playback/ExclusiveRenderer.cs:284`, `:116`, `:215`, `:245`). A file FFmpeg can't read to its end fails with a message instead of reading as ENDED (`src/Stx.Playback/MusicEngine.cs:91`). PLAY on a finished track whose device another app took plays shared instead of throwing; STOP during the probe and closing during an open are safe (`src/Stx.Playback/RoutingEngine.cs:161`, `:174`, `:198`).
 - **A failed measurement isn't "Measured"** (`src/Stx.Audio/AudioMeasurer.cs:39`), and one that finishes late no longer replaces the row you chose since (`src/Stx.App/Composition.cs:339`).

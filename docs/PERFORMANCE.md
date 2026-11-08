@@ -18,7 +18,21 @@ empty            228.90    117.30       117.50   0.01     0.00 0
 50,000 files     302.70    185.30       185.50   0.00     0.00 1 (over the 150 MB budget)
 ```
 
-**The idle memory budget fails with a very large collection.** With nothing watched, Phases 2 to 7 cost about 38 MB over Phase 1's 80 MB. Each Library row then costs about 1.4 KB: every row is held in memory so search answers as you type, and each keeps a second, lower-case copy of its title, file name and folder for that search (`src/Stx.ViewModels/LibraryViewModel.cs:46`). Whether to shrink the rows or give the budget an allowance per row is open. The idle and hidden rows below predate Phases 2 to 7.
+**The idle memory budget fails with a very large collection.** With nothing watched, Phases 2 to 7 cost about 38 MB over Phase 1's 80 MB. Each Library row then costs about 1.4 KB: every row is held in memory so search answers as you type, and each keeps a second, lower-case copy of its title, file name and folder for that search (`src/Stx.ViewModels/LibraryViewModel.cs:46`). Rocky chose to rework row storage (plan `docs/superpowers/plans/2026-11-05-library-row-storage.md`); measured below. The idle and hidden rows below predate Phases 2 to 7.
+
+**After the rows left memory** (2026-11-07). Not this machine: a Core Ultra 7 258V laptop, Arc 140V, a 2880x1800 panel at 175%, the same script and the same 50,000 files (500 folders of 100). All four runs in one sitting, each with the tools already downloaded, the code before the change built from the branch's last commit in a worktree:
+
+```
+code             watched folder   wsMB   privateMB privateMaxMB cpuPct gpu3dPct
+before rows     empty            284.50    178.00       178.40   0.00     0.00
+before rows     50,000 files     342.20    235.30       235.40   0.00     0.00
+after rows      empty            266.60    165.40       165.50   0.01     0.00
+after rows      50,000 files     271.00    163.60       163.80   0.00     0.00
+```
+
+At 50,000 rows the Library now costs nothing over an empty one: before, 57 MB (about 1.1 KB a row here). Two changes made that: the Library holds only the rows read so far, a page at first and more as the list scrolls (`src/Stx.ViewModels/LibraryViewModel.cs:121`), and the garbage a scan leaves, which an idle app never collects, is given back once the work has been quiet for 10 seconds (`src/Stx.Core/Memory/MemoryReturn.cs:10`; a heap dump of the idle app before that showed 48 MB of committed heap with 4 MB alive). **This laptop's own floor is over the budget**, 165 MB with an empty Library, against 117.5 MB on the reference PC; the 50,000-row run with `-Assert` on the reference PC is still to be done, and should land near its empty figure.
+
+**Search at 50,000 rows**, on the same laptop: a keystroke (both counts and the first page) takes about 20 to 40 ms through the database, and under the 150 ms budget through the view-model on the real database (`tests/Stx.App.Tests/LibraryCollectionTests.cs`, `tests/Stx.Data.Tests/LibraryRowsTests.cs`). A page from row 49,000 comes as fast as the first.
 
 `cpuPct` is a share of all 8 cores. Each row is 10 samples over 30 seconds, after settling. `toolSamples` is how many samples had a tool running under the app.
 
@@ -58,6 +72,8 @@ hidden   dark   208.70     98.70        99.00   0.01     0.00 0/10        False
 ## Playback
 
 Playback has no budget, but it is measured. `tests/Stx.VisualTests/PlayerPlaybackTests.cs` plays a 4K60 HEVC file (39 Mb/s, made by FFmpeg) full screen for 60 seconds on this machine. LibVLC's lost pictures and the compositor's dropped and missed frames each have to stay under 1%. The run on 2026-11-04 passed: 3,891 pictures shown by the end, 12 lost in the whole run (all at the start, outside the measured minute), hardware decoding on the UHD 620 (D3D11VA).
+
+**On the Core Ultra laptop (2026-11-07), the 4K60 test fails about half its runs.** Its panel runs at 60 Hz (2880x1800, Arc 140V, mains power, High performance). Each run either loses nothing after its first second, or loses 3 to 4 pictures a second all the way through (about 6%), in a window as in full screen, with GPU or software decoding, at any decoder thread count from 1 to 8 (each run's outcome is set when it starts, so single runs at different settings look like a pattern and aren't). With VLC told not to drop late pictures, none are lost but only about 55 a second reach the screen in those runs, the same as when they're dropped, and late pictures would carry the picture away from the sound; so that option wasn't kept. What limits those runs is VLC 3.0.24's Direct3D 11 output presenting into WinUI's swap chain on this GPU and panel, not decoding. Not fixed: it needs a newer VLC output or a measured change to how the swap chain presents.
 
 ## Every primitive at once
 

@@ -18,7 +18,9 @@ STX ships the **official VLC 3.0.24 build for 64-bit Windows**, the same zip Vid
 
 VLC 3.0.24's engine crashes the whole program on Dirac / VC-2 video. That happens in the official desktop build too, with a real video window, and with a genuine Dirac sample from FFmpeg's archive as well as one made by FFmpeg. If STX passed such a file to the engine, STX would close.
 
-So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:304`), and the rest of the console keeps working. When LibVLC can't finish reading a file's tracks (a slow share, a parse that times out or fails), STX doesn't take the file as safe: it reads the first megabyte itself for Dirac's sequence header, `BBCD` and parse code 0, which FFmpeg writes within the first few kilobytes in MKV, MOV, MP4, MPEG-TS, NUT and AVI (`src/Stx.Core/Playback/DiracSniff.cs`; added 2026-11-07). Network streams aren't sniffed, since that would mean a second connection before every play.
+So STX reads a file's tracks before playing it. If any video track is Dirac, it doesn't play the file. It shows **DIRAC VIDEO CAN'T BE PLAYED SAFELY** instead (`src/Stx.Playback/LibVlcEngine.cs:19`, `src/Stx.Playback/LibVlcEngine.cs:304`), and the rest of the console keeps working. When LibVLC can't finish reading a file's tracks (a slow share, a parse that times out or fails), STX doesn't take the file as safe: it reads the first megabyte itself for Dirac's sequence header, `BBCD` and parse code 0, which FFmpeg writes within the first few kilobytes in MKV, MOV, MP4, MPEG-TS, NUT and AVI (`src/Stx.Core/Playback/DiracSniff.cs`; added 2026-11-07). An http(s) stream is read too (added later on 2026-11-07): LibVLC reads local files' tracks only, so before a stream that may carry video is given to it, STX reads its start, up to a megabyte or 2 seconds, and refuses Dirac with the same message (`src/Stx.Core/Playback/DiracSniff.cs:33`, `src/Stx.Playback/LibVlcEngine.cs:262`). Sound isn't read (its server says it's sound, or its address names a sound file, which isn't even asked), nor are playlists, manifests (HLS, DASH) or pages; a stream slower than that reaches the player with what arrived checked. RTSP, RTMP and MMS aren't read; Dirac isn't carried that way in practice.
+
+**Why no engine setting avoids it** (2026-11-07, a probe that plays a file in a child process): the crash is FFmpeg's decoder inside VLC's `avcodec` plugin, `Assertion frame->data[i] failed at src/libavcodec/decode.c:1628`, then abort. It happened with the Dirac demuxer or packetizer taken out of the engine, with one decoding thread, and with hardware decoding off, on two Dirac files ten runs each; never on H.264.
 
 Dirac is rare. It's mostly found in BBC archive material. VLC 3.0.24 doesn't play it safely either.
 
@@ -70,7 +72,7 @@ Spike S6 read VLC 3.0.24's source. UPSCALE is VLC's Direct3D 11 super resolution
 
 Both are options of the whole engine: VLC makes the video output under the player, not the file (VLC's own source, input/resource.c line 241), so a file's own options don't reach it. Turning the knob restarts LibVLC in place; the video view takes the new player, and the file carries on from where it was. The readout under the knob says what VLC's own log confirms is running.
 
-**Not proven on hardware.** SHARPEN loading is tested in CI from VLC's log. Whether UPSCALE applies needs an RTX or Arc GPU, which wasn't available.
+**Seen on hardware (2026-11-07).** SHARPEN loading is tested in CI from VLC's log. UPSCALE was seen running on an Intel Arc 140V: VLC's log says "Using Super Resolution scaler" with the player on screen (`tests/Stx.VisualTests/EnhanceSeenTests.cs`, which skips on a GPU without super resolution). Not seen on an RTX.
 
 ## The parity corpus
 
