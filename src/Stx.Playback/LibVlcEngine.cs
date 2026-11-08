@@ -18,6 +18,13 @@ public sealed class LibVlcEngine : IPlaybackEngine
     /// <summary>What the plate says for Dirac / VC-2, which crashes VLC 3.0.24's engine (the official desktop build too).</summary>
     public const string DiracRefused = "DIRAC VIDEO CAN'T BE PLAYED SAFELY";
 
+    /// <summary>What the plate says when a stream fails before a sound or picture arrived: the address answered with
+    /// nothing STX can play, or didn't answer at all.</summary>
+    public const string StreamUnreachable = "THAT STREAM COULDN'T BE OPENED. CHECK THE ADDRESS AND YOUR CONNECTION.";
+
+    /// <summary>What the plate says when a stream that was playing fails: the connection or the station went away.</summary>
+    public const string StreamCutOff = "THE STREAM WAS CUT OFF. CHECK YOUR CONNECTION, THEN PLAY IT AGAIN.";
+
     /// <summary>The General MIDI SoundFont shipped beside the engine (tools/vlc/engine.json).</summary>
     public static string ShippedSoundFont => Path.Combine(AppContext.BaseDirectory, "libvlc", "soundfonts", "FluidR3_GM.sf2");
 
@@ -38,6 +45,8 @@ public sealed class LibVlcEngine : IPlaybackEngine
     bool _sawVideoDecoder;
     bool _disposed;
     int _generation;
+    TargetKind _targetKind;
+    volatile bool _reachedPlaying;
     volatile bool _monoRecovery;
     bool _monoRestarted;
 
@@ -205,6 +214,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
             _sawHardwareDecoder = _sawVideoDecoder = false;
             AudioOutput = AudioStream = "";
             _state = PlaybackState.Opening;
+            _reachedPlaying = false;
             _generation++;
             _lastPath = path;
             if (_player is null) _pending = path;
@@ -221,48 +231,65 @@ public sealed class LibVlcEngine : IPlaybackEngine
         int generation = _generation;
         _opening = Task.Run(() =>
         {
-            // STX decides what this is before LibVLC sees it. An encrypted disc, or an address that would need a
-            // listening port, is refused here and never opened (Phase 4).
-            var target = PlaybackTarget.For(path);
-            if (target.IsRefused)
+            Media? media = null;
+            try
             {
-                lock (_gate) { if (_disposed || generation != _generation) return; _error = target.Refusal; }
+                // STX decides what this is before LibVLC sees it. An encrypted disc, or an address that would need a
+                // listening port, is refused here and never opened (Phase 4).
+                var target = PlaybackTarget.For(path);
+                if (target.IsRefused)
+                {
+                    lock (_gate) { if (_disposed || generation != _generation) return; _error = target.Refusal; }
+                    Set(PlaybackState.Failed);
+                    return;
+                }
+                lock (_gate)
+                {
+                    if (_disposed || _vlc is null || generation != _generation) return;
+                    string[] options = [.. LibVlcOptions.ForMedia(Profile), .. LibVlcOptions.ForTarget(target.Kind), .. StartPaused ? [":start-paused"] : Array.Empty<string>()];
+                    // The target's location, not the path as given: a file: address arrives here as the file it names.
+                    media = target.Kind == TargetKind.File
+                        ? new Media(_vlc, target.Location, FromType.FromPath, options)
+                        : new Media(_vlc, target.Location, FromType.FromLocation, options);
+                    HandedToLibVlc = target.Location;
+                    _targetKind = target.Kind;
+                }
+                var (mono, dirac) = Inspect(media, target);
+                if (dirac)
+                {
+                    media.Dispose();
+                    media = null;
+                    lock (_gate) { if (_disposed || generation != _generation) return; _error = DiracRefused; }
+                    Set(PlaybackState.Failed);
+                    return;
+                }
+                lock (_gate)
+                {
+                    if (_disposed || _player is null || generation != _generation) { media.Dispose(); media = null; return; }
+                    // Windows refuses a one-channel stream in shared mode (0x88890008, AUDCLNT_E_UNSUPPORTED_FORMAT) and
+                    // LibVLC 3.0.24 then falls back to DirectSound. The stereo setting can't be made to stick before the
+                    // output opens (LibVLC resets it there), so a mono file starts muted; when the output lands on
+                    // DirectSound it is switched to stereo, which reopens it on WASAPI, and then sound is let through.
+                    // Anything else keeps its own layout, so 5.1 and 7.1 are never downmixed.
+                    _monoRecovery = mono;
+                    _monoRestarted = false;
+                    _player.Mute = mono;
+                    var old = _media;
+                    _media = media;
+                    media = null;
+                    bool started = _player.Play(_media);
+                    old?.Dispose();
+                    if (!started) { _error = null; _state = PlaybackState.Failed; }
+                }
+                if (_state == PlaybackState.Failed) Raise();
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                // Review 2026-11-07: a throw here vanished into the task and left the plate on OPENING for good.
+                media?.Dispose();
+                Stx.Core.Logging.ErrorLog.Write("player", e);
+                lock (_gate) { if (_disposed || generation != _generation) return; _error = null; }
                 Set(PlaybackState.Failed);
-                return;
-            }
-            Media media;
-            lock (_gate)
-            {
-                if (_disposed || _vlc is null || generation != _generation) return;
-                string[] options = [.. LibVlcOptions.ForMedia(Profile), .. LibVlcOptions.ForTarget(target.Kind), .. StartPaused ? [":start-paused"] : Array.Empty<string>()];
-                media = target.Kind == TargetKind.File
-                    ? new Media(_vlc, path, FromType.FromPath, options)
-                    : new Media(_vlc, target.Location, FromType.FromLocation, options);
-                HandedToLibVlc = target.Location;
-            }
-            var (mono, dirac) = Inspect(media);
-            if (dirac)
-            {
-                media.Dispose();
-                lock (_gate) { if (_disposed || generation != _generation) return; _error = DiracRefused; }
-                Set(PlaybackState.Failed);
-                return;
-            }
-            lock (_gate)
-            {
-                if (_disposed || _player is null || generation != _generation) { media.Dispose(); return; }
-                // Windows refuses a one-channel stream in shared mode (0x88890008, AUDCLNT_E_UNSUPPORTED_FORMAT) and
-                // LibVLC 3.0.24 then falls back to DirectSound. The stereo setting can't be made to stick before the
-                // output opens (LibVLC resets it there), so a mono file starts muted; when the output lands on
-                // DirectSound it is switched to stereo, which reopens it on WASAPI, and then sound is let through.
-                // Anything else keeps its own layout, so 5.1 and 7.1 are never downmixed.
-                _monoRecovery = mono;
-                _monoRestarted = false;
-                _player.Mute = mono;
-                var old = _media;
-                _media = media;
-                _player.Play(media);
-                old?.Dispose();
             }
         });
     }
@@ -271,19 +298,26 @@ public sealed class LibVlcEngine : IPlaybackEngine
     const uint Dirac = 'd' | 'r' << 8 | 'a' << 16 | 'c' << 24;
 
     // Reads the file's tracks before anything is decoded: mono sound needs the stereo path, and Dirac must never reach
-    // the decoder, because VLC 3.0.24 crashes the process on it.
-    static (bool Mono, bool Dirac) Inspect(Media media)
+    // the decoder, because VLC 3.0.24 crashes the process on it. When LibVLC can't finish reading a file's tracks (a
+    // slow share, a parse that times out or throws), the guard doesn't assume the best: the file's first megabyte is
+    // checked for Dirac's own signature instead (review 2026-11-07).
+    static (bool Mono, bool Dirac) Inspect(Media media, PlaybackTarget target)
     {
+        bool parsed = false;
         try
         {
-            media.Parse(MediaParseOptions.ParseLocal, timeout: 3000).Wait(4000);
+            var parsing = media.Parse(MediaParseOptions.ParseLocal, timeout: 3000);
+            parsed = parsing.Wait(4000) && parsing.Result == MediaParsedStatus.Done;
             var tracks = media.Tracks;
             var audio = tracks.Where(t => t.TrackType == TrackType.Audio).ToList();
-            return (audio.Count > 0 && audio.All(t => t.Data.Audio.Channels == 1),
-                    tracks.Any(t => t.TrackType == TrackType.Video && t.Codec == Dirac));
+            bool dirac = tracks.Any(t => t.TrackType == TrackType.Video && t.Codec == Dirac);
+            if (!dirac && !parsed && target.Kind == TargetKind.File) dirac = DiracSniff.Present(target.Location);
+            return (audio.Count > 0 && audio.All(t => t.Data.Audio.Channels == 1), dirac);
         }
-        catch (AggregateException) { return (false, false); }
-        catch (VLCException) { return (false, false); }
+        catch (Exception e) when (e is AggregateException or VLCException)
+        {
+            return (false, target.Kind == TargetKind.File && DiracSniff.Present(target.Location));
+        }
     }
 
     public void TogglePause()
@@ -295,7 +329,8 @@ public sealed class LibVlcEngine : IPlaybackEngine
 
     public void Stop()
     {
-        lock (_gate) _pending = null;
+        // A file still being opened is called off: without the new generation it would start after STOP.
+        lock (_gate) { _pending = null; _generation++; }
         _player?.Stop();
         Set(PlaybackState.Idle);
     }
@@ -338,7 +373,7 @@ public sealed class LibVlcEngine : IPlaybackEngine
         var player = new MediaPlayer(vlc) { Volume = _volume };
         if (_headless) DrawIntoMemory(player);
         player.Opening += (_, _) => Set(PlaybackState.Opening);
-        player.Playing += (_, _) => { Set(PlaybackState.Playing); Resume(player); };
+        player.Playing += (_, _) => { _reachedPlaying = true; Set(PlaybackState.Playing); Resume(player); };
         player.Paused += (_, _) => Set(PlaybackState.Paused);
         player.EndReached += (_, _) => Set(PlaybackState.Ended);
         player.EncounteredError += (_, _) => Fail();
@@ -428,10 +463,11 @@ public sealed class LibVlcEngine : IPlaybackEngine
         Task.Run(() => { lock (_gate) { if (!_disposed && ReferenceEquals(player, _player)) player.Mute = false; } });
     }
 
-    // LibVLC's own words stay in LoggedErrors; the plate gets the console's plain message.
+    // LibVLC's own words stay in LoggedErrors; the plate gets the console's plain message. A file that fails gets the
+    // plate's own "couldn't be played"; a stream says whether it never arrived or was cut off (handoff 2026-11-05, item 3).
     void Fail()
     {
-        _error = null;
+        _error = _targetKind == TargetKind.Stream ? (_reachedPlaying ? StreamCutOff : StreamUnreachable) : null;
         Set(PlaybackState.Failed);
     }
 

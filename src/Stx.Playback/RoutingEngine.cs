@@ -21,6 +21,8 @@ public sealed class RoutingEngine : IPlaybackEngine
     string _sharedWhy = "";
     PlaybackState? _opening;
     int _generation;
+    string? _path;
+    bool _disposed;
 
     /// <param name="bitPerfect">The BIT-PERFECT setting, read at each open.</param>
     /// <param name="ffmpeg">FFmpeg and FFprobe, which first run downloads. Until they're there, everything plays through VLC's engine.</param>
@@ -65,7 +67,9 @@ public sealed class RoutingEngine : IPlaybackEngine
         int generation;
         lock (_gate)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
             generation = ++_generation;
+            _path = path;
             _opening = PlaybackState.Opening;
             _sharedWhy = "";
         }
@@ -79,9 +83,11 @@ public sealed class RoutingEngine : IPlaybackEngine
             string why;
             try { (route, source, why) = Decide(path); }
             catch (Exception e) when (e is not OutOfMemoryException) { (route, source, why) = (AudioRoute.Shared, null, UnreadableSound); }
+            // Everything from here runs under the lock, the hand-off to VLC's engine included, so a STOP, a newer open
+            // or closing the app (each a new generation) can't be overtaken by this one finishing late.
             lock (_gate)
             {
-                if (generation != _generation) return;
+                if (_disposed || generation != _generation) return;
                 if (route == AudioRoute.Exclusive && source is not null)
                 {
                     try
@@ -103,8 +109,8 @@ public sealed class RoutingEngine : IPlaybackEngine
                 _active = _vlc;
                 _sharedWhy = route == AudioRoute.Passthrough && !_vlc.Passthrough ? "SHARED: PASSTHROUGH STARTS WITH STX'S NEXT LAUNCH" : why;
                 _opening = null;
+                _vlc.Open(path);
             }
-            _vlc.Open(path);
         });
     }
 
@@ -150,9 +156,39 @@ public sealed class RoutingEngine : IPlaybackEngine
         catch (System.ComponentModel.Win32Exception) { return null; }
     }
 
-    public void TogglePause() => _active.TogglePause();
-    public void Stop() => _active.Stop();
-    public void Seek(TimeSpan to) => _active.Seek(to);
+    /// <summary>PLAY on a finished or stopped lossless track opens it again through the routing, so a device another
+    /// app took in the meantime means shared sound with the reason, never an error thrown at the plate.</summary>
+    public void TogglePause()
+    {
+        string? replay;
+        lock (_gate)
+        {
+            if (_disposed || _opening is not null) return;
+            replay = _active is MusicEngine { State: PlaybackState.Ended or PlaybackState.Idle } ? _path : null;
+        }
+        if (replay is not null) Open(replay);
+        else _active.TogglePause();
+    }
+
+    /// <summary>Stops what's playing, and calls off a file still being probed, which would otherwise start after STOP.</summary>
+    public void Stop()
+    {
+        bool wasOpening;
+        lock (_gate)
+        {
+            if (_disposed) return;
+            _generation++;
+            wasOpening = _opening is not null;
+            _opening = null;
+        }
+        _active.Stop();
+        if (wasOpening) Raise();
+    }
+
+    public void Seek(TimeSpan to)
+    {
+        if (_opening is null) _active.Seek(to);
+    }
     public void SelectAudio(int id) => _active.SelectAudio(id);
     public void SelectSubtitle(int id) => _active.SelectSubtitle(id);
     public void SelectChapter(int id) => _active.SelectChapter(id);
@@ -161,6 +197,12 @@ public sealed class RoutingEngine : IPlaybackEngine
 
     public void Dispose()
     {
+        lock (_gate)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _generation++;
+        }
         _music?.Dispose();
         _vlc.Dispose();
     }

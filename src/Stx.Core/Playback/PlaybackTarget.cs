@@ -42,15 +42,26 @@ public sealed record PlaybackTarget(TargetKind Kind, string Location, string? Re
         return new(TargetKind.Disc, DiscMrl(verdict.Kind, DiscRoot(pathOrUrl)), null, verdict.Kind);
     }
 
-    /// <summary>dvd:///D:/ or bluray:///C:/Films/My%20Film/ — the path after the scheme, with forward slashes, each part escaped.</summary>
+    /// <summary>
+    /// dvd:///D:/ or bluray:///C:/Films/My%20Film/ — the path after the scheme, with forward slashes, each part escaped.
+    /// A disc on a network share keeps its two leading slashes: dvd://///nas/Films/My%20Film/.
+    /// </summary>
+    /// <remarks>
+    /// Review finding 5, checked against LibVLC 3.0.24 on 2026-11-07 with a disc folder reached as \\localhost\C$\...:
+    /// the old dvd:///nas/... reached VLC's DVD reader as "nas\..." (no leading \\), so a disc on a share never opened;
+    /// dvd://///nas/... reached it as "\\nas\...", and the reader read the folder's VIDEO_TS.IFO, as it does for a
+    /// local folder. VLC's core makes the reader's path the same way for bluray:, which wasn't run separately.
+    /// </remarks>
     public static string DiscMrl(DiscKind kind, string path)
     {
         string scheme = kind == DiscKind.BluRay ? "bluray" : "dvd";
         string forward = path.Replace('\\', '/');
+        bool share = forward.StartsWith("//", StringComparison.Ordinal) && !forward.StartsWith("//?/", StringComparison.Ordinal) && !forward.StartsWith("//./", StringComparison.Ordinal);
         var parts = forward.Split('/');
         for (int i = 0; i < parts.Length; i++)
             if (!(i == 0 && parts[i].Length == 2 && parts[i][1] == ':')) parts[i] = Uri.EscapeDataString(parts[i]);
         string joined = string.Join('/', parts).TrimStart('/');
+        if (share) joined = "//" + joined;
         if (Directory.Exists(path) && !joined.EndsWith('/')) joined += "/";
         return $"{scheme}:///{joined}";
     }

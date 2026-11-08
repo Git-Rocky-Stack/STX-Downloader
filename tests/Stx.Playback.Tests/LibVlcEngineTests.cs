@@ -152,7 +152,9 @@ public class LibVlcEngineTests
     {
         var facts = HardwareProbe.Detect();
         Assert.Equal(Environment.ProcessorCount, facts.LogicalCores);
-        Assert.False(facts.GpuSuperResolution);
+        // What this PC's adapter has, by STX's rule: false on the reference UHD 620, true on an Arc (the Core Ultra 7
+        // 258V's 140V, 2026-11-07). It said False outright before, which only held on the reference PC.
+        Assert.Equal(Enhance.SuperResolution(HardwareProbe.Gpu()), facts.GpuSuperResolution);
     }
 
     // Closing STX just after opening a file: the engine must not free LibVLC while the file's tracks are still being read.
@@ -229,6 +231,90 @@ public class LibVlcEngineTests
             $"state {engine.State}, position {engine.Position}, error {engine.Error}");
         Assert.True(engine.Decoded.AudioBlocks > 0, $"decoded {engine.Decoded}");
         Assert.Equal(station, engine.HandedToLibVlc);
+    }
+
+    // Handoff 2026-11-05, item 3: a stream that failed said "THIS FILE COULDN'T BE PLAYED", or nothing. One that never
+    // answers now says to check the address and the connection. A port nothing listens on, so it runs anywhere.
+    [Fact]
+    public void A_stream_that_cant_be_reached_says_so()
+    {
+        var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        int port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open($"http://127.0.0.1:{port}/radio.mp3");
+        Assert.True(Fixture.Within(TimeSpan.FromSeconds(15), () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+        Assert.Equal(LibVlcEngine.StreamUnreachable, engine.Error);
+    }
+
+    // Review 2026-11-07: STOP pressed while a file's tracks were still being read didn't call the open off, so the
+    // file started anyway and played under a plate that said it was stopped.
+    [Fact]
+    public void Stop_during_the_open_keeps_it_stopped()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(Fixture.File("moving.mp4"));
+        engine.Stop();
+        Thread.Sleep(2500);
+        Assert.Equal(PlaybackState.Idle, engine.State);
+        Assert.Equal(0, engine.Decoded.Pictures);
+    }
+
+    // Review 2026-11-07: a file: address was turned into its path for the checks, then handed to LibVLC as given, so
+    // LibVLC looked for a file literally named "file:///...".
+    [Fact]
+    public void A_file_address_plays_the_file()
+    {
+        using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+        engine.Open(new Uri(Fixture.File("tiny.mp4")).AbsoluteUri);
+        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.3)),
+            $"state {engine.State}, error {engine.Error}, handed {engine.HandedToLibVlc}");
+        Assert.Equal(Fixture.File("tiny.mp4"), engine.HandedToLibVlc);
+    }
+
+    // Review finding 5: a disc folder on a network share never reached VLC's DVD reader. Reached through this PC's own
+    // admin share, the reader must get as far as reading the folder's VIDEO_TS.IFO, as it does for the same folder on C:.
+    // A local gate (Category=Network): it needs \\localhost\C$, which only an administrator's account can open.
+    [Fact, Trait("Category", "Network")]
+    public void A_disc_folder_on_a_share_reaches_vlcs_disc_reader()
+    {
+        if (!Directory.Exists(@"\\localhost\C$\Windows")) Assert.Skip(@"\\localhost\C$ isn't open to this account.");
+        string local = Directory.CreateTempSubdirectory("stx-share-disc").FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(local, "VIDEO_TS"));
+            File.WriteAllBytes(Path.Combine(local, "VIDEO_TS", "VIDEO_TS.IFO"), new byte[4096]);
+            string share = @"\\localhost\" + local[0] + "$" + local[2..];
+            LibVLCSharp.Shared.Core.Initialize();
+            var seen = new System.Collections.Concurrent.ConcurrentQueue<string>();
+            using var vlc = new LibVLCSharp.Shared.LibVLC(enableDebugLogs: true, "--aout=dummy", "--vout=dummy");
+            vlc.Log += (_, e) => { if (e.Module == "dvdnav") seen.Enqueue(e.Message); };
+            using var media = new LibVLCSharp.Shared.Media(vlc, PlaybackTarget.DiscMrl(DiscKind.Dvd, share), LibVLCSharp.Shared.FromType.FromLocation);
+            using var player = new LibVLCSharp.Shared.MediaPlayer(media);
+            player.Play();
+            Assert.True(Fixture.Within(Five, () => seen.Any(m => m.Contains("VIDEO_TS.IFO", StringComparison.Ordinal))), "VLC's disc reader never reached the folder: " + string.Join(" | ", seen.Take(6)));
+            player.Stop();
+        }
+        finally { Directory.Delete(local, true); }
+    }
+
+    // A file that fails keeps the plate's own message: the stream words are for streams only.
+    [Fact]
+    public void A_broken_file_doesnt_get_the_stream_message()
+    {
+        string dir = Directory.CreateTempSubdirectory("stx-broken").FullName;
+        try
+        {
+            string junk = Path.Combine(dir, "junk.mp4");
+            File.WriteAllBytes(junk, [.. Enumerable.Range(0, 4096).Select(i => (byte)(i * 31))]);
+            using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
+            engine.Open(junk);
+            Fixture.Within(Five, () => engine.State is PlaybackState.Failed or PlaybackState.Ended);
+            Assert.NotEqual(LibVlcEngine.StreamUnreachable, engine.Error);
+            Assert.NotEqual(LibVlcEngine.StreamCutOff, engine.Error);
+        }
+        finally { Directory.Delete(dir, true); }
     }
 
     [Fact, Trait("Category", "Device")]
