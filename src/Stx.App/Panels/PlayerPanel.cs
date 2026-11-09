@@ -28,7 +28,8 @@ public sealed partial class PlayerPanel : ContentControl
     readonly Grid _screen = new() { Background = new SolidColorBrush(Microsoft.UI.Colors.Black) };
     readonly Grid _strip = new() { ColumnSpacing = 12, RowSpacing = 8, Padding = new Thickness(0, 12, 0, 0) };
     readonly Grid _titleRow = new() { ColumnSpacing = 16, Margin = new Thickness(0, 0, 0, 12) };
-    readonly StackPanel _pickers = new() { Orientation = Orientation.Horizontal, Spacing = 16 };
+    // The time, VOLUME, then ENHANCE and any track knobs, wrapping under the time when the plate is too narrow (KnobRow).
+    readonly KnobRow _knobs = new();
     readonly Display _audioOnly = new() { Tone = DisplayTone.Cyan, Visibility = Visibility.Collapsed, HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center };
     readonly GlowText _audioTitle = new() { Tone = DisplayTone.Cyan, TextSize = 28, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     readonly GlowText _nowPlaying = new() { Tone = DisplayTone.Cyan, VerticalAlignment = VerticalAlignment.Center };
@@ -40,11 +41,12 @@ public sealed partial class PlayerPanel : ContentControl
     readonly Rotary _volume = new() { Label = "Volume", Items = VolumeSteps };
     readonly Grid _pads = new() { ColumnSpacing = 8 };
     readonly Pad[] _transport;
-    readonly StackPanel _volumeDial;
+    readonly GlowText? _enhanceStatus;
+    readonly int _padsRow;
     Rotary? _audioPicker, _subtitlePicker, _chapterPicker;
     bool _wasFullScreen;
 
-    /// <param name="enhance">The ENHANCE knob and its readout (Phase 6). The screenshot galleries leave it out.</param>
+    /// <param name="enhance">The ENHANCE knob and its readout (Phase 6). Of the screenshot galleries, only player-plate has it.</param>
     public PlayerPanel(PlayerViewModel player, LibVlcEngine engine, EnhanceViewModel? enhance = null)
     {
         _player = player;
@@ -72,9 +74,10 @@ public sealed partial class PlayerPanel : ContentControl
         _screen.Children.Add(_problem);
         _screen.SizeChanged += (_, e) => { if (!_player.IsFullScreen) _screen.Height = e.NewSize.Width / WidthOverHeight; };
 
-        // On the plate: three rows, so it fits the rack's right column (the position across the full width; the time,
-        // the volume and any track pickers the file needs; then the five pads sharing the width). In full screen: one
-        // row over the bottom of the picture, so it covers as little of it as it can (Layout).
+        // On the plate: rows, so it fits the rack's right column (the position across the full width; the time, the
+        // volume and the other knobs; ENHANCE's readout; then the five pads sharing the width). In full screen: one row
+        // over the bottom of the picture, so it covers as little of it as it can (Layout). Three columns: the pads,
+        // the position, the knobs.
         for (int i = 0; i < _transport.Length; i++)
         {
             _pads.ColumnDefinitions.Add(new ColumnDefinition());
@@ -85,16 +88,22 @@ public sealed partial class PlayerPanel : ContentControl
         }
         _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _strip.ColumnDefinitions.Add(new ColumnDefinition());
-        for (int i = 0; i < 3; i++) _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        for (int i = 0; i < 3; i++) _strip.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        _volumeDial = _volume.Captioned();
+        _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _time.HorizontalAlignment = HorizontalAlignment.Left;
+        _knobs.Children.Add(_time);
+        _knobs.Children.Add(_volume.Captioned());
         _strip.Children.Add(_pads);
         _strip.Children.Add(_seek);
-        _strip.Children.Add(_time);
-        _strip.Children.Add(_volumeDial);
-        _strip.Children.Add(_pickers);
-        if (enhance is not null) _pickers.Children.Add(EnhanceDial(enhance));
+        _strip.Children.Add(_knobs);
+        if (enhance is not null)
+        {
+            _knobs.Children.Add(EnhanceDial(enhance, out var status));
+            _enhanceStatus = status;
+            _strip.Children.Add(status);
+        }
+        // ENHANCE's readout takes a row of its own, so a long one can't widen the knobs' row off the plate.
+        _padsRow = _enhanceStatus is null ? 2 : 3;
+        for (int i = 0; i <= _padsRow; i++) _strip.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         Layout(fullScreen: false);
 
         _stage.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -155,18 +164,17 @@ public sealed partial class PlayerPanel : ContentControl
         if (_player.IsFullScreen != _wasFullScreen) SetFullScreen(_player.IsFullScreen);
     }
 
-    // ENHANCE: the knob, and under it what's actually on the picture, as VLC confirmed it, or why not.
-    static StackPanel EnhanceDial(EnhanceViewModel enhance)
+    // ENHANCE: the knob, and under it what's actually on the picture, as VLC confirmed it, or why not. The readout is
+    // right-aligned under the knob and wraps, as one naming the GPU runs past 60 characters.
+    static StackPanel EnhanceDial(EnhanceViewModel enhance, out GlowText status)
     {
         var knob = new Rotary { Label = "Enhance", Items = EnhanceViewModel.Labels, SelectedIndex = (int)enhance.Wanted };
         knob.SelectionChanged += (_, index) => { if (index >= 0) enhance.Wanted = (EnhanceLevel)index; };
-        var status = new GlowText { Tone = DisplayTone.Cyan, Dimmed = true, TextSize = 12, Text = enhance.Status };
-        AutomationProperties.SetName(status, "Enhance status");
-        enhance.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EnhanceViewModel.Status)) status.Text = enhance.Status; };
-        var dial = new StackPanel { Spacing = 4 };
-        dial.Children.Add(knob.Captioned());
-        dial.Children.Add(status);
-        return dial;
+        var readout = new GlowText { Tone = DisplayTone.Cyan, Dimmed = true, TextSize = 12, Text = enhance.Status, WrapsRight = true, HorizontalAlignment = HorizontalAlignment.Right };
+        AutomationProperties.SetName(readout, "Enhance status");
+        enhance.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EnhanceViewModel.Status)) readout.Text = enhance.Status; };
+        status = readout;
+        return knob.Captioned();
     }
 
     // A knob appears only when the file offers more than one choice.
@@ -174,11 +182,11 @@ public sealed partial class PlayerPanel : ContentControl
     {
         var names = tracks.Select(t => t.Name.ToUpperInvariant()).ToList();
         if (current is not null && current.Items.SequenceEqual(names)) return current;
-        if (current is not null) _pickers.Children.Remove((UIElement)current.Parent);
+        if (current is not null) _knobs.Children.Remove((UIElement)current.Parent);
         if (tracks.Count < 2) return null;
         var picker = new Rotary { Label = label, Items = names };
         picker.SelectionChanged += (_, index) => { if (index >= 0 && index < tracks.Count) select(tracks[index].Id); };
-        _pickers.Children.Add(picker.Captioned());
+        _knobs.Children.Add(picker.Captioned());
         return picker;
     }
 
@@ -190,20 +198,29 @@ public sealed partial class PlayerPanel : ContentControl
         {
             Place(_pads, 0, 0, 1);
             Place(_seek, 0, 1, 1);
-            Place(_time, 0, 2, 1);
-            Place(_volumeDial, 0, 3, 1);
-            Place(_pickers, 0, 4, 1);
+            Place(_knobs, 0, 2, 1);
+            _knobs.LeadGap = KnobRowLayout.FullScreenLeadGap;
+            // ENHANCE's readout under the position bar, inside the band's height rather than adding to it.
+            if (_enhanceStatus is not null)
+            {
+                Place(_enhanceStatus, 0, 1, 1);
+                _enhanceStatus.VerticalAlignment = VerticalAlignment.Bottom;
+            }
             // Narrower pads in full screen leave the position bar room; still well over 44 px each.
             _pads.Width = _transport.Length * 80 + (_transport.Length - 1) * 8;
             _pads.VerticalAlignment = VerticalAlignment.Center;
         }
         else
         {
-            Place(_seek, 0, 0, 5);
-            Place(_time, 1, 0, 2);
-            Place(_volumeDial, 1, 3, 1);
-            Place(_pickers, 1, 4, 1);
-            Place(_pads, 2, 0, 5);
+            Place(_seek, 0, 0, 3);
+            Place(_knobs, 1, 0, 3);
+            _knobs.LeadGap = KnobRowLayout.PlateLeadGap;
+            if (_enhanceStatus is not null)
+            {
+                Place(_enhanceStatus, 2, 0, 3);
+                _enhanceStatus.VerticalAlignment = VerticalAlignment.Top;
+            }
+            Place(_pads, _padsRow, 0, 3);
             _pads.Width = double.NaN;
             _pads.VerticalAlignment = VerticalAlignment.Stretch;
         }

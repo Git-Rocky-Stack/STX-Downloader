@@ -95,6 +95,7 @@ Each line names the code that does it, by file and member, so it can be checked.
 - A PLAYER plate sits beside the Library, above Source Truth (`MainWindow`). OPEN in the Library plays the file there and never hands it to another app (`LibraryViewModel.OpenCommand`, `Composition.Play`).
 - A file opened from File Explorer joins the Library and plays (`App.OnLaunched`, `Composition.OpenFromOutsideAsync`). A second launch with a file hands it to the copy already running, over a named pipe only your account can open (`SingleInstance.TryBecomeFirst`, `OpenRequests`).
 - PREV and NEXT walk the Library in its order, past files gone from disk (`LibraryViewModel.PlayOrder`, `PlayerViewModel`). AUDIO, SUBTITLES and CHAPTER knobs appear when a file has more than one (`PlayerPanel.Picker`).
+- The plate fits the rack's right column at any width: when the time, VOLUME and the other knobs don't fit on one line, the other knobs wrap under it, and ENHANCE's readout has a line of its own that wraps too, so nothing is pushed off the plate (`KnobRowLayout.Arrange`, `KnobRow`).
 - FULL, or a double-click on the picture, fills the screen; EXIT or Esc brings the console back. The video keeps playing through it (`PlayerPanel.SetFullScreen`).
 - Hidden in the tray, the player stops decoding pictures and the sound carries on (`LibVlcEngine.HideVideo`).
 - A PERFORMANCE knob in Settings sets how hard playback may work: AUTO picks from the PC, or choose ECO, BALANCED or MAX (`PerformanceProfile.For`).
