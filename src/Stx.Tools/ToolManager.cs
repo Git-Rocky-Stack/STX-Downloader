@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Net;
 using System.Security.Cryptography;
 using Stx.Core.Logging;
 
@@ -51,6 +52,18 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
 
     const int MostRedirects = 10;
 
+    /// <summary>
+    /// How long to wait before asking again when a host answers that it can't right now. GitHub's release downloads
+    /// answered 504 Gateway Time-out for minutes at a time on 2026-11-08 and -09; one such answer used to end a first
+    /// run with TOOLS MISSING. About 17 seconds in all, so a real outage still reports soon, and RETRY is still there.
+    /// </summary>
+    public IReadOnlyList<TimeSpan> TransientWaits { get; init; } = [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)];
+
+    // Busy, rate-limited or briefly down: worth asking again. A 404 or a 403 isn't, and an unreachable network is
+    // reported at once (it throws, and isn't retried), so going offline still shows straight away.
+    static bool IsTransient(HttpStatusCode status) => status is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests
+        or HttpStatusCode.InternalServerError or HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout;
+
     /// <summary>The client the updater wants: redirects left to it, so it can check each one.</summary>
     public static HttpClient NewHttpClient()
     {
@@ -72,6 +85,12 @@ public sealed class ToolManager(HttpClient http, string root, ToolOptions option
                 throw new HttpRequestException($"{next.Host} isn't a tool host.");
             }
             var response = await http.GetAsync(next, completion, cancel).ConfigureAwait(false);
+            for (int wait = 0; IsTransient(response.StatusCode) && wait < TransientWaits.Count; wait++)
+            {
+                response.Dispose();
+                await Task.Delay(TransientWaits[wait], cancel).ConfigureAwait(false);
+                response = await http.GetAsync(next, completion, cancel).ConfigureAwait(false);
+            }
             if ((int)response.StatusCode is >= 300 and < 400 && response.Headers.Location is { } location)
             {
                 response.Dispose();
