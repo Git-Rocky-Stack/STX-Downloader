@@ -17,12 +17,17 @@ sealed class FakeWeb : HttpMessageHandler
     /// <summary>Addresses answered with a redirect to another address, as GitHub answers a release download.</summary>
     public readonly Dictionary<string, string> Moves = new();
     public readonly List<Uri> Requests = new();
+    /// <summary>Addresses that answer with these statuses first, one per request, before answering as usual.</summary>
+    public readonly Dictionary<string, Queue<HttpStatusCode>> Failing = new();
     public bool Offline;
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancel)
     {
         lock (Requests) Requests.Add(request.RequestUri!);
         if (Offline) throw new HttpRequestException("no route to host");
+        lock (Failing)
+            if (Failing.TryGetValue(request.RequestUri!.ToString(), out var answers) && answers.Count > 0)
+                return Task.FromResult(new HttpResponseMessage(answers.Dequeue()));
         if (Moves.TryGetValue(request.RequestUri!.ToString(), out var to))
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = new Uri(to) } });
         return Task.FromResult(Files.TryGetValue(request.RequestUri!.ToString(), out var body)
@@ -101,6 +106,43 @@ public sealed class ToolManagerTests : IDisposable
         Assert.Equal(ToolHealth.Current, await Manager().EnsureAsync());
         foreach (string exe in new[] { "yt-dlp.exe", "deno.exe", "ffmpeg.exe", "ffprobe.exe" })
             Assert.True(File.Exists(Installed(exe)), exe);
+    }
+
+    // 2026-11-08 and -09: GitHub's release host answered 504 for minutes at a time, and one 504 ended a first run.
+    [Fact]
+    public async Task First_run_rides_out_a_release_host_that_is_briefly_down()
+    {
+        _web.Failing[FfmpegSource.Sums] = new([HttpStatusCode.GatewayTimeout, HttpStatusCode.BadGateway, HttpStatusCode.ServiceUnavailable]);
+        var manager = new ToolManager(new HttpClient(_web), _root, new ToolOptions(true), _tools) { TransientWaits = [TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero] };
+
+        Assert.Equal(ToolHealth.Current, await manager.EnsureAsync());
+        Assert.Equal(4, _web.Requests.Count(u => u.ToString() == FfmpegSource.Sums));
+    }
+
+    [Fact]
+    public async Task A_host_down_past_every_wait_leaves_the_tool_missing_and_stops_asking()
+    {
+        _web.Failing[FfmpegSource.Sums] = new(Enumerable.Repeat(HttpStatusCode.GatewayTimeout, 10));
+        var manager = new ToolManager(new HttpClient(_web), _root, new ToolOptions(true), _tools) { TransientWaits = [TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero] };
+
+        Assert.Equal(ToolHealth.Missing, await manager.EnsureAsync());
+        Assert.Equal(4, _web.Requests.Count(u => u.ToString() == FfmpegSource.Sums));
+    }
+
+    [Fact]
+    public async Task A_file_that_isnt_there_is_asked_for_once()
+    {
+        _web.Files.Remove(FfmpegSource.Sums);
+        Assert.Equal(ToolHealth.Missing, await Manager().EnsureAsync());
+        Assert.Equal(1, _web.Requests.Count(u => u.ToString() == FfmpegSource.Sums));
+    }
+
+    [Fact]
+    public void Waits_for_a_busy_host_add_up_to_well_under_a_minute()
+    {
+        var waits = Manager().TransientWaits;
+        Assert.InRange(waits.Count, 1, 5);
+        Assert.InRange(waits.Aggregate(TimeSpan.Zero, (sum, w) => sum + w), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30));
     }
 
     [Fact]

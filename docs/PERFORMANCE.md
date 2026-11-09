@@ -6,11 +6,11 @@ Measured 2026-11-01 with `tools/Measure-Budgets.ps1 -Assert`, every run exiting 
 
 **Budgets:** with no work running, 0% CPU over 30 seconds (the script fails at 0.05% or more). While animating or running a job, under 2% of total CPU and under 5% GPU. Private memory under 150 MB.
 
-**These budgets apply when nothing is playing.** Playback has no fixed limits: it uses what the file needs, within the PERFORMANCE setting (AUTO, ECO, BALANCED, MAX; `src/Stx.Core/Playback/PerformanceProfile.cs:16`). The PLAYER plate sits in the rack whether or not anything plays, so the idle budgets are measured with it there.
+**These budgets apply when nothing is playing.** Playback has no fixed limits: it uses what the file needs, within the PERFORMANCE setting (AUTO, ECO, BALANCED, MAX; `PerformanceProfile.For`). The PLAYER plate sits in the rack whether or not anything plays, so the idle budgets are measured with it there.
 
-**Watched folders (Phase 2).** The first scan of Videos and Music is work, like a download: it runs on its own thread below normal priority (`src/Stx.Core/Library/CollectionWatcher.cs:94`), so the idle budget applies once it has finished. Watching costs nothing until a file changes.
+**Watched folders (Phase 2).** The first scan of Videos and Music is work, like a download: it runs on its own thread below normal priority (`CollectionWatcher.Watch`), so the idle budget applies once it has finished. Watching costs nothing until a file changes.
 
-**Measured after Phases 2 to 7** (2026-11-05, this machine, `tools/Measure-Budgets.ps1 -Scenario idle -Assert -WatchedFolder <folder>`; `-WatchedFolder` makes that folder the only one watched). The 50,000 files are small files with media names in 500 folders: the scan reads only path, size and date (`src/Stx.Core/Library/FolderScan.cs:12`), so they make 50,000 real Library rows, and the database held 50,000 `media_files` rows afterwards.
+**Measured after Phases 2 to 7** (2026-11-05, this machine, `tools/Measure-Budgets.ps1 -Scenario idle -Assert -WatchedFolder <folder>`; `-WatchedFolder` makes that folder the only one watched). The 50,000 files are small files with media names in 500 folders: the scan reads only path, size and date (`FolderScan`), so they make 50,000 real Library rows, and the database held 50,000 `media_files` rows afterwards.
 
 ```
 watched folder   wsMB   privateMB privateMaxMB cpuPct gpu3dPct exit
@@ -18,7 +18,7 @@ empty            228.90    117.30       117.50   0.01     0.00 0
 50,000 files     302.70    185.30       185.50   0.00     0.00 1 (over the 150 MB budget)
 ```
 
-**The idle memory budget fails with a very large collection.** With nothing watched, Phases 2 to 7 cost about 38 MB over Phase 1's 80 MB. Each Library row then costs about 1.4 KB: every row is held in memory so search answers as you type, and each keeps a second, lower-case copy of its title, file name and folder for that search (`src/Stx.ViewModels/LibraryViewModel.cs:46`). Rocky chose to rework row storage (plan `docs/superpowers/plans/2026-11-05-library-row-storage.md`); measured below. The idle and hidden rows below predate Phases 2 to 7.
+**The idle memory budget fails with a very large collection.** With nothing watched, Phases 2 to 7 cost about 38 MB over Phase 1's 80 MB. Each Library row then costs about 1.4 KB: every row is held in memory so search answers as you type, and each kept a second, lower-case copy of its title, file name and folder for that search. That was the Library until 2026-11-07; the next measurement is after it changed. Rocky chose to rework row storage (plan `docs/superpowers/plans/2026-11-05-library-row-storage.md`); measured below. The idle and hidden rows below predate Phases 2 to 7.
 
 **After the rows left memory** (2026-11-07). Not this machine: a Core Ultra 7 258V laptop, Arc 140V, a 2880x1800 panel at 175%, the same script and the same 50,000 files (500 folders of 100). All four runs in one sitting, each with the tools already downloaded, the code before the change built from the branch's last commit in a worktree:
 
@@ -30,7 +30,7 @@ after rows      empty            266.60    165.40       165.50   0.01     0.00
 after rows      50,000 files     271.00    163.60       163.80   0.00     0.00
 ```
 
-At 50,000 rows the Library now costs nothing over an empty one: before, 57 MB (about 1.1 KB a row here). Two changes made that: the Library holds only the rows read so far, a page at first and more as the list scrolls (`src/Stx.ViewModels/LibraryViewModel.cs:121`), and the garbage a scan leaves, which an idle app never collects, is given back once the work has been quiet for 10 seconds (`src/Stx.Core/Memory/MemoryReturn.cs:10`; a heap dump of the idle app before that showed 48 MB of committed heap with 4 MB alive). **This laptop's own floor is over the budget**, 165 MB with an empty Library, against 117.5 MB on the reference PC; the 50,000-row run with `-Assert` on the reference PC is still to be done, and should land near its empty figure.
+At 50,000 rows the Library now costs nothing over an empty one: before, 57 MB (about 1.1 KB a row here). Two changes made that: the Library holds only the rows read so far, a page at first and more as the list scrolls (`LibraryViewModel.Page`, `IncrementalRows`), and the garbage a scan leaves, which an idle app never collects, is given back once the work has been quiet for 10 seconds (`MemoryReturn`; a heap dump of the idle app before that showed 48 MB of committed heap with 4 MB alive). **This laptop's own floor is over the budget**, 165 MB with an empty Library, against 117.5 MB on the reference PC; the 50,000-row run with `-Assert` on the reference PC is still to be done, and should land near its empty figure.
 
 **Search at 50,000 rows**, on the same laptop: a keystroke (both counts and the first page) takes about 20 to 40 ms through the database, and under the 150 ms budget through the view-model on the real database (`tests/Stx.App.Tests/LibraryCollectionTests.cs`, `tests/Stx.Data.Tests/LibraryRowsTests.cs`). A page from row 49,000 comes as fast as the first.
 
@@ -77,7 +77,7 @@ Playback has no budget, but it is measured. `tests/Stx.VisualTests/PlayerPlaybac
 
 ## Shrink's encoder settings
 
-SHRINK encodes video with SVT-AV1 preset 6 at CRF 30, or x265 medium at CRF 24, both 10-bit (`src/Stx.Tools/FfmpegArgs.cs:127`). Checked on 2026-11-07 (Core Ultra laptop) against real footage: three clips cut from Blender's open films (CC BY), copied from their H.264 releases as a downloaded file would be, the first 10 seconds of each encoded as SHRINK encodes it at a ladder of CRFs and scored with VMAF (FFmpeg's libvmaf, default model) against its original. VMAF 95 and up is usually indistinguishable from the original, 90 and up good.
+SHRINK encodes video with SVT-AV1 preset 6 at CRF 30, or x265 medium at CRF 24, both 10-bit (`FfmpegArgs.ForConvert`). Checked on 2026-11-07 (Core Ultra laptop) against real footage: three clips cut from Blender's open films (CC BY), copied from their H.264 releases as a downloaded file would be, the first 10 seconds of each encoded as SHRINK encodes it at a ladder of CRFs and scored with VMAF (FFmpeg's libvmaf, default model) against its original. VMAF 95 and up is usually indistinguishable from the original, 90 and up good.
 
 ```
 clip                          codec CRF  kbps  size   VMAF  worst 5%

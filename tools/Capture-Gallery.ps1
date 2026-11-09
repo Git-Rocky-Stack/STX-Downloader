@@ -21,8 +21,13 @@ if (-not ('StxCaptureWindow.Native' -as [type])) {
 [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, int[] rect);
 [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, int[] rect);
 [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, int[] point);
+[DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
 '@
 }
+# STX is per-monitor DPI aware, so its window is drawn in device pixels. Measured from a thread that isn't, its rectangles
+# come back in 96-DPI units: on a 175% screen the print was cut to its top-left 946x603 (2026-11-09). -4 is
+# DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2. At 96 DPI both measures agree, so the baselines don't change.
+[StxCaptureWindow.Native]::SetThreadDpiAwarenessContext([IntPtr]::new(-4)) | Out-Null
 
 if (-not ('StxCaptureWindow.Pixels' -as [type])) {
     # Compiled, because a PowerShell loop over every pixel takes seconds, longer than the retry window below.

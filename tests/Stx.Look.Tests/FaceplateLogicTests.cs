@@ -53,4 +53,17 @@ public class FaceplateLogicTests
                 Assert.True(LookTokens.Contrast(t["Ink"], t[plate]) >= 4.5, $"{m} Ink on {plate}");
         }
     }
+
+    // The user guide sets pad names in Accent and each section's summary in InkDim, on the same plates as Ink.
+    [Fact]
+    public void Accent_and_dim_ink_meet_contrast_on_both_plates()
+    {
+        foreach (var m in new[] { LookMode.Dark, LookMode.Light })
+        {
+            var t = LookTokens.For(m);
+            foreach (var ink in new[] { "Accent", "InkDim" })
+                foreach (var plate in new[] { "PlateTop", "PlateMid", "PlateBottom" })
+                    Assert.True(LookTokens.Contrast(t[ink], t[plate]) >= 4.5, $"{m} {ink} on {plate}");
+        }
+    }
 }
