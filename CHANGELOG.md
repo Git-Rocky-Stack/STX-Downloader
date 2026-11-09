@@ -1,8 +1,16 @@
 # Changelog
 
-## 1.1.0 (2026-11-08)
+## 1.1.0 (2026-11-09)
 
 The first release since 1.0.0 (2026-11-01). STX plays what it saves now, and the Library is your whole collection: a media player on VLC's engine, STX as the default player, discs and streams, bit-perfect sound, ENHANCE, and Shrink. It was built in the rounds below, newest first.
+
+### The Player in the tutorial, and the Player's knobs on a narrow plate (2026-11-09)
+
+Every change below has a test that failed without it, unless it says otherwise.
+
+- **The tutorial shows the Player.** A new scene, 06 · WATCH IT HERE, follows OPEN in the Library to the Player: the whole plate, its title, a press on FULL, then ENHANCE and its readout, ON SCREEN ONLY. Its three captions are the guide's own. The tutorial runs 89 seconds now, and the guide and README say so; a test fails if they, the project in `tools/tutorial` and the shipped `Assets/tutorial.mp4` disagree on its length (`GuideTests`). The plate is a capture of the real Player playing a sample clip FFmpeg made from a gradient, so no third-party picture is in it; `tools/tutorial/STORYBOARD.md` has the commands to make it again.
+- **Fixed: with ENHANCE on, the Player pushed its own controls off the plate.** ENHANCE's readout sat in the knob's column, so "SHARPEN · SOFTWARE FILTER · ON SCREEN ONLY" widened the knob row past the plate: the time readout was squeezed to nothing and the FULL pad was cut off, in any window narrower than about 1,560 px, which includes the 1,360 px STX opens at (the knob row needed about 628 px of the 535 it had there), and wider still with AUDIO, SUBTITLES or CHAPTER knobs as well. The readout has a line of its own now, and wraps; when the knobs don't fit beside the time, the extra ones wrap under it, right-aligned (`KnobRowLayout.Arrange`, `KnobRow`, `KnobRowLayoutTests`). Where they fit, everything sits where it did: the `player`, `player-full` and `player-audio` captures are pixel-identical to before, so the approved baselines stand.
+- **A `player-plate` gallery page**, the Player as the rack shows it, ENHANCE knob included, at the rack's right-column width, set from a fixed sample so it never shows a user's settings (`PlayerGallery`). The other player pages still leave ENHANCE out. Not covered by a test: it's what the tutorial's plate is captured from.
 
 ### The user guide, the docs, and the release (2026-11-08)
 
