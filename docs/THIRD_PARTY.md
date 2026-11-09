@@ -22,15 +22,15 @@ None of these are included in the app. When its tool setup runs, it downloads ea
 
 | Tool | Used for | Source | License |
 |---|---|---|---|
-| yt-dlp | Reading and downloading media | [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) releases (`src/Stx.Tools/ToolVersions.cs:6`) | [Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE) |
-| Deno | JavaScript runtime that yt-dlp uses for full YouTube extraction | [denoland/deno](https://github.com/denoland/deno) releases (`src/Stx.Tools/ToolVersions.cs:10`) | [MIT](https://github.com/denoland/deno/blob/main/LICENSE.md) |
-| FFmpeg and FFprobe | Merging streams, converting, measuring audio, and decoding lossless music for BIT-PERFECT | [FFmpeg-Builds/FFmpeg-Builds](https://github.com/FFmpeg-Builds/FFmpeg-Builds) (formerly BtbN/FFmpeg-Builds) release branch 9.0, `win64-gpl` (`src/Stx.Tools/FfmpegSource.cs:11`) | [GPL](https://ffmpeg.org/legal.html), because this build enables GPL components |
+| yt-dlp | Reading and downloading media | [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) releases (`ToolVersions.YtDlpExe`) | [Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE) |
+| Deno | JavaScript runtime that yt-dlp uses for full YouTube extraction | [denoland/deno](https://github.com/denoland/deno) releases (`ToolVersions.DenoZip`) | [MIT](https://github.com/denoland/deno/blob/main/LICENSE.md) |
+| FFmpeg and FFprobe | Merging streams, converting, measuring audio, and decoding lossless music for BIT-PERFECT | [FFmpeg-Builds/FFmpeg-Builds](https://github.com/FFmpeg-Builds/FFmpeg-Builds) (formerly BtbN/FFmpeg-Builds) release branch 9.0, `win64-gpl` (`FfmpegSource.ZipName`) | [GPL](https://ffmpeg.org/legal.html), because this build enables GPL components |
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php), under [its own license](https://jrsoftware.org/files/is/license.txt).
 
 ## Why the GPL build of FFmpeg
 
-The GPL build chosen in `src/Stx.Tools/FfmpegSource.cs:9` includes libx264, a software H.264 encoder. The LGPL builds leave it out. FFmpeg's license applies to FFmpeg itself. Because FFmpeg is a separate program that you download from its publisher, and it is not part of this repository or linked into this app, this repository's code stays under MIT.
+The GPL build chosen in `FfmpegSource` includes libx264, a software H.264 encoder. The LGPL builds leave it out. FFmpeg's license applies to FFmpeg itself. Because FFmpeg is a separate program that you download from its publisher, and it is not part of this repository or linked into this app, this repository's code stays under MIT.
 
 Each download is checked against the checksum its publisher posts, and a tool with no matching checksum is not installed.
 
