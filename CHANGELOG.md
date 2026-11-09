@@ -4,7 +4,31 @@
 
 The first release since 1.0.0 (2026-11-01). STX plays what it saves now, and the Library is your whole collection: a media player on VLC's engine, STX as the default player, discs and streams, bit-perfect sound, ENHANCE, and Shrink. It was built in the rounds below, newest first.
 
-<!-- release-notes -->
+### The user guide, the docs, and the release (2026-11-08)
+
+Every change below has a test that failed without it, unless it says otherwise.
+
+#### The user guide
+
+- **Rebuilt, and twice as deep.** It opens with four quick-start steps behind glass, then gives each plate a section with a one-line summary: the console itself, saving from a link and from a page, Settings, the Queue, the Library, Source truth, the Player, streams and discs, and what to do when something goes wrong (`src/Stx.ViewModels/GuideContent.cs`, `src/Stx.App/Panels/GuidePanel.cs`).
+- **Every pad, switch, knob and readout it names is set in the console's accent**, semibold, so a line can be matched to the console at a glance. A new `Accent` colour meets WCAG AA on both plates, as does the dimmed ink the summaries use (`LookTokens`, `FaceplateLogicTests`).
+- **It covers the whole console.** A test fails if the guide names a control the console doesn't have, and now also if the console has one the guide never names. LIGHT MODE, START WITH WINDOWS, TOOL UPDATES, REDUCE MOTION, BROWSE, GRAB IT, NO THANKS, CLOSE, and the VOLUME, AUDIO, SUBTITLES and CHAPTER knobs, among others, were missing (`tests/Stx.App.Tests/GuideTests.cs`). Every readout it quotes is held to the app's own words.
+- **Corrected:** it never said how to open it again (SETTINGS, then USER GUIDE); it gave two of Source truth's five verdicts; it said STX never deletes media, when a new download identical to a saved file is removed; and it didn't say that with TOOL UPDATES off, a first run can't download its tools.
+
+#### Docs
+
+- **The README** leads with installing and a quick start, has a table of contents, and says what's been tested since the laptop runs (BIT-PERFECT, UPSCALE, high DPI, HDR, Default Apps), not what hadn't been on 2026-11-05.
+- **References name the member, not the line.** Most of the README's line references had drifted onto blank lines or other code. The README and the living docs now name file and member, and a test fails on a line number, on a file that isn't there, or on a name the code doesn't have (`tests/Stx.App.Tests/DocsTests.cs`).
+
+#### The app
+
+- **A first run waits out a tool host that's briefly down.** GitHub's release downloads answered 504 for minutes at a time on 2026-11-08 and -09, and a single 504 ended a first run with TOOLS MISSING. A busy or briefly-down answer is asked again after 2, 5 and 10 seconds; a 404 isn't, and an unreachable network still shows at once (`ToolManager.TransientWaits`).
+
+#### Release and build
+
+- **1.1.0, set in one place.** `Directory.Build.props` holds the number; `tools/Publish.ps1` reads it, the installer won't build without being given it, and a test holds the extension's manifest to it (`tests/Stx.App.Tests/VersionTests.cs`). `Publish.ps1` also finds Inno Setup installed for one user. Built on this laptop with Inno Setup 6.7.4: the setup and the zip carry 1.1.0 in the exe and in the extension.
+- **The GitHub Actions** moved to checkout 7.0.1, setup-dotnet 6.1.0, cache 6.1.0 and setup-node 7.1.0, each pinned to its release's commit (Dependabot, #4 to #7), and CI waits about five minutes for GitHub's release host before giving up.
+- **Gallery captures on a scaled screen.** `tools/Capture-Gallery.ps1` measured the window in 96-DPI units when PowerShell wasn't DPI aware, and cut a 175% capture to its top-left corner. It measures in device pixels now; at 96 DPI nothing changes. Not covered by a test: seen in a capture.
 
 ### The Library's rows out of memory, Dirac streams, high-DPI and HDR screens, a 27 MB SoundFont (2026-11-07)
 
