@@ -30,7 +30,7 @@
 
 - **Shrink's encoder settings, checked against real footage:** clips from Blender's open films, scored with VMAF against their originals. SVT-AV1 CRF 30 and x265 CRF 24 give the same quality, AV1's copy the smaller; live action keeps VMAF 95 to 97; a detailed 10 Mb/s source keeps about 90 at a twelfth of its size. The settings stay; the numbers are in `docs/PERFORMANCE.md`.
 - **FFmpeg's builds moved** from BtbN/FFmpeg-Builds to FFmpeg-Builds/FFmpeg-Builds; STX and CI name the new owner, and a Network test fails if that address ever answers with a move again (`src/Stx.Tools/FfmpegSource.cs:12`).
-- **The projects that aren't Windows-only run on Linux in CI** (Look, Art, Core, Data; `.github/workflows/build.yml`). Not yet run: it runs once this branch is pushed.
+- **The projects that aren't Windows-only run on Linux in CI** (Look, Art, Core, Data; `.github/workflows/build.yml`). Its first run passed all four once the job had FFmpeg, which Core's bit-perfect decode tests need; nothing else needed changing for Linux.
 - **A test that failed since 2026-11-05:** the baseline size check still asked 944x601 of the settings and Library images after their taller baselines were approved (`tests/Stx.VisualTests/BaselineTests.cs:36`). The playback tests' picture regions now scale with the capture, for high-DPI screens (`tests/Stx.VisualTests/CaptureArea.cs`).
 
 ## Unreleased: the 2026-11-07 review, and the rest of the open findings
