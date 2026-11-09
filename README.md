@@ -80,7 +80,7 @@ Each line points at the code that does it.
 
 Windows 10 version 2004 or later, x64.
 
-1. Run `STXDownloader-1.0.0-setup.exe`. It installs for your account only, with no administrator prompt, and uninstalls from Windows Settings (`tools/installer/STXDownloader.iss:37`). Your saved videos are never removed.
+1. Run `STXDownloader-1.1.0-setup.exe`. It installs for your account only, with no administrator prompt, and uninstalls from Windows Settings (`tools/installer/STXDownloader.iss:37`). Your saved videos are never removed.
 2. The first run downloads yt-dlp, FFmpeg and Deno, about 430 MB. See [third-party tools](docs/THIRD_PARTY.md).
 
 The setup and the app's own files are signed through Azure Artifact Signing. Windows shows the certificate's validated name as the publisher: Sharif Elsalaymeh.

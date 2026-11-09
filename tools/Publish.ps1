@@ -1,15 +1,19 @@
 param(
-    [string] $Version = '1.0.0',
+    # The release number; Directory.Build.props sets it, so it's given here only to build something else.
+    [string] $Version,
     [string] $Out = (Join-Path (Split-Path $PSScriptRoot -Parent) 'dist'),
     # Signs with the Strategia-X Azure Artifact Signing account, using your az login. Each file signed counts against its quota.
     [switch] $Sign,
     # The newest Windows SDK's signtool unless given; the machine that signed 1.0.0 had 10.0.26100.0.
     [string] $SignTool,
-    [string] $InnoSetup = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+    # Inno Setup 6's compiler, installed for every user or for yours alone (its /CURRENTUSER install), unless given.
+    [string] $InnoSetup
 )
 # Builds the release: the app, the native host beside it, the unpacked extension and its setup script, as a zip and an installer.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
+if (-not $Version) { $Version = ([xml](Get-Content (Join-Path $root 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1 }
+if (-not $Version) { throw 'Directory.Build.props sets no Version, and -Version was not given' }
 $name = "STXDownloader-$Version-win-x64"
 $stage = Join-Path $Out $name
 $zip = Join-Path $Out "$name.zip"
@@ -73,8 +77,11 @@ if (-not $built.StartsWith($Version)) { throw "STXDownloader.exe says $built, no
 
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
 
-$iscc = $InnoSetup
-if (-not (Test-Path -LiteralPath $iscc)) { throw "Inno Setup not found: $iscc (pass -InnoSetup)" }
+$iscc = if ($InnoSetup) { $InnoSetup } else {
+    @((Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'), (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')) |
+        Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+}
+if (-not $iscc -or -not (Test-Path -LiteralPath $iscc)) { throw "Inno Setup 6 not found (install it from https://jrsoftware.org/isdl.php, or pass -InnoSetup)" }
 $compile = @("/DStage=$stage", "/DAppVersion=$Version", "/DOutputFolder=$Out", '/Qp')
 if ($Sign) {
     # Inno signs Setup and the uninstaller it writes into it, which is why the tool is handed over rather than run after.

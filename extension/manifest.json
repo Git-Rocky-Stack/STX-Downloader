@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "STX Downloader",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Finds media on the current tab and hands it to the STX Downloader app.",
   "author": { "email": "support@strategia-x.com" },
   "homepage_url": "https://strategia-x.com",

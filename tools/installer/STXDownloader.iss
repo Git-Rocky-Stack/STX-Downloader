@@ -6,7 +6,7 @@
   #error Build this with tools\Publish.ps1, which passes /DStage=<published folder>
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #error Build this with tools\Publish.ps1, which passes /DAppVersion=<the version in Directory.Build.props>
 #endif
 #ifndef OutputFolder
   #define OutputFolder "..\..\dist"
