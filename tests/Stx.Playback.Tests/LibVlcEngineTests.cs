@@ -5,18 +5,20 @@ namespace Stx.Playback.Tests;
 [Collection(SoundDeviceCollection.Name)]
 public class LibVlcEngineTests
 {
-    static readonly TimeSpan Five = TimeSpan.FromSeconds(5);
+    // How long to wait for the engine to get somewhere. A wait ends the moment it does, so this costs time only when a
+    // test fails; GitHub's runners once took over 5 s to give up on a truncated file (2026-11-09).
+    static readonly TimeSpan Patience = TimeSpan.FromSeconds(15);
 
     [Fact]
     public void Plays_a_tiny_file()
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("tiny.mp4"));
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)),
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)),
             $"state {engine.State}, position {engine.Position}, error {engine.Error}");
         Assert.True(engine.HasVideo);
         Assert.Equal(2, engine.Length.TotalSeconds, 0.2);
-        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > 0 && engine.Decoded.AudioBlocks > 0), $"decoded {engine.Decoded}");
+        Assert.True(Fixture.Within(Patience, () => engine.Decoded.Pictures > 0 && engine.Decoded.AudioBlocks > 0), $"decoded {engine.Decoded}");
     }
 
     // Phase 4, done when: an encrypted sample is refused with no playback attempted. The disc is built from sectors
@@ -34,7 +36,7 @@ public class LibVlcEngineTests
 
             using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
             engine.Open(disc);
-            Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+            Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
             Assert.Equal(DiscCheck.Refused, engine.Error);
             Assert.Null(engine.HandedToLibVlc);
         }
@@ -46,7 +48,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open("udp://@239.0.0.1:1234");
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
         Assert.Equal(StreamLink.PortRefused, engine.Error);
         Assert.Null(engine.HandedToLibVlc);
     }
@@ -58,13 +60,13 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("tiny.mp4"));
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.6)), $"state {engine.State}");
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.6)), $"state {engine.State}");
         Assert.Null(engine.EnhanceSeen);
 
         var before = engine.Position;
         engine.Enhance = EnhanceLevel.Sharpen;
-        Assert.True(Fixture.Within(Five, () => engine.EnhanceSeen == EnhanceLevel.Sharpen), $"seen {engine.EnhanceSeen}, errors {string.Join("; ", engine.LoggedErrors)}");
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position >= before - TimeSpan.FromSeconds(0.3)),
+        Assert.True(Fixture.Within(Patience, () => engine.EnhanceSeen == EnhanceLevel.Sharpen), $"seen {engine.EnhanceSeen}, errors {string.Join("; ", engine.LoggedErrors)}");
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing && engine.Position >= before - TimeSpan.FromSeconds(0.3)),
             $"state {engine.State}, position {engine.Position}, before {before}");
     }
 
@@ -73,7 +75,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("tiny-audio.flac"));
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)),
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)),
             $"state {engine.State}, error {engine.Error}");
         Assert.False(engine.HasVideo);
     }
@@ -83,7 +85,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("truncated.mp4"));
-        Assert.True(Fixture.Within(Five, () => engine.State is PlaybackState.Failed or PlaybackState.Ended), $"state {engine.State}");
+        Assert.True(Fixture.Within(Patience, () => engine.State is PlaybackState.Failed or PlaybackState.Ended), $"state {engine.State}");
         if (engine.State == PlaybackState.Failed) Assert.NotEmpty(engine.LoggedErrors);
     }
 
@@ -92,7 +94,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("Фильм тест.mp4"));
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)),
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)),
             $"state {engine.State}, error {engine.Error}");
     }
 
@@ -101,7 +103,7 @@ public class LibVlcEngineTests
     {
         var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("tiny.mp4"));
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing));
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing));
         engine.Dispose();
         Assert.Equal(PlaybackState.Idle, engine.State);
         Assert.Null(engine.Player);
@@ -125,7 +127,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("tiny-dirac.mkv"));
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
         Assert.Equal(LibVlcEngine.DiracRefused, engine.Error);
         Assert.Equal(0, engine.Decoded.Pictures);
     }
@@ -138,7 +140,7 @@ public class LibVlcEngineTests
         using var server = new LocalHttp(Fixture.File("tiny-dirac.mkv"), "video/x-matroska");
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(server.Url);
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Failed), $"state {engine.State}");
         Assert.Equal(LibVlcEngine.DiracRefused, engine.Error);
         Assert.Equal(0, engine.Decoded.Pictures);
     }
@@ -150,7 +152,7 @@ public class LibVlcEngineTests
         using var server = new LocalHttp(Fixture.File("moving.mp4"), "video/mp4");
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(server.Url);
-        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > 10), $"state {engine.State}, {engine.Decoded.Pictures} pictures");
+        Assert.True(Fixture.Within(Patience, () => engine.Decoded.Pictures > 10), $"state {engine.State}, {engine.Decoded.Pictures} pictures");
         Assert.Null(engine.Error);
     }
 
@@ -160,7 +162,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(Fixture.File("moving.mp4"));
-        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > 10), "no pictures");
+        Assert.True(Fixture.Within(Patience, () => engine.Decoded.Pictures > 10), "no pictures");
         engine.HideVideo();
         Thread.Sleep(800);
         var hidden = engine.Decoded;
@@ -168,7 +170,7 @@ public class LibVlcEngineTests
         Assert.Equal(hidden.Pictures, engine.Decoded.Pictures);
         Assert.True(engine.Decoded.AudioBlocks > hidden.AudioBlocks, "the sound stopped too");
         engine.ShowVideo();
-        Assert.True(Fixture.Within(Five, () => engine.Decoded.Pictures > hidden.Pictures), "pictures didn't come back");
+        Assert.True(Fixture.Within(Patience, () => engine.Decoded.Pictures > hidden.Pictures), "pictures didn't come back");
     }
 
     [Fact]
@@ -201,7 +203,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true) { StartPaused = true };
         engine.Open(Fixture.File("moving.mp4"));
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Paused), $"state {engine.State}");
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Paused), $"state {engine.State}");
         Thread.Sleep(1000);
         Assert.Equal(PlaybackState.Paused, engine.State);
         Assert.True(engine.Position < TimeSpan.FromMilliseconds(100), $"position {engine.Position}");
@@ -224,7 +226,7 @@ public class LibVlcEngineTests
         int changes = 0;
         engine.Changed += (_, _) => Interlocked.Increment(ref changes);
         engine.Open(Fixture.File("tiny.mp4"));
-        Assert.True(Fixture.Within(Five, () => Volatile.Read(ref changes) > 0 && engine.State == PlaybackState.Playing));
+        Assert.True(Fixture.Within(Patience, () => Volatile.Read(ref changes) > 0 && engine.State == PlaybackState.Playing));
     }
 
     // LibVLC 3.0.24 still logs Windows' one refusal of a mono stream on the first try; what matters is where the sound ends up.
@@ -235,10 +237,10 @@ public class LibVlcEngineTests
         {
             using var engine = new LibVlcEngine(Fixture.Profile, headless: true, realAudio: true);
             engine.Open(Fixture.File(name));
-            Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)), $"{name}: state {engine.State}");
-            Assert.True(Fixture.Within(Five, () => engine.AudioStream == "wasapi" && engine.AudioOutput.Contains("Stereo", StringComparison.Ordinal)),
+            Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.5)), $"{name}: state {engine.State}");
+            Assert.True(Fixture.Within(Patience, () => engine.AudioStream == "wasapi" && engine.AudioOutput.Contains("Stereo", StringComparison.Ordinal)),
                 $"{name}: stream '{engine.AudioStream}', output '{engine.AudioOutput}'");
-            Assert.True(Fixture.Within(Five, () => engine.Player is { Mute: false }), $"{name}: still muted");
+            Assert.True(Fixture.Within(Patience, () => engine.Player is { Mute: false }), $"{name}: still muted");
             Assert.True(engine.LoggedErrors.Count(e => e.Contains("cannot negotiate audio format", StringComparison.Ordinal)) <= 1, string.Join(" | ", engine.LoggedErrors));
         }
     }
@@ -292,7 +294,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
         engine.Open(new Uri(Fixture.File("tiny.mp4")).AbsoluteUri);
-        Assert.True(Fixture.Within(Five, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.3)),
+        Assert.True(Fixture.Within(Patience, () => engine.State == PlaybackState.Playing && engine.Position > TimeSpan.FromSeconds(0.3)),
             $"state {engine.State}, error {engine.Error}, handed {engine.HandedToLibVlc}");
         Assert.Equal(Fixture.File("tiny.mp4"), engine.HandedToLibVlc);
     }
@@ -317,7 +319,7 @@ public class LibVlcEngineTests
             using var media = new LibVLCSharp.Shared.Media(vlc, PlaybackTarget.DiscMrl(DiscKind.Dvd, share), LibVLCSharp.Shared.FromType.FromLocation);
             using var player = new LibVLCSharp.Shared.MediaPlayer(media);
             player.Play();
-            Assert.True(Fixture.Within(Five, () => seen.Any(m => m.Contains("VIDEO_TS.IFO", StringComparison.Ordinal))), "VLC's disc reader never reached the folder: " + string.Join(" | ", seen.Take(6)));
+            Assert.True(Fixture.Within(Patience, () => seen.Any(m => m.Contains("VIDEO_TS.IFO", StringComparison.Ordinal))), "VLC's disc reader never reached the folder: " + string.Join(" | ", seen.Take(6)));
             player.Stop();
         }
         finally { Directory.Delete(local, true); }
@@ -334,7 +336,7 @@ public class LibVlcEngineTests
             File.WriteAllBytes(junk, [.. Enumerable.Range(0, 4096).Select(i => (byte)(i * 31))]);
             using var engine = new LibVlcEngine(Fixture.Profile, headless: true);
             engine.Open(junk);
-            Fixture.Within(Five, () => engine.State is PlaybackState.Failed or PlaybackState.Ended);
+            Fixture.Within(Patience, () => engine.State is PlaybackState.Failed or PlaybackState.Ended);
             Assert.NotEqual(LibVlcEngine.StreamUnreachable, engine.Error);
             Assert.NotEqual(LibVlcEngine.StreamCutOff, engine.Error);
         }
@@ -346,7 +348,7 @@ public class LibVlcEngineTests
     {
         using var engine = new LibVlcEngine(Fixture.Profile, headless: true, realAudio: true);
         engine.Open(Fixture.File("surround-5.1.flac"));
-        Assert.True(Fixture.Within(Five, () => engine.AudioOutput.Length > 0), "no audio output logged");
+        Assert.True(Fixture.Within(Patience, () => engine.AudioOutput.Length > 0), "no audio output logged");
         Assert.Contains("3F2R/LFE", engine.AudioOutput);
         Assert.Equal("wasapi", engine.AudioStream);
     }
