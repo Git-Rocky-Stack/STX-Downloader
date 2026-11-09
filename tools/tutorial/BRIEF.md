@@ -7,7 +7,7 @@ destination: in-app tutorial plate
 aspect: 1920x1080
 language: en
 audience: someone who just installed STX Downloader
-length: 76s
+length: 89s
 angle: walkthrough
 ---
 
@@ -19,7 +19,7 @@ A first-time user's walkthrough of STX Downloader, played on the TUTORIAL plate 
 
 - ../../icons/stx final icon.png — Rocky's S, on its own black, unaltered. Opens the video.
 - ../../icons/stax badge.png — Rocky's badge, transparent background, unaltered. Closing lockup.
-- ../../tests/baselines/*.png and Release gallery captures — the real console's plates, holding sample data only.
+- ../../tests/baselines/*.png and Release gallery captures — the real console's plates, holding sample data only. The Player plate is `--gallery=player-plate` playing a sample clip FFmpeg made from a gradient, so no third-party picture appears.
 - ../../extension/popup.html — the extension popup's own styles, for the browser scene.
 
 ## Customizations
