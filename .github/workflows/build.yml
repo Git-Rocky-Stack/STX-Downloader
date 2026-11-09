@@ -12,7 +12,8 @@ jobs:
   test:
     runs-on: windows-latest
     steps:
-      # Each action is pinned to the commit its release tag named on 2026-11-07, so a moved tag can't change what runs.
+      # Each action is pinned to its release's commit (the tag is in the comment), so a moved tag can't change what runs;
+      # Dependabot (.github/dependabot.yml) proposes each new release as a pull request.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
