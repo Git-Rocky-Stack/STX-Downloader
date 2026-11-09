@@ -12,17 +12,18 @@ jobs:
   test:
     runs-on: windows-latest
     steps:
-      # Each action is pinned to the commit its release tag named on 2026-11-07, so a moved tag can't change what runs.
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+      # Each action is pinned to its release's commit (the tag is in the comment), so a moved tag can't change what runs;
+      # Dependabot (.github/dependabot.yml) proposes each new release as a pull request.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
       # The VLC engine and SoundFont the player ships (tools/vlc/engine.json), downloaded, and the SoundFont converted to
       # SF3 with the FFmpeg build engine.json pins, once, then reused.
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .engine
           key: engine-${{ hashFiles('tools/vlc/engine.json', 'tools/vlc/Get-Engine.ps1', 'tools/vlc/Make-Sf3.cs') }}
@@ -34,9 +35,9 @@ jobs:
           $base = 'https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest'
           $zip = 'ffmpeg-n9.0-latest-win64-gpl-9.0.zip'
           $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg'
-          Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip) -MaximumRetryCount 6 -RetryIntervalSec 20
+          Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip) -MaximumRetryCount 10 -RetryIntervalSec 30
           # GitHub serves the checksum list as binary, so it's saved and read as lines rather than taken from .Content.
-          Invoke-WebRequest "$base/checksums.sha256" -OutFile (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256') -MaximumRetryCount 6 -RetryIntervalSec 20
+          Invoke-WebRequest "$base/checksums.sha256" -OutFile (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256') -MaximumRetryCount 10 -RetryIntervalSec 30
           $want = (Get-Content (Join-Path $env:RUNNER_TEMP 'ffmpeg.sha256') | Where-Object { $_ -match [regex]::Escape($zip) } | Select-Object -First 1) -split '\s+' | Select-Object -First 1
           $got = (Get-FileHash (Join-Path $env:RUNNER_TEMP $zip) -Algorithm SHA256).Hash
           if (-not $want -or $got -ne $want) { throw "FFmpeg's sha256 is $got; its publisher says $want" }
@@ -62,8 +63,8 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 10.0.x
       # Core's bit-perfect decode tests run FFmpeg: the same release STX downloads on Windows, in its Linux build,
@@ -73,8 +74,8 @@ jobs:
         run: |
           base=https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest
           archive=ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz
-          curl -fsSL --retry 6 --retry-delay 20 --retry-all-errors -o "$RUNNER_TEMP/$archive" "$base/$archive"
-          curl -fsSL --retry 6 --retry-delay 20 --retry-all-errors -o "$RUNNER_TEMP/ffmpeg.sha256" "$base/checksums.sha256"
+          curl -fsSL --retry 10 --retry-delay 30 --retry-all-errors -o "$RUNNER_TEMP/$archive" "$base/$archive"
+          curl -fsSL --retry 10 --retry-delay 30 --retry-all-errors -o "$RUNNER_TEMP/ffmpeg.sha256" "$base/checksums.sha256"
           want=$(grep " $archive\$" "$RUNNER_TEMP/ffmpeg.sha256" | cut -d' ' -f1)
           got=$(sha256sum "$RUNNER_TEMP/$archive" | cut -d' ' -f1)
           [ -n "$want" ] && [ "$got" = "$want" ] || { echo "FFmpeg's sha256 is $got; its publisher says $want"; exit 1; }
