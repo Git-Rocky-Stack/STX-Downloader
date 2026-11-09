@@ -113,7 +113,7 @@ internal static class ConsoleSample
         return new FirstRunPanel(first);
     }
 
-    sealed class NoStartup : IStartupRegistration
+    internal sealed class NoStartup : IStartupRegistration
     {
         public bool IsEnabled => false;
         public void Set(bool enabled) { }
