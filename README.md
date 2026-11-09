@@ -42,7 +42,7 @@ The setup already registers the browser hand-off, for Chrome and Edge (`STXDownl
 
 ## Quick start
 
-The same four steps open the in-app user guide, which shows by itself on the first launch. Open it again any time from **SETTINGS**, then **USER GUIDE**. **TUTORIAL** beside it plays a 76-second walkthrough.
+The same four steps open the in-app user guide, which shows by itself on the first launch. Open it again any time from **SETTINGS**, then **USER GUIDE**. **TUTORIAL** beside it plays an 89-second walkthrough.
 
 | | Step | What to do |
 |---|---|---|
@@ -95,6 +95,7 @@ Each line names the code that does it, by file and member, so it can be checked.
 - A PLAYER plate sits beside the Library, above Source Truth (`MainWindow`). OPEN in the Library plays the file there and never hands it to another app (`LibraryViewModel.OpenCommand`, `Composition.Play`).
 - A file opened from File Explorer joins the Library and plays (`App.OnLaunched`, `Composition.OpenFromOutsideAsync`). A second launch with a file hands it to the copy already running, over a named pipe only your account can open (`SingleInstance.TryBecomeFirst`, `OpenRequests`).
 - PREV and NEXT walk the Library in its order, past files gone from disk (`LibraryViewModel.PlayOrder`, `PlayerViewModel`). AUDIO, SUBTITLES and CHAPTER knobs appear when a file has more than one (`PlayerPanel.Picker`).
+- The plate fits the rack's right column at any width: when the time, VOLUME and the other knobs don't fit on one line, the other knobs wrap under it, and ENHANCE's readout has a line of its own that wraps too, so nothing is pushed off the plate (`KnobRowLayout.Arrange`, `KnobRow`).
 - FULL, or a double-click on the picture, fills the screen; EXIT or Esc brings the console back. The video keeps playing through it (`PlayerPanel.SetFullScreen`).
 - Hidden in the tray, the player stops decoding pictures and the sound carries on (`LibVlcEngine.HideVideo`).
 - A PERFORMANCE knob in Settings sets how hard playback may work: AUTO picks from the PC, or choose ECO, BALANCED or MAX (`PerformanceProfile.For`).
@@ -121,7 +122,7 @@ Each line names the code that does it, by file and member, so it can be checked.
 - Choose best quality, up to 1080p or 720p, video only or audio only, and which metadata to embed (`SettingsPanel`, `DownloadChoices.Map`).
 - Tray mode (`Tray`), start with Windows (`StartupRegistry`) and an optional clipboard offer, off by default (`ClipboardWatcher`).
 - A USER GUIDE pad and a TUTORIAL pad on the Settings plate (`SettingsPanel.HelpPad`). The guide opens by itself on the first launch, once (`SettingsViewModel.TakeFirstLaunchGuide`). It starts with four quick-start steps, covers each plate, and sets every pad, switch and knob it names in the console's accent; a test fails if the guide names a control the console doesn't have, or the console has one the guide never names (`GuideContent`, `GuideTests`).
-- The tutorial is a 76-second captioned walkthrough with no sound that ships with the app. It starts by itself; with reduce motion on, it shows a poster and waits for PLAY (`TutorialPanel.Open`).
+- The tutorial is an 89-second captioned walkthrough with no sound that ships with the app. It starts by itself; with reduce motion on, it shows a poster and waits for PLAY (`TutorialPanel.Open`).
 - The first run waits out a tool host that's briefly down, asking again after 2, 5 and 10 seconds (`ToolManager.TransientWaits`). If setup still can't finish, a Setup plate says why and offers RETRY (`FirstRunViewModel`).
 
 ## What has and hasn't been tested

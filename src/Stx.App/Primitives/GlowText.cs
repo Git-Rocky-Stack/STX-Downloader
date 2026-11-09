@@ -51,6 +51,20 @@ public sealed partial class GlowText : Grid
         set => _text.FontSize = value;
     }
 
+    /// <summary>
+    /// Wraps onto more lines within the width it's given, aligned to its right edge, for a readout that can outgrow its
+    /// plate. The text still hugs its widest line, so the glow's mask keeps fitting it.
+    /// </summary>
+    public bool WrapsRight
+    {
+        get => _text.TextWrapping == TextWrapping.Wrap;
+        set
+        {
+            _text.TextWrapping = value ? TextWrapping.Wrap : TextWrapping.NoWrap;
+            _text.TextAlignment = value ? TextAlignment.Right : TextAlignment.Left;
+        }
+    }
+
     public DisplayTone Tone
     {
         get => _tone;

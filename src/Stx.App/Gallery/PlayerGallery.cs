@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Stx.App.Panels;
 using Stx.Core.Playback;
+using Stx.Core.Settings;
 using Stx.Playback;
 using Stx.ViewModels;
 
@@ -12,7 +13,9 @@ namespace Stx.App.Gallery;
 /// <summary>
 /// The PLAYER plate playing a test file, for capture and for the playback tests. Nothing here reaches the library.
 /// --gallery=player plays tests/fixtures/playback/moving.mp4, player-audio plays tiny-audio.flac, player-full starts
-/// in full screen. --hold pauses on the first picture so a capture is the same every time.
+/// in full screen, and player-plate is the plate as the rack shows it, ENHANCE knob included (set to SHARPEN from a fixed
+/// sample, never this user's settings), for the tutorial's stills. --hold pauses on the first picture so a capture is
+/// the same every time.
 /// Env: STX_PLAYER_FILE plays another file; STX_PLAYER_PERF = eco|balanced|max|software (hardware decoding off);
 /// STX_PLAYER_VLCLOG writes every line VLC logs to a file; STX_PLAYER_THREADS sets the decoder threads; STX_PLAYER_ENHANCE = sharpen|upscale turns ENHANCE on; STX_PLAYER_LOG writes a line twice a second (state, time,
 /// swap chains, decoder, pictures shown and lost, sound path, what ENHANCE VLC's log confirms, whether this GPU has
@@ -50,11 +53,14 @@ internal static class PlayerGallery
         }
         var queue = window.DispatcherQueue;
         var player = new PlayerViewModel(engine, run => queue.TryEnqueue(() => run()));
-        // About the width of the rack's right column.
-        var panel = new PlayerPanel(player, engine) { Margin = new Thickness(8) };
+        // The other player pages leave ENHANCE out, so their baselines stay as approved.
+        var enhance = options.Name == "player-plate" ? SampleEnhance(engine, profile, player) : null;
+        var panel = new PlayerPanel(player, engine, enhance) { Margin = new Thickness(8) };
         if (options.Name != "player-full")
         {
-            panel.MaxWidth = 520;
+            // About the width of the rack's right column; player-plate exactly that at the app's first 1360 wide window
+            // (1360 less the rack's 16 of padding and the deck's 8 of spacing, at 1 : 1.2 with the left column).
+            panel.MaxWidth = options.Name == "player-plate" ? 607 : 520;
             panel.HorizontalAlignment = HorizontalAlignment.Left;
         }
 
@@ -95,6 +101,18 @@ internal static class PlayerGallery
 
         var scroller = new ScrollViewer { Content = panel };
         return scroller;
+    }
+
+    // Wired as Composition.cs wires the app's: the knob sets the engine, and each change in the player rereads what VLC
+    // confirmed is running. The setting is a fixed sample in a file of its own, so a capture never shows this user's.
+    static EnhanceViewModel SampleEnhance(LibVlcEngine engine, PerformanceProfile profile, PlayerViewModel player)
+    {
+        string file = Path.Combine(Path.GetTempPath(), "stx-gallery-player-" + Environment.ProcessId + ".json");
+        File.WriteAllText(file, $"{{\"Enhance\":{(int)EnhanceLevel.Sharpen}}}");
+        var settings = new SettingsViewModel(new SettingsStore(file), new ConsoleSample.NoStartup());
+        var enhance = new EnhanceViewModel(settings, () => profile, HardwareProbe.Gpu(), level => engine.Enhance = level, () => engine.EnhanceSeen);
+        player.PropertyChanged += (_, _) => enhance.Refresh();
+        return enhance;
     }
 
     static string Rect(int x, int y, int width, int height) => string.Create(CultureInfo.InvariantCulture, $"{width}x{height}@{x},{y}");

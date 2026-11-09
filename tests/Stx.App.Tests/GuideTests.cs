@@ -202,4 +202,36 @@ public class GuideTests
         Assert.Contains(@"Assets\tutorial.mp4", File.ReadAllText(Path.Combine(Root(), "src", "Stx.App", "Stx.App.csproj")));
         Assert.Contains(@"Assets\tutorial.mp4", File.ReadAllText(Path.Combine(Root(), "tools", "Publish.ps1")));
     }
+
+    // The guide and the README say how long the tutorial is. A scene added to tools/tutorial (the Player, 2026-11-09)
+    // changes that, and the shipped video has to be rendered again from it.
+    [Fact]
+    public void The_tutorial_length_the_guide_gives_is_the_shipped_videos_and_its_projects()
+    {
+        string project = File.ReadAllText(Path.Combine(Root(), "tools", "tutorial", "index.html"));
+        var root = Regex.Match(project, @"id=""root""[^>]*data-duration=""(\d+(?:\.\d+)?)""");
+        Assert.True(root.Success, "The tutorial project's root has no data-duration.");
+        double authored = double.Parse(root.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+        double shipped = Mp4Seconds(Path.Combine(Root(), "src", "Stx.App", "Assets", "tutorial.mp4"));
+        Assert.True(Math.Abs(shipped - authored) < 0.5, $"Assets/tutorial.mp4 runs {shipped:F2} s, its project {authored} s: render it again.");
+
+        string said = $"{Math.Round(authored)}-second walkthrough";
+        Assert.Contains(said, GuideContent.Reopen);
+        Assert.Equal(2, Regex.Count(File.ReadAllText(Path.Combine(Root(), "README.md")), Regex.Escape($"{Math.Round(authored)}-second")));
+    }
+
+    // The movie's length from its mvhd box: the time scale and the duration, version 0 (32-bit) or 1 (64-bit), big-endian.
+    static double Mp4Seconds(string file)
+    {
+        byte[] bytes = File.ReadAllBytes(file);
+        int at = bytes.AsSpan().IndexOf("mvhd"u8);
+        Assert.True(at > 0, $"{file} has no mvhd box.");
+        var box = bytes.AsSpan(at + 4);
+        bool wide = box[0] == 1;
+        var times = box[(wide ? 20 : 12)..];
+        uint scale = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(times);
+        ulong duration = wide ? System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(times[4..]) : System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(times[4..]);
+        return (double)duration / scale;
+    }
 }

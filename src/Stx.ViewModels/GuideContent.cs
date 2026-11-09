@@ -27,7 +27,7 @@ public static class GuideContent
 {
     /// <summary>Under the guide's title: how to get back here, since it opens by itself only once.</summary>
     // MainWindow.cs TakeFirstLaunchGuide, SettingsPanel.cs HelpPad
-    public const string Reopen = "Open it again any time: SETTINGS, then USER GUIDE. TUTORIAL beside it plays a 76-second walkthrough.";
+    public const string Reopen = "Open it again any time: SETTINGS, then USER GUIDE. TUTORIAL beside it plays an 89-second walkthrough.";
 
     public static IReadOnlyList<string> ReopenControls { get; } = ["SETTINGS", "USER GUIDE", "TUTORIAL"];
 
