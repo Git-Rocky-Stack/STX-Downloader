@@ -4,6 +4,11 @@
 
 The first release since 1.0.0 (2026-11-01). STX plays what it saves now, and the Library is your whole collection: a media player on VLC's engine, STX as the default player, discs and streams, bit-perfect sound, ENHANCE, and Shrink. It was built in the rounds below, newest first.
 
+### .NET ships inside the app (2026-11-10)
+
+- **Fixed: the setup didn't run on a PC without .NET.** The app was built to bundle the Windows App SDK but to look for .NET 10 installed, so on a PC without it the installed app stopped with "You must install .NET". The design always called for a self-contained build. The app now carries its own .NET runtime (10.0.14), so nothing has to be installed first and the setup still asks for no administrator; a separate .NET installer in the setup would have needed one. The setup grows from 103 MB to 127 MB, the installed app from 318 MB to 395 MB (`Stx.App.csproj`, `SelfContained`). `tools/Publish.ps1` refuses a release that leaves .NET out, and `RuntimeShipsTests` fails on a build without it; the test failed against the previous build. Checked on this laptop, which has no .NET installed for every user: the published app opened its window with the per-user SDK hidden from it.
+- **Third-party notices** now list what ships with the app's own code: the .NET runtime, the Windows App SDK, CommunityToolkit.Mvvm and Microsoft.Data.Sqlite with SQLite (`docs/THIRD_PARTY.md`). Not covered by a test.
+
 ### The Player in the tutorial, and the Player's knobs on a narrow plate (2026-11-09)
 
 Every change below has a test that failed without it, unless it says otherwise.

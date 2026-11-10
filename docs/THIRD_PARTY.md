@@ -16,6 +16,17 @@ The player uses VLC's engine. The build fetches each item below from its publish
 
 Some of VLC's plugins aren't shipped, each with its reason in `tools/vlc/engine.json`: the ones that would open network ports, run site scripts or show VLC's own windows. VLC's two DVD plugins (`libdvdnav`, `libdvdread`) do ship, for unencrypted DVDs (Rocky's decision for Phase 4). Both have libdvdcss built in, which can decrypt CSS-protected DVDs. **STX doesn't use it**: before any disc, disc folder or disc image reaches LibVLC, STX reads the disc's own CSS and AACS markings and refuses an encrypted one (`src/Stx.Core/Playback/DiscCheck.cs`). The README's no-DRM rule applies to playback too. No AACS or BD+ library ships, so libbluray reads only unencrypted Blu-ray discs.
 
+### The runtime and libraries
+
+The app carries its own .NET and its own Windows App SDK, so the setup needs nothing else installed and asks for no administrator (`Stx.App.csproj`, `SelfContained` and `WindowsAppSDKSelfContained`; `tools/Publish.ps1` refuses a release without them). The build takes each item below from NuGet. .NET's patch is the newest the SDK knows when the release is built, so .NET's security fixes reach users with the next STX release, not through Windows Update.
+
+| Component | Used for | Source | License |
+|---|---|---|---|
+| .NET 10 runtime (10.0.14 in 1.1.0) | Running the app | [Microsoft.NETCore.App.Runtime.win-x64](https://www.nuget.org/packages/Microsoft.NETCore.App.Runtime.win-x64) on NuGet, from Microsoft | [MIT](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) |
+| Windows App SDK 2.6.4 | WinUI 3: the window, its controls and text | [Microsoft.WindowsAppSDK](https://www.nuget.org/packages/Microsoft.WindowsAppSDK/2.6.4) on NuGet, from Microsoft | [Microsoft Software License Terms](https://www.nuget.org/packages/Microsoft.WindowsAppSDK/2.6.4/License), which allow shipping it inside an app |
+| CommunityToolkit.Mvvm 8.4.0 | The app's view models | [NuGet](https://www.nuget.org/packages/CommunityToolkit.Mvvm/8.4.0) | [MIT](https://github.com/CommunityToolkit/dotnet/blob/main/License.md) |
+| Microsoft.Data.Sqlite 10.0.14, with SQLitePCLRaw 2.1.13 and SQLite | The queue and the Library's database | [NuGet](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.14) | [MIT](https://github.com/dotnet/efcore/blob/main/LICENSE.txt); SQLitePCLRaw [Apache-2.0](https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT); SQLite is [public domain](https://sqlite.org/copyright.html) |
+
 ## Downloaded on first run
 
 None of these are included in the app. When its tool setup runs, it downloads each one directly from the publisher to your own machine (`src/Stx.Tools/ToolManager.cs`), and it runs them as separate programs.
