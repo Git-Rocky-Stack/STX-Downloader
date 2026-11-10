@@ -24,8 +24,9 @@ Published by Strategia-X (Rocky Elsalaymeh). Support: support@strategia-x.com ·
 | | |
 |---|---|
 | **Windows** | Windows 10 version 2004 or later, x64 |
-| **Disk** | About 320 MB for the app, and about 430 MB for the tools its first run downloads |
+| **Disk** | About 400 MB for the app, and about 430 MB for the tools its first run downloads |
 | **Account** | Your own: no administrator prompt |
+| **Nothing else** | .NET and the Windows App SDK ship inside the app, so there's no runtime to install first (`Stx.App.csproj`, `SelfContained`) |
 
 1. Run `STXDownloader-1.1.0-setup.exe`. It installs for your account only, and uninstalls from Windows Settings (`tools/installer/STXDownloader.iss`, `PrivilegesRequired=lowest`). Your saved media is never removed.
 2. On its first run, STX downloads yt-dlp, FFmpeg and Deno from their publishers, each checked against the checksum the publisher posts. See [third-party software](docs/THIRD_PARTY.md).

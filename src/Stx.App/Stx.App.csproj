@@ -8,6 +8,10 @@
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- .NET ships inside the app, as the design calls for, so a PC without .NET runs it and the setup asks for no
+         administrator. Without this only the Windows App SDK was bundled: 1.1.0's first setup stopped on a clean PC
+         with "You must install .NET" (2026-11-10). RuntimeShipsTests holds the build and the release to it. -->
+    <SelfContained>true</SelfContained>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>STXDownloader</AssemblyName>
