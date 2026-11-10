@@ -55,9 +55,14 @@ Get-ChildItem -LiteralPath $stage -Filter *.pdb -Recurse | Remove-Item -Confirm:
 
 foreach ($needed in 'STXDownloader.exe', 'STXDownloader.pri', 'App.xbf', 'Themes\Generic.xbf', 'STXNativeHost.exe', 'Assets\badge.png', 'Assets\stx.ico', 'Assets\tutorial.mp4', 'Assets\tutorial-poster.png',
     'libvlc\win-x64\libvlc.dll', 'libvlc\win-x64\libvlccore.dll', 'libvlc\win-x64\plugins\plugins.dat', 'libvlc\soundfonts\FluidR3_GM.sf3', 'libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt',
-    'extension\manifest.json', 'extension\icons\icon-128.png', 'tools\Register-NativeHost.ps1') {
+    'extension\manifest.json', 'extension\icons\icon-128.png', 'tools\Register-NativeHost.ps1',
+    'hostfxr.dll', 'hostpolicy.dll', 'coreclr.dll', 'System.Private.CoreLib.dll') {
     if (-not (Test-Path -LiteralPath (Join-Path $stage $needed))) { throw "Missing from the release: $needed" }
 }
+# .NET ships inside the app (2026-11-10: a setup that only asked for it stopped on a PC without it). A runtimeconfig
+# that names a framework to look for means it was published without its own copy.
+$runtime = (Get-Content -LiteralPath (Join-Path $stage 'STXDownloader.runtimeconfig.json') -Raw | ConvertFrom-Json).runtimeOptions
+if ($runtime.framework -or $runtime.frameworks -or -not $runtime.includedFrameworks) { throw 'STXDownloader.exe would need .NET installed: publish it self-contained' }
 # The SoundFont ships as SF3 (2026-11-07); the 148 MB SF2 it's made from must never ride along.
 if (Get-ChildItem -LiteralPath $stage -Filter *.sf2 -Recurse) { throw 'An .sf2 is in the release; STX ships FluidR3_GM.sf3' }
 
