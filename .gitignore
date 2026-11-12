@@ -12,3 +12,5 @@ dist/
 TestResults/
 tests/corpus/files/
 .engine/
+# A setup copied to the root to hand to testers; releases live in dist/.
+/STXDownloader-*-setup.exe

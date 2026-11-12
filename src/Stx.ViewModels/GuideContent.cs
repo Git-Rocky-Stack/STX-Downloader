@@ -33,9 +33,10 @@ public static class GuideContent
 
     public static IReadOnlyList<GuideStep> QuickStart { get; } =
     [
-        // ToolManager.cs EnsureOnceAsync, EngineStatusViewModel.cs Apply; 433 MB on disk measured 2026-11-08
+        // STXDownloader.iss installs the tools (2026-11-11); ToolManager.cs EnsureOnceAsync fetches any that are missing,
+        // as from the zip; EngineStatusViewModel.cs Apply
         new("Let it set up",
-            "The first launch downloads yt-dlp, FFmpeg and Deno, about 430 MB. You're ready when the light at the top right turns green and reads ENGINE CURRENT.",
+            "The setup installs yt-dlp, FFmpeg and Deno with STX, and the first launch downloads any that are missing. You're ready when the light at the top right turns green and reads ENGINE CURRENT.",
             [], ["ENGINE CURRENT"]),
         // SourcePanel.cs PasteAsync, SourceViewModel.cs Accept
         new("Save a link",
