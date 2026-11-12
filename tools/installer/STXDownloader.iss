@@ -5,6 +5,9 @@
 #ifndef Stage
   #error Build this with tools\Publish.ps1, which passes /DStage=<published folder>
 #endif
+#ifndef Tools
+  #error Build this with tools\Publish.ps1, which passes /DTools=<the checked tools folder>
+#endif
 #ifndef AppVersion
   #error Build this with tools\Publish.ps1, which passes /DAppVersion=<the version in Directory.Build.props>
 #endif
@@ -73,6 +76,12 @@ Name: "desktopicon"; Description: "Add a desktop shortcut"; Flags: unchecked
 
 [Files]
 Source: "{#Stage}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; yt-dlp, FFmpeg, FFprobe and Deno, checked by Publish.ps1, so the first launch has nothing to download. They go where
+; the app keeps its tools (ToolManager.DefaultRoot), which finds them there and installs nothing. A copy already there
+; stays: STX updates yt-dlp by itself, and an older one from this setup must never replace it. Uninstalling leaves them
+; to the question about the app's data below, as it always has.
+Source: "{#Tools}\*.exe"; DestDir: "{localappdata}\STXDownloader\tools"; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "{#Tools}\licenses\*"; DestDir: "{app}\docs\licenses"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\STX Downloader"; Filename: "{app}\STXDownloader.exe"
@@ -147,7 +156,7 @@ begin
   if CurUninstallStep = usPostUninstall then Log('Removal finished, asking about data');
   // Saved videos live elsewhere and are never touched. A silent uninstall keeps everything.
   if (CurUninstallStep = usPostUninstall) and not UninstallSilent() then
-    if MsgBox('Also remove your STX Downloader settings, queue history and downloaded tools (about 430 MB)?' + #13#10 + #13#10 +
+    if MsgBox('Also remove your STX Downloader settings, queue history and tools (about 430 MB)?' + #13#10 + #13#10 +
               'Your saved videos are not touched either way.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
       DelTree(ExpandConstant('{localappdata}\STXDownloader'), True, True, True);
 end;
