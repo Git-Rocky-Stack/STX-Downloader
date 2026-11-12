@@ -1,6 +1,6 @@
 # Third-party software
 
-STX Downloader's own code is MIT licensed. Some third-party software ships inside the app; other tools are downloaded on first run.
+STX Downloader's own code is MIT licensed. Some third-party software ships inside the app; the setup installs the tools it runs beside it.
 
 ## Shipped inside the app
 
@@ -27,9 +27,11 @@ The app carries its own .NET and its own Windows App SDK, so the setup needs not
 | CommunityToolkit.Mvvm 8.4.0 | The app's view models | [NuGet](https://www.nuget.org/packages/CommunityToolkit.Mvvm/8.4.0) | [MIT](https://github.com/CommunityToolkit/dotnet/blob/main/License.md) |
 | Microsoft.Data.Sqlite 10.0.14, with SQLitePCLRaw 2.1.13 and SQLite | The queue and the Library's database | [NuGet](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.14) | [MIT](https://github.com/dotnet/efcore/blob/main/LICENSE.txt); SQLitePCLRaw [Apache-2.0](https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT); SQLite is [public domain](https://sqlite.org/copyright.html) |
 
-## Downloaded on first run
+## The tools, installed by the setup
 
-None of these are included in the app. When its tool setup runs, it downloads each one directly from the publisher to your own machine (`src/Stx.Tools/ToolManager.cs`), and it runs them as separate programs.
+The setup installs each of these beside the app's data, in `%LOCALAPPDATA%\STXDownloader\tools` (`tools/installer/STXDownloader.iss`). The release build fetches them from the addresses the app's own updater uses, and ships one only when it matches the SHA-256 its publisher posts and starts and reports its version (`tools/Publish.ps1`). The app runs them as separate programs. Their licenses, and a list of the exact builds with their checksums and where their source is, are installed in `docs\licenses` in the install folder (`BUNDLED-TOOLS.txt`).
+
+The zip carries the app alone. When the app finds a tool missing, as on the zip's first run, it downloads that tool directly from its publisher (`src/Stx.Tools/ToolManager.cs`), held to the same checksum. While TOOL UPDATES is on, it also replaces yt-dlp with each new release, and the setup never puts an older one back.
 
 | Tool | Used for | Source | License |
 |---|---|---|---|
@@ -41,8 +43,10 @@ The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php), und
 
 ## Why the GPL build of FFmpeg
 
-The GPL build chosen in `FfmpegSource` includes libx264, a software H.264 encoder. The LGPL builds leave it out. FFmpeg's license applies to FFmpeg itself. Because FFmpeg is a separate program that you download from its publisher, and it is not part of this repository or linked into this app, this repository's code stays under MIT.
+The GPL build chosen in `FfmpegSource` includes libx264, a software H.264 encoder. The LGPL builds leave it out. FFmpeg's license applies to FFmpeg itself. FFmpeg is a separate program that STX starts; it is not part of this repository and not linked into this app, so this repository's code stays under MIT.
 
-Each download is checked against the checksum its publisher posts, and a tool with no matching checksum is not installed.
+Because the setup passes FFmpeg on, it carries what the GPL asks of whoever does: the license text, taken from the very archive the programs come from (`FFmpeg-LICENSE.txt`), and directions to the corresponding source, with the build's exact FFmpeg commit from its own version line and the repository of the scripts and libraries it was built from (`BUNDLED-TOOLS.txt`).
+
+Each tool is checked against the checksum its publisher posts, and a tool with no matching checksum is neither shipped nor installed.
 
 This note describes how the project is set up. It isn't legal advice.
