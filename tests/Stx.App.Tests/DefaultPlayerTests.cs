@@ -96,12 +96,12 @@ public sealed class DefaultPlayerTests : IDisposable
     public void The_readout_follows_windows_after_coming_back()
     {
         var player = Make();
-        Assert.Equal("STX ISN'T YOUR DEFAULT PLAYER", player.StateText);
+        Assert.Equal($"PLAYS {MediaTypes.All.Count} TYPES · NOT YET YOUR DEFAULT", player.StateText);
         player.ChooseCommand.Execute(null);
         _registry.Choose(".mp4", FileAssociations.VideoProgId);
-        Assert.Equal("STX ISN'T YOUR DEFAULT PLAYER", player.StateText);
+        Assert.Equal($"PLAYS {MediaTypes.All.Count} TYPES · NOT YET YOUR DEFAULT", player.StateText);
         player.Refresh();
-        Assert.Equal($"STX OPENS 1 OF {MediaTypes.All.Count} TYPES", player.StateText);
+        Assert.Equal($"PLAYS {MediaTypes.All.Count} TYPES · DEFAULT FOR 1", player.StateText);
     }
 
     [Fact]

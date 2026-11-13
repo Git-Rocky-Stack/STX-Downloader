@@ -125,6 +125,27 @@ public class LedArtTests
         Assert.True(unlit.R > unlit.B, "dead amber and red segments still read warm");
     }
 
+    [Theory]
+    [InlineData("#B06BFF")]
+    [InlineData("#22E6B4")]
+    [InlineData("#FF9A1F")]
+    public void A_ramp_colors_segments_light_dim_and_keep_their_tint(string hex)
+    {
+        var lit = LedArt.SegmentLit(hex, SegW, SegH);
+        var unlit = LedArt.SegmentUnlit(hex, 48, 42);
+        Assert.True(lit.Luma(SegW / 2, SegH / 2) > unlit.MeanLuma() * 5);
+        var core = (R: Convert.ToInt32(hex[1..3], 16), G: Convert.ToInt32(hex[3..5], 16), B: Convert.ToInt32(hex[5..7], 16));
+        var dead = Rgb(unlit, 24, 8);
+        // The strongest channel of the color is still the strongest (or level) in its dead segment.
+        if (core.B > core.R && core.B > core.G) Assert.True(dead.B >= dead.R && dead.B >= dead.G, $"{hex} dead reads {dead}");
+        if (core.R > core.B) Assert.True(dead.R > dead.B, $"{hex} dead reads {dead}");
+        Assert.True(LedArt.SegmentPeak(hex, SegW, SegH).Luma(SegW / 2, SegH / 3) > lit.Luma(SegW / 2, SegH / 3));
+    }
+
+    [Fact]
+    public void Named_and_hex_colors_draw_the_same_segment() =>
+        Assert.Equal(LedArt.SegmentLit(LedColor.Green, SegW, SegH).Hash(), LedArt.SegmentLit(LedColors.Core(LedColor.Green), SegW, SegH).Hash());
+
     [Fact]
     public void Peak_segment_is_hotter_than_a_lit_one()
     {

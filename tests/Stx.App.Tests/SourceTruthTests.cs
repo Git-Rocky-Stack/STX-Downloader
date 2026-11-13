@@ -312,6 +312,76 @@ public class LibraryTests
         Assert.False(row.CanConvert);
     }
 
+    // Review 2026-11-12: rows for files gone from disk stacked up with no way to clear them.
+    [Fact]
+    public async Task Remove_takes_the_row_off_and_never_touches_the_disk()
+    {
+        Add("Gone", @"D:\m\gone.mp4", onDisk: false);
+        Add("Kept", @"D:\m\kept.mp4");
+        var library = Library();
+        library.Refresh();
+        var gone = library.Rows.Single(r => r.Title == "Gone");
+        Assert.True(gone.CanRemove);
+
+        await library.RemoveCommand.ExecuteAsync(gone);
+
+        Assert.Equal("Kept", Assert.Single(library.Rows).Title);
+        Assert.Equal("Removed from the Library.", library.Message);
+        Assert.Empty(_shell.FileActions);
+        Assert.Contains(@"D:\m\kept.mp4", _files);
+    }
+
+    [Fact]
+    public async Task Clear_missing_takes_every_missing_row_scrolled_to_or_not()
+    {
+        for (int i = 0; i < LibraryViewModel.Page + 30; i++) Add($"Gone {i}", $@"D:\gone\{i}.mp4", onDisk: false);
+        Add("Here", @"D:\m\here.mp4");
+        var library = Library();
+        library.Refresh();
+        Assert.Equal(LibraryViewModel.Page, library.Rows.Count);
+
+        await library.ClearMissingCommand.ExecuteAsync(null);
+
+        Assert.Equal("Here", Assert.Single(library.Rows).Title);
+        Assert.Equal($"Removed {LibraryViewModel.Page + 30} missing files from the Library.", library.Message);
+        Assert.False(library.IsClearing);
+
+        await library.ClearMissingCommand.ExecuteAsync(null);
+        Assert.Equal("No missing files in the Library.", library.Message);
+    }
+
+    [Fact]
+    public async Task A_row_with_a_job_under_way_stays()
+    {
+        Add("Converting", @"D:\m\gone.mp4", onDisk: false);
+        var engine = new QueueEngine(_jobs, _runner, new QueuePolicy(), new SystemClock(), new CaptureVault());
+        var library = new LibraryViewModel(_catalog, engine, _shell, _files.Contains, _played.Add);
+        library.Refresh();
+        var row = library.Rows.Single();
+        engine.Enqueue(row.MediaId, Stx.Core.Queue.JobKind.Convert, "plan");
+
+        await library.RemoveCommand.ExecuteAsync(row);
+        Assert.Single(library.Rows);
+        Assert.Contains("job in the queue", library.Message);
+
+        await library.ClearMissingCommand.ExecuteAsync(null);
+        Assert.Single(library.Rows);
+        Assert.Equal("No missing files in the Library. 1 with a job in the queue stayed.", library.Message);
+    }
+
+    // A watched folder lists everything in it, so a file there would only come back; it leaves with its folder.
+    [Fact]
+    public void A_watched_file_still_on_disk_cant_be_removed_but_a_missing_one_can()
+    {
+        _catalog.Stored.Add(new LibraryItem(1, "Here", null, [new LibraryFile(1, @"D:\w\here.mp3", "Original")], MediaOrigin.Watched));
+        _catalog.Stored.Add(new LibraryItem(2, "Gone", null, [new LibraryFile(2, @"D:\w\gone.mp3", "Original")], MediaOrigin.Watched));
+        _files.Add(@"D:\w\here.mp3");
+        var library = Library();
+        library.Refresh();
+        Assert.False(library.Rows.Single(r => r.Title == "Here").CanRemove);
+        Assert.True(library.Rows.Single(r => r.Title == "Gone").CanRemove);
+    }
+
     // OPEN plays the file on the PLAYER plate; it never hands the file to another app.
     [Fact]
     public void Open_plays_inside_STX_and_never_hands_off()

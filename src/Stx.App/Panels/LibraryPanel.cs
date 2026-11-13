@@ -28,13 +28,14 @@ public sealed partial class LibraryPanel : ContentControl
     {
         SelectionMode = ListViewSelectionMode.Single,
         Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-        MaxHeight = 420,
         ItemTemplate = (DataTemplate)XamlReader.Load(RowTemplate),
     };
-    readonly StateView _empty = new() { State = ViewState.Empty, Message = "NOTHING SAVED YET" };
+    readonly StateView _empty = new() { State = ViewState.Empty, Message = "NOTHING SAVED YET", VerticalAlignment = VerticalAlignment.Center };
     readonly DisplayTextBox _search = new() { Label = "Search the library", PlaceholderText = "SEARCH TITLE, FILE OR FOLDER…", Tone = DisplayTone.Cyan };
     readonly GlowText _count = new() { Tone = DisplayTone.Cyan, Dimmed = true, TextSize = 13 };
     readonly Pad _open = new() { Content = "OPEN" }, _reveal = new() { Content = "FIND FILE" }, _car = new() { Content = "CAR USB" }, _phone = new() { Content = "PHONE" }, _archive = new() { Content = "ARCHIVE" }, _shrink = new() { Content = "SHRINK" };
+    // Housekeeping: rows leave the Library; files never leave the disk.
+    readonly Pad _remove = new() { Content = "REMOVE" }, _clearMissing = new() { Content = "CLEAR MISSING" };
     readonly TextBlock _message = new() { TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Segoe UI"), FontSize = 13, Visibility = Visibility.Collapsed };
     long? _selectedFile;
 
@@ -63,9 +64,20 @@ public sealed partial class LibraryPanel : ContentControl
         _car.Click += (_, _) => Convert("Car USB");
         _phone.Click += (_, _) => Convert("Phone");
         _archive.Click += (_, _) => Convert("Archive");
+        _remove.Click += (_, _) => library.RemoveCommand.Execute(Selected);
+        _clearMissing.Click += (_, _) => library.ClearMissingCommand.Execute(null);
+        AutomationProperties.SetHelpText(_remove, "Takes the selected file off the Library. The file on disk isn't touched.");
+        AutomationProperties.SetHelpText(_clearMissing, "Takes every file that's gone from disk off the Library.");
 
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-        foreach (var pad in new[] { _open, _reveal, _car, _phone, _archive }) actions.Children.Add(pad);
+        var actions = new PadRow();
+        foreach (var pad in new[] { _open, _reveal, _car, _phone, _archive, _remove, _clearMissing }) actions.Children.Add(pad);
+        TourTargets.Mark(this, "library");
+        TourTargets.Mark(_open, "library.open");
+        TourTargets.Mark(_car, "library.convert");
+        TourTargets.Mark(_remove, "library.remove");
+        TourTargets.Mark(_clearMissing, "library.clearmissing");
+        TourTargets.Mark(_shrink, "library.shrink");
+        TourTargets.Mark(_count, "library.count");
 
         // Shrink (Phase 7): a smaller copy beside the original, in the codec on the knob; sound alone goes to Opus.
         var codec = new Rotary { Label = "Shrink to", Items = ["AV1", "HEVC"] };
@@ -80,20 +92,36 @@ public sealed partial class LibraryPanel : ContentControl
         shrinkRow.Children.Add(_shrink);
         if (shrinkFolder is not null)
         {
-            var folder = new Pad { Content = "SHRINK FOLDER", VerticalAlignment = VerticalAlignment.Center };
+            var folder = TourTargets.Mark(new Pad { Content = "SHRINK FOLDER", VerticalAlignment = VerticalAlignment.Center }, "library.shrinkfolder");
             folder.Click += async (_, _) => await shrinkFolder();
             shrinkRow.Children.Add(folder);
         }
 
-        var column = new StackPanel { Spacing = 12 };
-        column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Library" });
-        column.Children.Add(new Display { Tone = DisplayTone.Cyan, Padding = new Thickness(6), Content = _search });
-        column.Children.Add(_count);
-        column.Children.Add(_empty);
-        column.Children.Add(_list);
-        column.Children.Add(_message);
-        column.Children.Add(actions);
-        column.Children.Add(shrinkRow);
+        // Three bands: the search on top, the list in the middle, the pads at the bottom. The middle band takes whatever
+        // height the deck gives the plate (DeckPanel), so the plate meets the Source truth plate's bottom edge with no
+        // dead space, and the list shows more rows instead of empty metal.
+        var top = new StackPanel { Spacing = 12 };
+        top.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Library" });
+        top.Children.Add(TourTargets.Mark(new Display { Tone = DisplayTone.Cyan, Padding = new Thickness(6), Content = _search }, "library.search"));
+        top.Children.Add(_count);
+        var rows = new Grid { MinHeight = 72 };
+        rows.Children.Add(_empty);
+        rows.Children.Add(new ListWell { Children = { _list } });
+        var middle = TourTargets.Mark(ListTray.Around(rows), "library.list");
+        var bottom = new StackPanel { Spacing = 12 };
+        bottom.Children.Add(_message);
+        bottom.Children.Add(actions);
+        bottom.Children.Add(shrinkRow);
+        var column = new Grid { RowSpacing = 12 };
+        column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        column.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        Grid.SetRow(middle, 1);
+        Grid.SetRow(bottom, 2);
+        column.Children.Add(top);
+        column.Children.Add(middle);
+        column.Children.Add(bottom);
+        VerticalContentAlignment = VerticalAlignment.Stretch;
         Content = new Faceplate { PanelName = "library", Padding = new Thickness(36, 28, 36, 28), Content = column };
 
         library.Rows.CollectionChanged += OnRows;
@@ -161,6 +189,8 @@ public sealed partial class LibraryPanel : ContentControl
         _list.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         _open.IsEnabled = _reveal.IsEnabled = row?.CanOpen == true;
         _car.IsEnabled = _phone.IsEnabled = _archive.IsEnabled = _shrink.IsEnabled = row?.CanConvert == true;
+        _remove.IsEnabled = row?.CanRemove == true && !_library.IsClearing;
+        _clearMissing.IsEnabled = any && !_library.IsClearing;
         _message.Text = _library.Message;
         _message.Visibility = _library.Message.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
     }

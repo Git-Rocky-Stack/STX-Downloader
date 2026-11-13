@@ -91,7 +91,12 @@ public sealed partial class PlayerPanel : ContentControl
         _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _time.HorizontalAlignment = HorizontalAlignment.Left;
         _knobs.Children.Add(_time);
-        _knobs.Children.Add(_volume.Captioned());
+        _knobs.Children.Add(TourTargets.Mark(_volume.Captioned(), "player.volume"));
+        TourTargets.Mark(this, "player");
+        TourTargets.Mark(_screen, "player.screen");
+        TourTargets.Mark(_pads, "player.transport");
+        TourTargets.Mark(_seek, "player.seek");
+        TourTargets.Mark(_full, "player.full");
         _strip.Children.Add(_pads);
         _strip.Children.Add(_seek);
         _strip.Children.Add(_knobs);
@@ -174,7 +179,7 @@ public sealed partial class PlayerPanel : ContentControl
         AutomationProperties.SetName(readout, "Enhance status");
         enhance.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EnhanceViewModel.Status)) readout.Text = enhance.Status; };
         status = readout;
-        return knob.Captioned();
+        return TourTargets.Mark(knob.Captioned(), "player.enhance");
     }
 
     // A knob appears only when the file offers more than one choice.

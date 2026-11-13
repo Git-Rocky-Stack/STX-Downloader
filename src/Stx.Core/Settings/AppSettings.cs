@@ -37,6 +37,8 @@ public sealed record AppSettings
     public bool BitPerfect { get; init; }
     /// <summary>First-run setup asks once whether STX should be the player for videos and music. Yes or Not now, it never asks again.</summary>
     public bool DefaultPlayerAsked { get; init; }
+    /// <summary>The tutorial chapters finished to their last step, by id. Each one's lamp on the Tutorials plate lights green.</summary>
+    public IReadOnlyList<string>? TutorialsDone { get; init; }
     /// <summary>Folders whose media joins the Library. Null means never chosen: Videos and Music.</summary>
     public IReadOnlyList<string>? WatchedFolders { get; init; }
 

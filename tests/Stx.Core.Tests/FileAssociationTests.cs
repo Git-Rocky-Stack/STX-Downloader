@@ -112,11 +112,12 @@ public class FileAssociationTests
         registry.Choose(".mkv", "VLC.mkv");
         var some = FileAssociations.Read(registry);
         Assert.Equal(2, some.Ours);
-        Assert.Equal($"STX OPENS 2 OF {MediaTypes.All.Count} TYPES", some.Text);
+        Assert.Equal($"PLAYS {MediaTypes.All.Count} TYPES · DEFAULT FOR 2", some.Text);
+        Assert.DoesNotContain("OPENS", some.Text, StringComparison.Ordinal);
 
         foreach (string extension in MediaTypes.All) registry.Choose(extension, FileAssociations.ProgIdFor(extension));
         Assert.True(FileAssociations.Read(registry).IsAll);
-        Assert.Equal("STX IS YOUR PLAYER FOR VIDEOS AND MUSIC", FileAssociations.Read(registry).Text);
+        Assert.Equal($"DEFAULT PLAYER FOR ALL {MediaTypes.All.Count} TYPES", FileAssociations.Read(registry).Text);
     }
 
     [Fact]

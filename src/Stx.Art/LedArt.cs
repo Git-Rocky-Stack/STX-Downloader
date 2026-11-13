@@ -124,10 +124,26 @@ public static class LedArt
         return buffer;
     }
 
-    public static PixelBuffer SegmentLit(LedColor color, int width, int height) => Segment(color, width, height, 1);
+    public static PixelBuffer SegmentLit(LedColor color, int width, int height) => Segment(Parse(LedColors.Core(color)), width, height, 1);
+
+    /// <summary>A lit segment in any phosphor color (#RRGGBB): one step of a meter's color ramp.</summary>
+    public static PixelBuffer SegmentLit(string coreHex, int width, int height) => Segment(Parse(coreHex), width, height, 1);
 
     /// <summary>The peak-hold segment burns about half again as bright.</summary>
-    public static PixelBuffer SegmentPeak(LedColor color, int width, int height) => Segment(color, width, height, 1.5);
+    public static PixelBuffer SegmentPeak(LedColor color, int width, int height) => Segment(Parse(LedColors.Core(color)), width, height, 1.5);
+
+    /// <summary>The peak-hold segment in any phosphor color (#RRGGBB).</summary>
+    public static PixelBuffer SegmentPeak(string coreHex, int width, int height) => Segment(Parse(coreHex), width, height, 1.5);
+
+    /// <summary>
+    /// A dead segment keeping a trace of any phosphor color (#RRGGBB): the plate's near-black tinted by the color,
+    /// darkest just below the middle, as the named colors' are.
+    /// </summary>
+    public static PixelBuffer SegmentUnlit(string coreHex, int width, int height)
+    {
+        var core = Parse(coreHex);
+        return Unlit((Blend((22, 24, 24), core, 0.09), Blend((10, 11, 11), core, 0.04), Blend((16, 18, 18), core, 0.06)), width, height);
+    }
 
     /// <summary>A dead segment: dark, keeping a trace of its color. Has no overhang.</summary>
     public static PixelBuffer SegmentUnlit(LedColor color, int width, int height)
@@ -138,7 +154,11 @@ public static class LedArt
             LedColor.Amber => ((42, 32, 13), (19, 14, 4), (29, 22, 8)),
             _ => ((26, 35, 29), (12, 17, 14), (20, 26, 22)),
         };
+        return Unlit(tones, width, height);
+    }
 
+    static PixelBuffer Unlit(((double R, double G, double B) Top, (double R, double G, double B) Mid, (double R, double G, double B) Bottom) tones, int width, int height)
+    {
         var buffer = new PixelBuffer(width, height);
         for (int y = 0; y < height; y++)
         {
@@ -149,9 +169,8 @@ public static class LedArt
         return buffer;
     }
 
-    static PixelBuffer Segment(LedColor color, int width, int height, double gain)
+    static PixelBuffer Segment((double R, double G, double B) core, int width, int height, double gain)
     {
-        var core = Parse(LedColors.Core(color));
         var hot = Blend(core, (255, 255, 255), 0.88);
         var edge = (R: core.R * 0.66, G: core.G * 0.66, B: core.B * 0.66);
         var buffer = new PixelBuffer(width, height);

@@ -37,6 +37,11 @@ public sealed partial class SourceTruthPanel : ContentControl
         _facts = new Display { Tone = DisplayTone.Amber, Height = 104, Padding = new Thickness(14, 8, 14, 8), Content = lines };
 
         var meters = new StackPanel { Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+        TourTargets.Mark(this, "truth");
+        TourTargets.Mark(_facts, "truth.verdict");
+        TourTargets.Mark(_spectrum, "truth.spectrum");
+        TourTargets.Mark(_convert, "truth.convert");
+        TourTargets.Mark(meters, "truth.meters");
         meters.Children.Add(new EngravedLabel { Kind = LabelKind.Label, Text = "Left" });
         meters.Children.Add(_left);
         meters.Children.Add(new EngravedLabel { Kind = LabelKind.Label, Text = "Right" });
@@ -48,7 +53,7 @@ public sealed partial class SourceTruthPanel : ContentControl
         controls.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         controls.ColumnDefinitions.Add(new ColumnDefinition());
         Grid.SetColumn(meters, 1);
-        controls.Children.Add(_output.Captioned());
+        controls.Children.Add(TourTargets.Mark(_output.Captioned(), "truth.output"));
         controls.Children.Add(meters);
 
         var column = new StackPanel { Spacing = 12 };
@@ -57,6 +62,8 @@ public sealed partial class SourceTruthPanel : ContentControl
         column.Children.Add(_facts);
         column.Children.Add(_spectrum);
         column.Children.Add(controls);
+        // Stretches to the deck column's height, so its bottom meets the Library's (MainWindow.Column).
+        VerticalContentAlignment = VerticalAlignment.Stretch;
         Content = new Faceplate { PanelName = "source-truth", Padding = new Thickness(36, 28, 36, 28), Content = column };
 
         _output.SelectionChanged += (_, index) => truth.SelectedOutputIndex = index;

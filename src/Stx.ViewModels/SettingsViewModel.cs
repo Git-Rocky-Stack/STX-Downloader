@@ -72,6 +72,16 @@ public sealed class SettingsViewModel(SettingsStore store, IStartupRegistration 
     /// <summary>Records that the default-player question was answered, so it's never asked again.</summary>
     public void MarkDefaultPlayerAsked() => Apply(_settings with { DefaultPlayerAsked = true });
 
+    /// <summary>Whether a tutorial chapter was finished to its last step.</summary>
+    public bool IsTutorialDone(string id) => _settings.TutorialsDone?.Contains(id, StringComparer.Ordinal) == true;
+
+    /// <summary>Records a chapter finished, so its lamp stays lit from now on.</summary>
+    public void MarkTutorialDone(string id)
+    {
+        if (IsTutorialDone(id)) return;
+        Apply(_settings with { TutorialsDone = [.. _settings.TutorialsDone ?? [], id] });
+    }
+
     /// <summary>True on the first launch only. Saved straight away, so the guide never opens by itself twice.</summary>
     public bool TakeFirstLaunchGuide()
     {

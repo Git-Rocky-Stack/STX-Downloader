@@ -40,8 +40,6 @@
   <ItemGroup>
     <Content Include="Assets\badge.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\stx.ico" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Assets\tutorial.mp4" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Assets\tutorial-poster.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <!-- dotnet publish leaves out the compiled XAML of an unpackaged WinUI app. Without these three, every styled control has no template: no faceplates, no pads. -->
   <Target Name="PublishCompiledXaml" AfterTargets="Publish">

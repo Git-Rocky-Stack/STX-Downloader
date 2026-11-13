@@ -23,6 +23,16 @@ public partial class CorpusManifestTests
         Assert.True(unproven.Count == 0, "Registered without a corpus file: " + string.Join(", ", unproven));
     }
 
+    // .mod names tracker music and a camcorder's MPEG-2 recording alike. STX doesn't register it (MediaTypes says why),
+    // but either opened directly plays, and the corpus keeps proving both.
+    [Fact]
+    public void Both_kinds_of_mod_file_are_played()
+    {
+        var entries = Corpus.Manifest().Where(e => e.Expect != "refused").ToDictionary(e => e.File);
+        Assert.True(entries.TryGetValue("sine.mod", out var tracker) && tracker.Audio && !tracker.Video, "No tracker .mod in the corpus");
+        Assert.True(entries.TryGetValue("camcorder.mod", out var camcorder) && camcorder.Video && camcorder.Features.Contains("MPEG PS"), "No camcorder .mod in the corpus");
+    }
+
     [Fact]
     public void Every_manifest_feature_is_on_the_list()
     {

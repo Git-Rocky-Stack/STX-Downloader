@@ -2,6 +2,7 @@
 .SYNOPSIS
   Builds the VLC parity corpus in tests/corpus/files: generates what FFmpeg can make, copies our own files from
   tests/corpus/own, and downloads the rest, checking each download against the sha256 pinned in the manifest.
+  A make line reads our own files as {own}/name and a corpus file made or fetched by an earlier entry as {files}/name.
 .EXAMPLE
   pwsh tools/corpus/Make-Corpus.ps1 -Ffmpeg (Get-Command ffmpeg).Source
 #>
@@ -42,7 +43,7 @@ foreach ($entry in $manifest.entries) {
     }
     elseif ($make.StartsWith('ffmpeg ')) {
         Write-Host "make   $($entry.file)"
-        $arguments = '-hide_banner -loglevel error -y ' + ($make.Substring(7) -replace '\{own\}/(\S+)', "`"$own\`$1`"").Replace('{out}', "`"$out`"")
+        $arguments = '-hide_banner -loglevel error -y ' + ($make.Substring(7) -replace '\{own\}/(\S+)', "`"$own\`$1`"" -replace '\{files\}/(\S+)', "`"$files\`$1`"").Replace('{out}', "`"$out`"")
         $process = Start-Process -FilePath $Ffmpeg -ArgumentList $arguments -NoNewWindow -Wait -PassThru
         if ($process.ExitCode -ne 0) { throw "$($entry.file): ffmpeg exited $($process.ExitCode) for: $arguments" }
     }

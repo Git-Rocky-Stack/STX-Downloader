@@ -20,6 +20,7 @@ sealed class FakeRepo : IJobRepo
     public void Update(Job job) => _jobs[job.Id] = job;
     public Job? Get(long id) => _jobs.GetValueOrDefault(id);
     public IReadOnlyList<Job> All() => _jobs.Values.OrderBy(j => j.Id).ToList();
+    public void Remove(long id) => _jobs.Remove(id);
 
     /// <summary>Puts a job straight into a state, as the database holds it after a crash.</summary>
     public Job Seed(JobKind kind, JobState state) => Add(new Job(0, 1, kind, state, 0, null, "original", DateTimeOffset.UnixEpoch));
@@ -90,6 +91,71 @@ public class QueueEngineTests
         Assert.False(engine.HasPending(1, JobKind.Convert, "shrink-av1"));
         Assert.NotEqual(first.Id, engine.Enqueue(1, JobKind.Convert, "shrink-av1").Id);
     }
+
+    // Review 2026-11-12: finished rows stacked up in the queue with no way to clear them.
+    [Fact]
+    public void Only_a_finished_job_can_be_cleared_and_it_leaves_for_good()
+    {
+        var engine = Engine();
+        var removed = new List<long>();
+        engine.JobRemoved += (_, id) => removed.Add(id);
+        var running = engine.Enqueue(1, JobKind.Link, "original");
+        Assert.False(engine.Remove(running.Id));
+        _runner.Succeed(running.Id);
+
+        Assert.True(engine.Remove(running.Id));
+        Assert.Null(_repo.Get(running.Id));
+        Assert.Equal([running.Id], removed);
+        Assert.False(engine.Remove(running.Id));
+    }
+
+    [Fact]
+    public void Clear_done_takes_complete_canceled_and_failed_jobs_and_leaves_the_rest()
+    {
+        var engine = Engine(new QueuePolicy { MaxParallel = 1 });
+        var done = engine.Enqueue(1, JobKind.Link, "original");
+        _runner.Succeed(done.Id);
+        var failed = engine.Enqueue(2, JobKind.Link, "original");
+        _runner.Fail(failed.Id, ErrorKind.DrmDetected);
+        var running = engine.Enqueue(3, JobKind.Link, "original");
+        var waiting = engine.Enqueue(4, JobKind.Link, "original");
+        var paused = engine.Enqueue(5, JobKind.Link, "original");
+        Assert.True(engine.Pause(paused.Id));
+        var canceled = engine.Enqueue(6, JobKind.Link, "original");
+        Assert.True(engine.Cancel(canceled.Id));
+        var recapture = _repo.Seed(JobKind.Captured, JobState.NeedsRecapture);
+
+        Assert.Equal(3, engine.RemoveFinished());
+
+        Assert.Equal(new[] { running.Id, waiting.Id, paused.Id, recapture.Id }.Order(), _repo.All().Select(j => j.Id).Order());
+        Assert.Equal(0, engine.RemoveFinished());
+    }
+
+    // A canceled job's tool may still be ending; its row stays until that run is over, so the run can't report into a
+    // row that's gone. Once it ends, the row can go.
+    [Fact]
+    public void A_canceled_job_whose_tool_is_still_ending_isnt_cleared_yet()
+    {
+        var engine = Engine();
+        var job = engine.Enqueue(1, JobKind.Link, "original");
+        Assert.True(engine.Cancel(job.Id));
+        Assert.False(engine.Remove(job.Id));
+        _runner.Finish(job.Id, JobOutcome.Failure(ErrorKind.ToolFailure));
+        Assert.True(engine.Remove(job.Id));
+    }
+
+    [Theory]
+    [InlineData(JobState.Completed, true)]
+    [InlineData(JobState.Canceled, true)]
+    [InlineData(JobState.Failed, true)]
+    [InlineData(JobState.Queued, false)]
+    [InlineData(JobState.Running, false)]
+    [InlineData(JobState.Paused, false)]
+    [InlineData(JobState.Waiting, false)]
+    [InlineData(JobState.Analyzing, false)]
+    [InlineData(JobState.NeedsRecapture, false)]
+    public void Finished_means_nothing_more_happens_unless_asked(JobState state, bool finished) =>
+        Assert.Equal(finished, QueueEngine.IsFinished(state));
 
     // Review 2026-11-07: RESUME right after PAUSE started a second run while the first one's tool was still ending.
     [Fact]

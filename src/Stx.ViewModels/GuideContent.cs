@@ -1,3 +1,5 @@
+using Stx.Core.Library;
+
 namespace Stx.ViewModels;
 
 /// <summary>
@@ -26,10 +28,10 @@ public readonly record struct GuideSpan(string Text, bool Marked);
 public static class GuideContent
 {
     /// <summary>Under the guide's title: how to get back here, since it opens by itself only once.</summary>
-    // MainWindow.cs TakeFirstLaunchGuide, SettingsPanel.cs HelpPad
-    public const string Reopen = "Open it again any time: SETTINGS, then USER GUIDE. TUTORIAL beside it plays an 89-second walkthrough.";
+    // MainWindow.cs TakeFirstLaunchGuide, SettingsPanel.cs HelpPad, TutorialPanel.cs
+    public const string Reopen = "Open it again any time: SETTINGS, then USER GUIDE. TUTORIALS beside it walks you through the live console, one chapter at a time.";
 
-    public static IReadOnlyList<string> ReopenControls { get; } = ["SETTINGS", "USER GUIDE", "TUTORIAL"];
+    public static IReadOnlyList<string> ReopenControls { get; } = ["SETTINGS", "USER GUIDE", "TUTORIALS"];
 
     public static IReadOnlyList<GuideStep> QuickStart { get; } =
     [
@@ -52,9 +54,9 @@ public static class GuideContent
             ["OPEN"], []),
     ];
 
-    public static IReadOnlyList<IReadOnlyList<GuideSection>> Columns { get; } =
+    /// <summary>Every section, in reading order: the guide's index lists them, and its page shows one at a time.</summary>
+    public static IReadOnlyList<GuideSection> Sections { get; } =
     [
-        [
             new("The console",
                 "One rack of plates: Source on top, Queue and Library on the left, Player and Source truth on the right.",
             [
@@ -63,12 +65,14 @@ public static class GuideContent
                 // EngineStatusViewModel.cs Apply, HeaderPanel.cs _fault
                 "The Fault light turns red, with TOOLS MISSING, when STX can't save anything until a tool is in place.",
                 // HeaderPanel.cs openSettings, SettingsPanel.cs HelpPad, GuidePanel.cs and TutorialPanel.cs CLOSE
-                "SETTINGS opens and closes the Settings plate, where USER GUIDE and TUTORIAL live. CLOSE puts either away.",
+                "SETTINGS opens and closes the Settings plate, where USER GUIDE and TUTORIALS live. CLOSE puts either away.",
+                // GuidePanel.cs index, PREVIOUS, NEXT and SHOW ME
+                "In this guide, the index on the left picks a section, PREVIOUS and NEXT turn the page, and SHOW ME starts the tutorial for it.",
                 // QueuePanel.cs, LibraryPanel.cs and SourceTruthPanel.cs PaintActions: IsEnabled
                 "A pad that can't act on what's selected can't be pressed until it can.",
                 // Pad.cs (a Button), PushSwitch.cs (a ToggleButton), Rotary.cs OnKeyDown
                 "Tab moves between controls. Enter or Space presses a pad or switch, and the arrow keys turn a knob.",
-            ], ["SETTINGS", "USER GUIDE", "TUTORIAL", "CLOSE"], ["ENGINE CURRENT", "UPDATE WAITING", "LIMITED: SOME FORMATS MISSING", "TOOLS MISSING"]),
+            ], ["SETTINGS", "USER GUIDE", "TUTORIALS", "CLOSE", "PREVIOUS", "NEXT", "SHOW ME"], ["ENGINE CURRENT", "UPDATE WAITING", "LIMITED: SOME FORMATS MISSING", "TOOLS MISSING"]),
             new("Save from a link",
                 "The Source plate takes a link to a video, a playlist, or anything else yt-dlp can read.",
             [
@@ -118,14 +122,12 @@ public static class GuideContent
                 "TRAY keeps downloads going after you close the window; the tray icon brings STX back or quits it. START WITH WINDOWS starts STX when you sign in, in the tray if TRAY is on.",
                 // ToolManager.cs EnsureOnceAsync, FirstRunViewModel.cs Message
                 "TOOL UPDATES keeps yt-dlp current and downloads missing tools. Off, STX downloads nothing for itself.",
-                // LookState.cs ReduceMotion, Led.cs, ScrollingGlowText.cs, TutorialPanel.cs, MeterTimeline.Sweep
-                "REDUCE MOTION holds lights steady, stops long titles scrolling, stills the meters' sweep, and makes the tutorial wait for PLAY. Windows' own animation setting does the same.",
+                // LookState.cs ReduceMotion, Led.cs, ScrollingGlowText.cs, TourOverlay.cs Glide, MeterTimeline.Sweep
+                "REDUCE MOTION holds lights steady, stops long titles scrolling, stills the meters' sweep, and moves a tutorial's spotlight without gliding. Windows' own animation setting does the same.",
                 // SettingsPanel.cs WatchedFolders, AppSettings.cs DefaultWatched, MediaRepo.cs ForgetWatchedUnder
                 "Videos and Music are watched to begin with. ADD FOLDER and REMOVE FOLDER change the list. Removing a folder takes its files out of the Library, never off your disk.",
-            ], ["DOWNLOAD", "PARALLEL DOWNLOADS", "BROWSE", "TAGS", "COVER ART", "CHAPTERS", "LIGHT MODE", "TRAY", "START WITH WINDOWS", "TOOL UPDATES", "REDUCE MOTION", "PLAY", "ADD FOLDER", "REMOVE FOLDER"],
+            ], ["DOWNLOAD", "PARALLEL DOWNLOADS", "BROWSE", "TAGS", "COVER ART", "CHAPTERS", "LIGHT MODE", "TRAY", "START WITH WINDOWS", "TOOL UPDATES", "REDUCE MOTION", "ADD FOLDER", "REMOVE FOLDER"],
                ["BEST", "1080P", "720P", "VIDEO", "AUDIO"]),
-        ],
-        [
             new("Queue",
                 "Every save, conversion and shrink runs here as a job.",
             [
@@ -141,7 +143,9 @@ public static class GuideContent
                 "OPEN PAGE appears when a captured link has expired. Capture from that page again and the job resumes.",
                 // SettingsPanel.cs parallel
                 "PARALLEL DOWNLOADS in Settings sets how many run at once.",
-            ], ["PAUSE", "RESUME", "CANCEL", "RETRY", "COPY LOG", "OPEN PAGE", "PARALLEL DOWNLOADS"], []),
+                // QueuePanel.cs _clear and _clearDone, QueueEngine.cs Remove and RemoveFinished
+                "CLEAR takes the selected finished job off the queue, and CLEAR DONE takes every complete, canceled or failed one, older ones out of sight too. What they saved stays in the Library and on your disk.",
+            ], ["PAUSE", "RESUME", "CANCEL", "RETRY", "COPY LOG", "OPEN PAGE", "PARALLEL DOWNLOADS", "CLEAR", "CLEAR DONE"], []),
             new("Library",
                 "Your whole collection: what you've saved, what you've opened, and your watched folders.",
             [
@@ -152,7 +156,7 @@ public static class GuideContent
                 // LibraryViewModel.cs CountText, ScanText and SpaceText
                 "The line under it counts the files, follows a scan as it goes, and says how much deleting shrunk originals would free.",
                 // CollectionWatcher.cs Apply
-                "New files in a watched folder appear by themselves. A renamed file keeps its row; a deleted one stays listed as FILE MISSING.",
+                "New files in a watched folder appear by themselves. A renamed file keeps its row; a deleted one stays listed as FILE MISSING until you clear it.",
                 // LibraryPanel.cs OPEN and FIND FILE, Composition.cs Select
                 "Selecting a file shows its audio in Source truth. OPEN plays it on the Player; FIND FILE shows it in its folder.",
                 // LibraryPanel.cs Convert, PresetCatalog.cs
@@ -161,7 +165,11 @@ public static class GuideContent
                 "SHRINK makes a smaller copy beside the selected file: AV1 or HEVC for video, as the SHRINK TO knob says, and Opus for sound alone. It's lossy, and the copy is checked from start to end before it's kept.",
                 // ShrinkFolder.cs QueueAsync, LibraryViewModel.cs SpaceText
                 "SHRINK FOLDER does the same for every file in a folder you pick. The Library shows how much deleting the originals would free. STX never deletes them.",
-            ], ["OPEN", "FIND FILE", "CAR USB", "PHONE", "ARCHIVE", "SHRINK", "SHRINK TO", "SHRINK FOLDER"], ["ORIGINAL", "OPENED", "WATCHED", "FILE MISSING"]),
+                // LibraryPanel.cs _remove, LibraryViewModel.cs RemoveAsync and CanRemove, MediaRepo.cs Forget
+                "REMOVE takes the selected row off the Library, never the file off your disk. A file still in a watched folder stays listed until it's deleted or its folder is removed.",
+                // LibraryPanel.cs _clearMissing, LibraryViewModel.cs ClearMissingAsync
+                "CLEAR MISSING takes every FILE MISSING row off at once. A row with a job still in the Queue stays until the job ends.",
+            ], ["OPEN", "FIND FILE", "CAR USB", "PHONE", "ARCHIVE", "SHRINK", "SHRINK TO", "SHRINK FOLDER", "REMOVE", "CLEAR MISSING"], ["ORIGINAL", "OPENED", "WATCHED", "FILE MISSING"]),
             new("Source truth",
                 "What the audio in a file really is, measured from the file, not taken from what the site claims.",
             [
@@ -178,8 +186,6 @@ public static class GuideContent
                 // SourceTruthViewModel.cs Warning
                 "Turning a lossy file into FLAC, ALAC, WAV or AIFF is allowed, with a note that it adds no quality.",
             ], ["OUTPUT FORMAT", "CONVERT"], ["REPORTED", "FULL BAND · NO CUTOFF", "LEFT", "RIGHT", "BIT-PERFECT", "LOSSLESS; NOTHING LOST", "LARGER FILE, SAME SOUND", "RE-ENCODED; SLIGHT QUALITY LOSS", "FLAC", "ALAC", "WAV", "AIFF"]),
-        ],
-        [
             new("Player",
                 "Plays your files inside STX, with VLC's engine.",
             [
@@ -203,7 +209,7 @@ public static class GuideContent
                 "Hidden in the tray, the Player stops drawing pictures; the sound carries on.",
             ], ["OPEN", "PLAY", "PAUSE", "PREV", "NEXT", "STOP", "VOLUME", "AUDIO", "SUBTITLES", "CHAPTER", "FULL", "EXIT", "ENHANCE", "PERFORMANCE", "BIT-PERFECT"],
                ["UPSCALE UNAVAILABLE", "AUTO", "ECO", "SHARPEN", "BALANCED", "MAX", "UPSCALE"]),
-            new("Streams, discs and your default player",
+            new("Streams, discs, default app",
                 "Play without saving, and let STX open your media from File Explorer.",
             [
                 // SourcePanel.cs PLAY STREAM, Composition.cs PlayStreamAsync, StreamOpener.cs, PlaybackTarget.cs
@@ -214,10 +220,23 @@ public static class GuideContent
                 "Dirac and VC-2 video crash VLC's engine, so STX refuses them, in files and streams alike, and shows DIRAC VIDEO CAN'T BE PLAYED SAFELY instead.",
                 // DefaultPlayerOfferPanel.cs, DefaultPlayerViewModel.cs YesCommand and NotNowCommand
                 "The first time, STX asks once whether it should be your player for videos and music. YES opens Windows' Default Apps, where you choose STX; Windows doesn't let an app choose itself. NOT NOW never asks again.",
-                // SettingsPanel.cs DefaultPlayer, FileAssociations.cs Read
-                "DEFAULT PLAYER in Settings opens that page any time. Its light shows what Windows really does: green for every type, amber for some.",
+                // SettingsPanel.cs DefaultPlayer, FileAssociations.cs Read and DefaultState.Text
+                "DEFAULT PLAYER in Settings opens that page any time. Its readout counts the types STX plays and, after DEFAULT FOR, how many of them Windows already opens with STX. Its light is green for every type, amber for some.",
             ], ["PLAY STREAM", "ANALYZE", "PLAY DISC", "YES", "NOT NOW", "DEFAULT PLAYER"],
-               ["THIS DISC IS ENCRYPTED, SO IT CAN'T BE PLAYED", "DIRAC VIDEO CAN'T BE PLAYED SAFELY"]),
+               ["THIS DISC IS ENCRYPTED, SO IT CAN'T BE PLAYED", "DIRAC VIDEO CAN'T BE PLAYED SAFELY", "DEFAULT FOR"]),
+            Formats(),
+            new("Tutorials",
+                "Short guided tours of the live console, one chapter at a time.",
+            [
+                // SettingsPanel.cs HelpPad, TutorialPanel.cs chapter cards, TutorialContent.cs Tours
+                "TUTORIALS in Settings lists the chapters, from your first save to the advanced settings. START begins one.",
+                // TourOverlay.cs: the dim layer, the spotlight's click-through hole, the card
+                "The console dims, and a spotlight lands on each control in turn while the card beside it explains. The lit control still works, so you can try it.",
+                // TourOverlay.cs BACK, NEXT, FINISH, END TOUR and Esc
+                "NEXT and BACK step through a chapter, FINISH ends its last step, and END TOUR or Esc stops it anywhere.",
+                // TutorialPanel.cs lamps, SettingsViewModel.cs MarkTutorialDone
+                "A chapter you finish lights its lamp green, and START runs it again any time.",
+            ], ["TUTORIALS", "START", "NEXT", "BACK", "FINISH", "END TOUR"], []),
             new("When something goes wrong",
                 "Every problem says what happened and what to do next.",
             [
@@ -242,11 +261,26 @@ public static class GuideContent
                 // ShrinkFolder.cs, MediaRepo.cs ForgetWatchedUnder, STXDownloader.iss, IdenticalFileCheck.cs
                 "STX leaves your media alone: a shrink keeps the original, removing a watched folder keeps its files, and uninstalling keeps your saves. The one file it removes is a new download identical to one you already have; the Library points at the first.",
             ], [], []),
-        ],
     ];
 
-    /// <summary>Every section, in reading order.</summary>
-    public static IEnumerable<GuideSection> Sections => Columns.SelectMany(column => column);
+    /// <summary>
+    /// What STX plays, read from the list Windows is offered (MediaTypes), so the guide can never claim a type the engine
+    /// isn't tested on, or leave one out. Every type there is played by a file in the parity corpus.
+    /// </summary>
+    // MediaTypes.cs, CorpusManifestTests.cs Every_type_STX_registers_is_played_by_a_corpus_file
+    static GuideSection Formats()
+    {
+        static string Names(MediaKind kind) =>
+            string.Join(", ", MediaTypes.All.Where(t => MediaTypes.KindOf("x" + t) == kind).Select(t => t.TrimStart('.').ToUpperInvariant()));
+        return new("What STX plays",
+            $"{MediaTypes.All.Count} file types, each one proven in STX's tests to play on its engine.",
+        [
+            $"Video: {Names(MediaKind.Video)}.",
+            $"Audio: {Names(MediaKind.Audio)}.",
+            "Subtitles beside a video play with it, and so do the ones inside it. Internet radio, streams and DVD or Blu-ray discs play from the Source plate.",
+            "STX registers itself for every one of these, and Windows opens them with STX once you choose it under DEFAULT PLAYER.",
+        ], ["DEFAULT PLAYER"], []);
+    }
 
     /// <summary>
     /// Splits a line into plain runs and the names it marks. A name counts only as whole words, so OPEN isn't found in

@@ -41,6 +41,8 @@ public sealed class QueueItemViewModel(long jobId, string title, string? pageUrl
     public bool CanResume => State == JobState.Paused;
     public bool CanCancel => JobTransitions.CanMove(State, JobState.Canceled);
     public bool CanRetry => State is JobState.Failed or JobState.Canceled;
+    /// <summary>CLEAR: a finished job (complete, canceled or failed) can leave the queue. What it saved stays.</summary>
+    public bool CanClear => QueueEngine.IsFinished(State);
 
     public string RawLog
     {
@@ -92,6 +94,7 @@ public sealed class QueueItemViewModel(long jobId, string title, string? pageUrl
         OnPropertyChanged(nameof(CanResume));
         OnPropertyChanged(nameof(CanCancel));
         OnPropertyChanged(nameof(CanRetry));
+        OnPropertyChanged(nameof(CanClear));
     }
 
     const string AlreadySavedStatus = "COMPLETE · SAME FILE ALREADY SAVED";
@@ -129,6 +132,7 @@ public sealed class QueueViewModel
         _shell = shell;
         _ui = ui;
         engine.JobChanged += (_, job) => _ui(() => Update(job));
+        engine.JobRemoved += (_, id) => _ui(() => Drop(id));
     }
 
     public ObservableCollection<QueueItemViewModel> Items { get; } = [];
@@ -136,7 +140,6 @@ public sealed class QueueViewModel
     /// <summary>True only while a retry is pending, so its timer can stop the rest of the time.</summary>
     public bool HasWaitingJobs => Items.Any(i => i.State == JobState.Waiting);
 
-    /// <summary>Brings back what was in the queue when the app last closed.</summary>
     /// <summary>Finished jobs shown at startup. Each row is live, and finished work is in the library anyway.</summary>
     public const int HistoryShown = 50;
 
@@ -149,6 +152,18 @@ public sealed class QueueViewModel
             if (job.State is not (JobState.Completed or JobState.Canceled) || recent.Contains(job.Id)) Update(job);
         }
     }
+
+    /// <summary>Whether any row is finished, so CLEAR DONE has something to take away.</summary>
+    public bool HasFinished => Items.Any(i => i.CanClear);
+
+    /// <summary>CLEAR: takes a finished job's row off the queue for good. Its file stays in the Library and on disk.</summary>
+    public void Clear(QueueItemViewModel item)
+    {
+        if (item.CanClear) _engine.Remove(item.JobId);
+    }
+
+    /// <summary>CLEAR DONE: takes every finished job off the queue, the ones scrolled out of sight and older ones too.</summary>
+    public int ClearFinished() => _engine.RemoveFinished();
 
     public void Pause(QueueItemViewModel item) => _engine.Pause(item.JobId);
     public void Resume(QueueItemViewModel item) => _engine.Resume(item.JobId);
@@ -183,6 +198,12 @@ public sealed class QueueViewModel
     }
 
     QueueItemViewModel? Find(long jobId) => Items.FirstOrDefault(i => i.JobId == jobId);
+
+    void Drop(long jobId)
+    {
+        _savedFile.Remove(jobId);
+        if (Find(jobId) is { } item) Items.Remove(item);
+    }
 
     void Update(Job job)
     {

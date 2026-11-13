@@ -71,6 +71,40 @@ public sealed class QueueEngine(IJobRepo repo, IJobRunner runner, QueuePolicy po
         return true;
     });
 
+    /// <summary>A job is finished when nothing more happens to it unless asked: complete, canceled, or failed.</summary>
+    public static bool IsFinished(JobState state) => state is JobState.Completed or JobState.Canceled or JobState.Failed;
+
+    /// <summary>
+    /// A finished job left the queue for good, by CLEAR or CLEAR DONE. Its row is gone from the database; what it saved
+    /// is still in the Library and on disk.
+    /// </summary>
+    public event EventHandler<long>? JobRemoved;
+
+    /// <summary>
+    /// Takes one finished job off the queue for good. False for a job still under way (it must be canceled first) and
+    /// for one whose last run is still ending, so a tool can never report into a row that's gone.
+    /// </summary>
+    public bool Remove(long id)
+    {
+        lock (_gate) return RemoveFinishedJob(id);
+    }
+
+    /// <summary>Takes every finished job off the queue (CLEAR DONE). Returns how many went.</summary>
+    public int RemoveFinished()
+    {
+        lock (_gate) return repo.All().Where(j => IsFinished(j.State)).Count(j => RemoveFinishedJob(j.Id));
+    }
+
+    bool RemoveFinishedJob(long id)
+    {
+        if (repo.Get(id) is not { } job || !IsFinished(job.State) || _drives.ContainsKey(id) || _running.ContainsKey(id)) return false;
+        repo.Remove(id);
+        _retryAt.Remove(id);
+        vault.Forget(id);
+        JobRemoved?.Invoke(this, id);
+        return true;
+    }
+
     public bool Retry(long id) => Act(id, job =>
         job.State is JobState.Failed or JobState.Canceled && Move(job with { Attempts = 0, Error = null }, JobState.Queued));
 

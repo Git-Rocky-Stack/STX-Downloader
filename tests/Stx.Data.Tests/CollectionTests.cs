@@ -118,6 +118,35 @@ public sealed class CollectionTests : IDisposable
         Assert.Equal(new[] { P("Music", "opened.mp3"), P("Music", "saved.mp3"), P("Music2", "c.mp3") }.Order(StringComparer.Ordinal), left);
     }
 
+    // REMOVE and CLEAR MISSING (review 2026-11-12): every row for the path goes, in any case, with its measurements;
+    // an item left with no file goes, so its download can be saved again; nothing else is touched.
+    [Fact]
+    public void Forgetting_a_path_takes_every_row_for_it_and_empty_items()
+    {
+        using var db = Db.Open(DbPath);
+        var repo = new MediaRepo(db);
+        long first = repo.AddItem("https://example.com/a", "a", "Song");
+        long original = repo.AddFile(first, P("Music", "Song.mp4"), null, "Original");
+        long copy = repo.AddFile(first, P("Music", "Song.flac"), null, "Flac");
+        repo.SaveFacts(original, "{}");
+        long second = repo.AddItem("https://example.com/b", "b", "Same file, other link");
+        repo.AddFile(second, P("MUSIC", "SONG.MP4"), null, "Original");
+        repo.RememberCapture("key", second);
+        repo.AddLocal([new FoundFile(P("Music", "other.mp3"), 4, When)], MediaOrigin.Watched);
+
+        Assert.Equal(1, repo.Forget([P("music", "song.mp4"), P("Music", "never-listed.mp4")]));
+
+        Assert.Null(repo.Row(P("Music", "Song.mp4")));
+        Assert.Null(repo.LoadFacts(original));
+        Assert.NotNull(repo.GetItem(first));
+        Assert.Equal(copy, repo.Row(P("Music", "Song.flac"))!.FileId);
+        Assert.Null(repo.GetItem(second));
+        Assert.Null(repo.RememberedCapture("key"));
+        Assert.NotNull(repo.Row(P("Music", "other.mp3")));
+        Assert.Equal(2, repo.Count(LibrarySearch.All));
+        Assert.Equal(0, repo.Forget([]));
+    }
+
     [Fact]
     public void Facts_update_in_place()
     {

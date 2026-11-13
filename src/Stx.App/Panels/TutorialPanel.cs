@@ -1,108 +1,186 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media;
 using Stx.App.Primitives;
 using Stx.Look;
-using Windows.Media.Core;
-using Windows.Media.Playback;
+using Stx.ViewModels;
 
 namespace Stx.App.Panels;
 
-/// <summary>The walkthrough video on its own plate. It's only loaded once asked for, and let go of when the plate closes.</summary>
+/// <summary>
+/// The tutorials: a chapter card for each guided tour of the live console (TutorialContent), with its lamp lit green
+/// once finished and a START pad that runs it on the real controls (TourOverlay). Nothing here is a recording, so it
+/// can't fall behind the console.
+/// </summary>
 public sealed partial class TutorialPanel : ContentControl
 {
-    const double Widest = 960, WidthOverHeight = 16.0 / 9;
+    // Cards wrap to the plate: three across on a wide one, two, then one. On the 8-point grid.
+    const double CardGap = 24, ThreeAcross = 1040, TwoAcross = 640;
 
-    readonly string _file, _posterFile;
-    readonly MediaPlayerElement _player = new()
-    {
-        AreTransportControlsEnabled = true,
-        AutoPlay = false,
-        MaxWidth = Widest,
-        Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform,
-        Visibility = Visibility.Collapsed,
-    };
-    readonly StateView _problem = new() { State = ViewState.Error, Visibility = Visibility.Collapsed };
-    // With reduce motion on, the poster and a PLAY pad wait here, and the video isn't loaded until it's asked for.
-    readonly Grid _waiting = new() { MaxWidth = Widest, Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Black), Visibility = Visibility.Collapsed };
-    readonly Image _poster = new() { Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform };
+    readonly Func<string, bool> _done;
+    readonly Grid _cards = new() { ColumnSpacing = CardGap, RowSpacing = CardGap };
+    readonly List<(Tour Tour, Led Lamp, EngravedLabel State)> _chapters = [];
+    readonly GlowText _tally = new() { Tone = DisplayTone.Cyan, TextSize = 13 };
+    readonly Bargraph _overall = new() { Zones = BargraphZones.Progress, Height = 16, Segments = 28 };
+    readonly List<TextBlock> _ink = [], _dim = [];
+    int _across;
 
-    public TutorialPanel(Action close, string? file = null)
+    /// <param name="close">CLOSE: puts the plate away.</param>
+    /// <param name="start">START on a card: runs that chapter on the console.</param>
+    /// <param name="done">Whether a chapter was finished, by id. Null in the gallery, where none is.</param>
+    public TutorialPanel(Action close, Action<Tour> start, Func<string, bool>? done = null)
     {
-        _file = file ?? Path.Combine(AppContext.BaseDirectory, "Assets", "tutorial.mp4");
-        _posterFile = Path.Combine(Path.GetDirectoryName(_file)!, "tutorial-poster.png");
+        _done = done ?? (_ => false);
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
-        var shut = new Pad { Content = "CLOSE", VerticalAlignment = VerticalAlignment.Center };
+        var shut = new Pad { Content = "CLOSE", VerticalAlignment = VerticalAlignment.Top };
         shut.Click += (_, _) => close();
+        var name = new EngravedLabel { Kind = LabelKind.Title, Text = "Tutorials" };
+        AutomationProperties.SetHeadingLevel(name, AutomationHeadingLevel.Level1);
+        var intro = Words("Guided tours of the live console. Pick a chapter: the console dims, and a spotlight walks you through each real control while you try it.", _dim);
+        var heading = new StackPanel { Spacing = 8 };
+        heading.Children.Add(name);
+        heading.Children.Add(intro);
         var title = new Grid { ColumnSpacing = 16 };
         title.ColumnDefinitions.Add(new ColumnDefinition());
         title.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Grid.SetColumn(shut, 1);
-        title.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Tutorial", VerticalAlignment = VerticalAlignment.Center });
+        title.Children.Add(heading);
         title.Children.Add(shut);
 
-        _player.SizeChanged += (_, e) => _player.Height = e.NewSize.Width / WidthOverHeight;
-        _waiting.SizeChanged += (_, e) => _waiting.Height = e.NewSize.Width / WidthOverHeight;
-        // Bottom right, clear of the S and the caption on the poster.
-        var play = new Pad { Content = "PLAY", HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(24) };
-        play.Click += (_, _) => Start();
-        _waiting.Children.Add(_poster);
-        _waiting.Children.Add(play);
+        // How far through the series you are, on the same meter the Queue uses for a job.
+        var progress = new Grid { ColumnSpacing = 16 };
+        progress.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        progress.ColumnDefinitions.Add(new ColumnDefinition { MaxWidth = 420 });
+        _tally.VerticalAlignment = _overall.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(_overall, 1);
+        progress.Children.Add(_tally);
+        progress.Children.Add(_overall);
+        AutomationProperties.SetName(_overall, "Chapters finished");
 
-        var column = new StackPanel { Spacing = 16 };
+        int number = 0;
+        foreach (var tour in TutorialContent.Tours)
+        {
+            var card = Card(++number, tour, start, out var lamp, out var state);
+            _chapters.Add((tour, lamp, state));
+            _cards.Children.Add(card);
+        }
+        _cards.SizeChanged += (_, e) => Arrange(e.NewSize.Width);
+
+        var column = new StackPanel { Spacing = 24 };
         column.Children.Add(title);
-        column.Children.Add(_player);
-        column.Children.Add(_waiting);
-        column.Children.Add(_problem);
-        Content = new Faceplate { PanelName = "tutorial", Padding = new Thickness(36, 28, 36, 28), Content = column };
+        column.Children.Add(progress);
+        column.Children.Add(_cards);
+        Content = new Faceplate { PanelName = "tutorial", Padding = new Thickness(36, 28, 36, 36), Content = column };
+
+        Loaded += (_, _) => { LookState.Changed += PaintInk; PaintInk(); };
+        Unloaded += (_, _) => LookState.Changed -= PaintInk;
+        PaintInk();
+        Refresh();
     }
 
-    /// <summary>Plays the video. With reduce motion on it shows the poster and waits for PLAY, and never starts by itself.</summary>
-    public void Open()
+    /// <summary>Reads again which chapters are finished: their lamps, and the tally.</summary>
+    public void Refresh()
     {
-        if (!File.Exists(_file))
+        int finished = 0;
+        foreach (var (tour, lamp, state) in _chapters)
         {
-            ShowProblem("THE TUTORIAL VIDEO IS MISSING. REINSTALLING WILL RESTORE IT.");
-            return;
+            bool done = _done(tour.Id);
+            if (done) finished++;
+            lamp.Color = LedColor.Green;
+            lamp.State = done ? LedState.On : LedState.Off;
+            state.Text = done ? "Finished" : "Not started";
+            AutomationProperties.SetName(lamp, done ? $"{tour.Title}: finished" : $"{tour.Title}: not finished yet");
         }
-        _problem.Visibility = Visibility.Collapsed;
-        if (LookState.ReduceMotion)
+        _tally.Text = $"{finished} OF {_chapters.Count} CHAPTERS FINISHED";
+        _overall.Value = finished * 100.0 / Math.Max(1, _chapters.Count);
+    }
+
+    // A chapter: its number and title behind glass, what it covers on the metal, and its lamp beside START.
+    FrameworkElement Card(int number, Tour tour, Action<Tour> start, out Led lamp, out EngravedLabel state)
+    {
+        var digits = new GlowText { Tone = DisplayTone.Cyan, TextSize = 26, Text = number.ToString("00", System.Globalization.CultureInfo.InvariantCulture), VerticalAlignment = VerticalAlignment.Center };
+        var names = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        names.Children.Add(new GlowText { Tone = DisplayTone.Cyan, Text = tour.Title.ToUpperInvariant() });
+        names.Children.Add(new GlowText { Tone = DisplayTone.Cyan, Dimmed = true, TextSize = 12, Text = tour.Meta });
+        var plate = new Grid { ColumnSpacing = 16 };
+        plate.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        plate.ColumnDefinitions.Add(new ColumnDefinition());
+        Grid.SetColumn(names, 1);
+        plate.Children.Add(digits);
+        plate.Children.Add(names);
+        var glass = new Display { Tone = DisplayTone.Cyan, Padding = new Thickness(16, 10, 16, 10), Content = plate };
+
+        lamp = new Led { VerticalAlignment = VerticalAlignment.Center };
+        state = new EngravedLabel { Kind = LabelKind.Label, VerticalAlignment = VerticalAlignment.Center };
+        var go = new Pad { Content = "START", Lit = true, LitTone = PadTone.Blue };
+        go.Click += (_, _) => start(tour);
+        AutomationProperties.SetName(go, $"Start {tour.Title}");
+        var foot = new Grid { ColumnSpacing = 12 };
+        foot.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        foot.ColumnDefinitions.Add(new ColumnDefinition());
+        foot.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(state, 1);
+        Grid.SetColumn(go, 2);
+        foot.Children.Add(lamp);
+        foot.Children.Add(state);
+        foot.Children.Add(go);
+
+        // Glass on top, the summary taking whatever height the row gives it, and the lamp and START along the bottom,
+        // so the cards in a row line up whatever their summaries' lengths.
+        var card = new Grid { RowSpacing = 12 };
+        card.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        card.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        card.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var summary = Words(tour.Summary, _ink);
+        Grid.SetRow(summary, 1);
+        Grid.SetRow(foot, 2);
+        card.Children.Add(glass);
+        card.Children.Add(summary);
+        card.Children.Add(foot);
+        AutomationProperties.SetName(card, $"Chapter {number}: {tour.Title}. {tour.Summary}");
+        return card;
+    }
+
+    void Arrange(double width)
+    {
+        int across = width >= ThreeAcross ? 3 : width >= TwoAcross ? 2 : 1;
+        if (across == _across) return;
+        _across = across;
+        _cards.ColumnDefinitions.Clear();
+        _cards.RowDefinitions.Clear();
+        for (int c = 0; c < across; c++) _cards.ColumnDefinitions.Add(new ColumnDefinition());
+        int rows = (_cards.Children.Count + across - 1) / across;
+        for (int r = 0; r < rows; r++) _cards.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        for (int i = 0; i < _cards.Children.Count; i++)
         {
-            if (_poster.Source is null && File.Exists(_posterFile)) _poster.Source = new BitmapImage(new Uri(_posterFile));
-            _player.Visibility = Visibility.Collapsed;
-            _waiting.Visibility = Visibility.Visible;
-            return;
+            var card = (FrameworkElement)_cards.Children[i];
+            Grid.SetColumn(card, i % across);
+            Grid.SetRow(card, i / across);
         }
-        Start();
     }
 
-    void Start()
+    static TextBlock Words(string text, List<TextBlock> ink)
     {
-        _waiting.Visibility = Visibility.Collapsed;
-        _player.Visibility = Visibility.Visible;
-        // The element's AutoPlay is handed to the player in SetMediaPlayer, so it has to be on as well.
-        _player.AutoPlay = true;
-        var player = new MediaPlayer { AutoPlay = true, Source = MediaSource.CreateFromUri(new Uri(_file)) };
-        player.MediaFailed += (_, _) => DispatcherQueue.TryEnqueue(() => ShowProblem("THIS PC COULDN'T PLAY THE TUTORIAL VIDEO."));
-        _player.SetMediaPlayer(player);
+        var block = new TextBlock
+        {
+            Text = text,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Segoe UI"),
+            FontSize = 14,
+            LineHeight = 22,
+        };
+        ink.Add(block);
+        return block;
     }
 
-    /// <summary>Stops the video and frees it, so a closed plate holds no decoder.</summary>
-    public void Stop()
+    void PaintInk()
     {
-        var player = _player.MediaPlayer;
-        _player.SetMediaPlayer(null);
-        player?.Pause();
-        player?.Dispose();
-    }
-
-    void ShowProblem(string message)
-    {
-        Stop();
-        _player.Visibility = Visibility.Collapsed;
-        _waiting.Visibility = Visibility.Collapsed;
-        _problem.Message = message;
-        _problem.Visibility = Visibility.Visible;
+        var tokens = LookTokens.For(LookState.Mode);
+        Brush ink = LookBrushes.From(tokens["Ink"]), dim = LookBrushes.From(tokens["InkDim"]);
+        foreach (var text in _ink) text.Foreground = ink;
+        foreach (var text in _dim) text.Foreground = dim;
     }
 }

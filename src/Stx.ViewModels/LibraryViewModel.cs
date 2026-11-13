@@ -34,6 +34,12 @@ public sealed class LibraryRowViewModel(LibraryEntry entry, bool onDisk, long? s
     public bool CanOpen => !IsMissing;
     public bool CanConvert => !IsMissing;
 
+    /// <summary>
+    /// REMOVE: takes the row off the Library, never the file off the disk. A file still in a watched folder can't be:
+    /// the folder lists everything in it, so it would only come back. It leaves when it's deleted or its folder does.
+    /// </summary>
+    public bool CanRemove => IsMissing || Origin != MediaOrigin.Watched;
+
     public string Status => IsMissing
         ? "FILE MISSING"
         : $"{System.IO.Path.GetExtension(Path).TrimStart('.').ToUpperInvariant()} · {Describe()}{Saving()}";
@@ -156,6 +162,79 @@ public sealed class LibraryViewModel : ObservableObject
         ConvertCommand = new RelayCommand<ConvertAsk>(ask => { if (ask is not null) Convert(ask.Row, ask.Output, null, ask.Output.ToString()); });
         ConvertPresetCommand = new RelayCommand<PresetAsk>(ConvertPreset);
         ShrinkCommand = new RelayCommand<LibraryRowViewModel>(Shrink);
+        RemoveCommand = new AsyncRelayCommand<LibraryRowViewModel>(RemoveAsync);
+        ClearMissingCommand = new AsyncRelayCommand(ClearMissingAsync);
+    }
+
+    /// <summary>REMOVE: takes the selected row off the Library. The file on disk is never touched.</summary>
+    public IAsyncRelayCommand<LibraryRowViewModel> RemoveCommand { get; }
+
+    /// <summary>CLEAR MISSING: takes every row whose file is gone from disk off the Library, scrolled to or not.</summary>
+    public IAsyncRelayCommand ClearMissingCommand { get; }
+
+    /// <summary>True while CLEAR MISSING looks through the Library, so it isn't pressed twice.</summary>
+    public bool IsClearing { get => _clearing; private set => SetProperty(ref _clearing, value); }
+    bool _clearing;
+
+    // An item with a job still under way (queued, running, paused, waiting, or waiting for a fresh capture) keeps its
+    // rows: the job would otherwise save into, or convert from, a row that's gone.
+    HashSet<long> Busy() => [.. _engine.AllJobs().Where(j => !QueueEngine.IsFinished(j.State)).Select(j => j.MediaId)];
+
+    async Task RemoveAsync(LibraryRowViewModel? row)
+    {
+        if (row is not { CanRemove: true }) return;
+        if (Busy().Contains(row.MediaId))
+        {
+            Message = "That file has a job in the queue. Cancel it or let it finish, then remove it.";
+            return;
+        }
+        int gone = await Task.Run(() => _catalog.Forget([row.Path]));
+        Message = gone == 0 ? "" : row.IsMissing ? "Removed from the Library." : "Removed from the Library. The file is still on disk.";
+        await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Pages through the whole Library off the UI thread, checks each file on disk, and forgets the missing ones in one
+    /// write. Rows with a job still under way are kept, and counted.
+    /// </summary>
+    async Task ClearMissingAsync()
+    {
+        if (IsClearing) return;
+        IsClearing = true;
+        Message = "Looking for missing files…";
+        try
+        {
+            var busy = Busy();
+            var (missing, kept) = await Task.Run(() =>
+            {
+                var gone = new List<string>();
+                int held = 0;
+                LibraryKey? after = null;
+                while (true)
+                {
+                    var page = _catalog.Rows(LibrarySearch.All, after, 1000);
+                    foreach (var entry in page)
+                    {
+                        if (_exists(entry.Path)) continue;
+                        if (busy.Contains(entry.MediaId)) held++;
+                        else gone.Add(entry.Path);
+                    }
+                    if (page.Count < 1000) return (gone, held);
+                    after = page[^1].Key;
+                }
+            });
+            int removed = missing.Count == 0 ? 0 : await Task.Run(() => _catalog.Forget(missing));
+            string said = removed switch
+            {
+                0 => "No missing files in the Library.",
+                1 => "Removed 1 missing file from the Library.",
+                _ => $"Removed {removed:N0} missing files from the Library.",
+            };
+            if (kept > 0) said += $" {kept:N0} with a job in the queue stayed.";
+            Message = said;
+            await RefreshAsync();
+        }
+        finally { IsClearing = false; }
     }
 
     /// <summary>SHRINK: a smaller copy beside the file, in the video codec chosen on the knob, or Opus for sound alone.</summary>

@@ -12,15 +12,20 @@ public interface IUserRegistry
     void Write(string key, string? name, string value);
 }
 
-/// <summary>How many of the types STX registers Windows actually opens with STX, read from Windows, never assumed.</summary>
+/// <summary>
+/// How many of the types STX registers Windows actually opens with STX, read from Windows, never assumed.
+/// STX plays every one of them either way; this counts only the ones Windows hands to it on a double-click, so the
+/// text says both, and never reads as a limit on what STX can play (review 2026-11-12: "STX OPENS 6 OF 51 TYPES"
+/// read as "STX can only open 6 types").
+/// </summary>
 public sealed record DefaultState(int Ours, int Total)
 {
     public bool IsAll => Total > 0 && Ours == Total;
     public bool IsNone => Ours == 0;
 
-    public string Text => IsAll ? "STX IS YOUR PLAYER FOR VIDEOS AND MUSIC"
-        : IsNone ? "STX ISN'T YOUR DEFAULT PLAYER"
-        : $"STX OPENS {Ours} OF {Total} TYPES";
+    public string Text => IsAll ? $"DEFAULT PLAYER FOR ALL {Total} TYPES"
+        : IsNone ? $"PLAYS {Total} TYPES · NOT YET YOUR DEFAULT"
+        : $"PLAYS {Total} TYPES · DEFAULT FOR {Ours}";
 }
 
 /// <summary>

@@ -18,6 +18,10 @@ public class AccessibilityScanTests
         ("label", 0), ("list", 5), ("textbox", 2), ("dialog", 2), ("states", 1),
         ("all-primitives", 9),
         ("console", 11), ("sourcetruth", 2), ("library", 8), ("settings", 9), ("firstrun", 1), ("player", 6),
+        // The guide at the window's real size (its index, CLOSE, PREVIOUS, NEXT, SHOW ME; the 640-high gallery cuts its index
+        // off at the window's edge, which reads as a short item), the Tutorials plate (CLOSE and the START pads on screen),
+        // and a tour held on a step, whose card and the console under it are both read.
+        ("guide-wide", 6), ("tutorial", 5), ("tour", 12),
     ];
 
     public static IEnumerable<object[]> Cases() =>

@@ -83,13 +83,18 @@ public sealed partial class SettingsPanel : ContentControl
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         top.ColumnDefinitions.Add(new ColumnDefinition());
         var dials = new StackPanel { Spacing = 16 };
-        dials.Children.Add(download.Captioned());
-        dials.Children.Add(parallel.Captioned());
+        dials.Children.Add(TourTargets.Mark(download.Captioned(), "settings.download"));
+        dials.Children.Add(TourTargets.Mark(parallel.Captioned(), "settings.parallel"));
+        TourTargets.Mark(this, "settings");
+        TourTargets.Mark(switches, "settings.switches");
+        TourTargets.Mark(embed, "settings.embed");
+        TourTargets.Mark(fields, "settings.folder");
         Grid.SetColumn(dials, 0);
 
         var help = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Top };
         if (openGuide is not null) help.Children.Add(HelpPad("USER GUIDE", openGuide));
-        if (openTutorial is not null) help.Children.Add(HelpPad("TUTORIAL", openTutorial));
+        if (openTutorial is not null) help.Children.Add(HelpPad("TUTORIALS", openTutorial));
+        TourTargets.Mark(help, "settings.help");
         // On the shorter row of switches, so they squeeze nothing when the window is narrow.
         var secondRow = new Grid { ColumnSpacing = 16 };
         secondRow.ColumnDefinitions.Add(new ColumnDefinition());
@@ -105,7 +110,7 @@ public sealed partial class SettingsPanel : ContentControl
         var fieldsRow = new Grid { ColumnSpacing = 24 };
         fieldsRow.ColumnDefinitions.Add(new ColumnDefinition());
         fieldsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var playback = performance.Captioned();
+        var playback = TourTargets.Mark(performance.Captioned(), "settings.performance");
         playback.VerticalAlignment = VerticalAlignment.Top;
         Grid.SetColumn(playback, 1);
         fieldsRow.Children.Add(fields);
@@ -118,9 +123,9 @@ public sealed partial class SettingsPanel : ContentControl
         var column = new StackPanel { Spacing = 12 };
         column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Settings" });
         column.Children.Add(top);
-        column.Children.Add(WatchedFolders(settings, owner));
-        if (defaultPlayer is not null) column.Children.Add(DefaultPlayer(defaultPlayer));
-        column.Children.Add(BitPerfectRow(settings));
+        column.Children.Add(TourTargets.Mark(WatchedFolders(settings, owner), "settings.watched"));
+        if (defaultPlayer is not null) column.Children.Add(TourTargets.Mark(DefaultPlayer(defaultPlayer), "settings.defaultplayer"));
+        column.Children.Add(TourTargets.Mark(BitPerfectRow(settings), "settings.bitperfect"));
         Content = new Faceplate { PanelName = "settings", Padding = new Thickness(36, 28, 36, 28), Content = column };
     }
 

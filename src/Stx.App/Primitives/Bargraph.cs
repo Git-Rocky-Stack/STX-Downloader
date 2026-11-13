@@ -6,7 +6,9 @@ using Stx.Look;
 namespace Stx.App.Primitives;
 
 /// <summary>
-/// An LED bargraph in a recessed well behind glass. Each color has one lit bitmap, shared by every segment.
+/// An LED bargraph in a recessed well behind glass. Each segment takes its color from the meter's ramp (an aurora sweep
+/// for progress, green through red for levels: BargraphLogic.ZoneHex), and each color has one lit bitmap, shared by
+/// every segment on every meter that uses it.
 /// A new reading touches only the segments that changed.
 /// </summary>
 public sealed partial class Bargraph : Control
@@ -18,7 +20,10 @@ public sealed partial class Bargraph : Control
 
     Canvas? _segmentsHost;
     Image? _glass;
-    Image[] _lit = [], _peak = [];
+    Image[] _lit = [];
+    // Peak-hold sprites exist only once a peak is shown: a progress meter never holds one, so it never pays for them.
+    Image?[] _peak = [];
+    bool _holdsPeaks;
     Image[] _unlit = [];
     int _segments = 30, _litCount;
     int _peakIndex = -1;
@@ -44,7 +49,17 @@ public sealed partial class Bargraph : Control
     public double Peak
     {
         get => _peakValue;
-        set { _peakValue = value; Paint(); }
+        set
+        {
+            _peakValue = value;
+            if (!_holdsPeaks && BargraphLogic.PeakIndex(value, _segments) >= 0)
+            {
+                _holdsPeaks = true;
+                Rebuild();
+                return;
+            }
+            Paint();
+        }
     }
 
     public BargraphZones Zones
@@ -83,18 +98,20 @@ public sealed partial class Bargraph : Control
 
         for (int i = 0; i < _segments; i++)
         {
-            var color = BargraphLogic.ZoneColor(i, _segments, _zones);
+            string color = BargraphLogic.ZoneHex(i, _segments, _zones);
             _unlit[i] = Layer(ArtCache.Get($"seg:unlit:{color}", () => LedArt.SegmentUnlit(color, coreW, coreH)), visible: true);
             _segmentsHost.Children.Add(_unlit[i]);
         }
         // Lit sprites go above every dead segment, so their bloom can land on the neighbors.
         for (int i = 0; i < _segments; i++)
         {
-            var color = BargraphLogic.ZoneColor(i, _segments, _zones);
+            string color = BargraphLogic.ZoneHex(i, _segments, _zones);
             _lit[i] = Layer(ArtCache.Get($"seg:lit:{color}", () => LedArt.SegmentLit(color, artW, artH)), visible: false);
-            _peak[i] = Layer(ArtCache.Get($"seg:peak:{color}", () => LedArt.SegmentPeak(color, artW, artH)), visible: false);
             _segmentsHost.Children.Add(_lit[i]);
-            _segmentsHost.Children.Add(_peak[i]);
+            if (!_holdsPeaks) continue;
+            var peak = Layer(ArtCache.Get($"seg:peak:{color}", () => LedArt.SegmentPeak(color, artW, artH)), visible: false);
+            _peak[i] = peak;
+            _segmentsHost.Children.Add(peak);
         }
         Layout();
         Paint();
@@ -124,7 +141,7 @@ public sealed partial class Bargraph : Control
             double x = i * (segment + Gap);
             Place(_unlit[i], x, 0, segment, height);
             Place(_lit[i], x - overhangX, -overhangY, segment + overhangX * 2, height + overhangY * 2);
-            Place(_peak[i], x - overhangX, -overhangY, segment + overhangX * 2, height + overhangY * 2);
+            if (_peak[i] is { } peak) Place(peak, x - overhangX, -overhangY, segment + overhangX * 2, height + overhangY * 2);
         }
 
         _glass.Width = ActualWidth - 2;
@@ -151,7 +168,7 @@ public sealed partial class Bargraph : Control
         foreach (int i in BargraphLogic.Changed(_litCount, newLit, _peakIndex, newPeak))
         {
             _lit[i].Opacity = i < newLit || i == newPeak ? 1 : 0;
-            _peak[i].Opacity = i == newPeak ? 1 : 0;
+            if (_peak[i] is { } peak) peak.Opacity = i == newPeak ? 1 : 0;
         }
         _litCount = newLit;
         _peakIndex = newPeak;

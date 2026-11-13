@@ -70,6 +70,9 @@ public sealed partial class QueueRow : Grid
 
     void OnChanged(object? sender, PropertyChangedEventArgs e) => Paint();
 
+    /// <summary>The row left the queue: it stops following its job.</summary>
+    public void Detach() => _item.PropertyChanged -= OnChanged;
+
     void Paint()
     {
         _led.Color = _item.LedColor;
@@ -89,6 +92,8 @@ public sealed partial class QueuePanel : ContentControl
     readonly StateView _empty = new() { State = ViewState.Empty, Message = "NOTHING IN THE QUEUE" };
     readonly Pad _pause = new() { Content = "PAUSE" }, _resume = new() { Content = "RESUME" }, _cancel = new() { Content = "CANCEL" }, _retry = new() { Content = "RETRY" };
     readonly Pad _reopen = new() { Content = "OPEN PAGE", Lit = true, LitTone = PadTone.Blue }, _copyLog = new() { Content = "COPY LOG" };
+    // Housekeeping: a finished row, or every finished row, leaves the queue. What they saved stays in the Library.
+    readonly Pad _clear = new() { Content = "CLEAR" }, _clearDone = new() { Content = "CLEAR DONE" };
     readonly TextBlock _detail = new() { TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Segoe UI"), FontSize = 13, Visibility = Visibility.Collapsed };
 
     public QueuePanel(QueueViewModel queue)
@@ -112,14 +117,27 @@ public sealed partial class QueuePanel : ContentControl
         _retry.Click += (_, _) => Act(queue.Retry);
         _reopen.Click += (_, _) => Act(queue.Reopen);
         _copyLog.Click += (_, _) => CopyLog();
+        _clear.Click += (_, _) => Act(queue.Clear);
+        _clearDone.Click += (_, _) => { queue.ClearFinished(); PaintActions(); };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(_clear, "Takes the selected finished job off the queue. Its file stays in the Library.");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(_clearDone, "Takes every finished job off the queue. Their files stay in the Library.");
 
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-        foreach (var pad in new[] { _pause, _resume, _cancel, _retry, _reopen, _copyLog }) actions.Children.Add(pad);
+        var actions = new PadRow();
+        foreach (var pad in new[] { _pause, _resume, _cancel, _retry, _reopen, _copyLog, _clear, _clearDone }) actions.Children.Add(pad);
+        TourTargets.Mark(this, "queue");
+        TourTargets.Mark(actions, "queue.actions");
+        TourTargets.Mark(_copyLog, "queue.copylog");
+        TourTargets.Mark(_clear, "queue.clear");
+        TourTargets.Mark(_clearDone, "queue.cleardone");
 
         var column = new StackPanel { Spacing = 12 };
         column.Children.Add(new EngravedLabel { Kind = LabelKind.Title, Text = "Queue" });
-        column.Children.Add(_empty);
-        column.Children.Add(_list);
+        // The list, or the empty state in its place: the tour's "queue.list" lands on whichever is showing.
+        var rows = new Grid { MinHeight = 72 };
+        _empty.VerticalAlignment = VerticalAlignment.Center;
+        rows.Children.Add(_empty);
+        rows.Children.Add(_list);
+        column.Children.Add(TourTargets.Mark(ListTray.Around(rows), "queue.list"));
         column.Children.Add(_detail);
         column.Children.Add(actions);
         Content = new Faceplate { PanelName = "queue", Padding = new Thickness(36, 28, 36, 28), Content = column };
@@ -136,16 +154,36 @@ public sealed partial class QueuePanel : ContentControl
 
     void OnItems(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            foreach (QueueRowHost host in _list.Items) host.Detach();
+            _list.Items.Clear();
+            foreach (var item in _queue.Items) AddRow(item);
+        }
+        foreach (QueueItemViewModel item in e.OldItems ?? Array.Empty<QueueItemViewModel>()) RemoveRow(item);
         foreach (QueueItemViewModel item in e.NewItems ?? Array.Empty<QueueItemViewModel>()) AddRow(item);
         PaintActions();
     }
 
     void AddRow(QueueItemViewModel item)
     {
-        var host = new QueueRowHost(item);
+        var host = new QueueRowHost(item, PaintActions);
         _list.Items.Add(host);
-        item.PropertyChanged += (_, _) => { if (ReferenceEquals(Selected, item)) PaintActions(); };
         if (_list.SelectedItem is null) _list.SelectedItem = host;
+    }
+
+    // A cleared row leaves; the selection moves to the row that took its place, so CLEAR can be pressed down the list.
+    void RemoveRow(QueueItemViewModel item)
+    {
+        for (int i = 0; i < _list.Items.Count; i++)
+        {
+            if (_list.Items[i] is not QueueRowHost host || !ReferenceEquals(host.Item, item)) continue;
+            bool wasSelected = ReferenceEquals(_list.SelectedItem, host);
+            host.Detach();
+            _list.Items.RemoveAt(i);
+            if (wasSelected && _list.Items.Count > 0) _list.SelectedIndex = Math.Min(i, _list.Items.Count - 1);
+            return;
+        }
     }
 
     void Act(Action<QueueItemViewModel> action)
@@ -175,6 +213,8 @@ public sealed partial class QueuePanel : ContentControl
         _retry.IsEnabled = item?.CanRetry == true;
         _reopen.Visibility = item?.ShowsReopen == true ? Visibility.Visible : Visibility.Collapsed;
         _copyLog.IsEnabled = item is not null;
+        _clear.IsEnabled = item?.CanClear == true;
+        _clearDone.IsEnabled = _queue.HasFinished;
 
         string words = item is null ? "" : $"{item.ErrorMessage} {item.NextStep}".Trim();
         _detail.Text = words;
@@ -184,19 +224,36 @@ public sealed partial class QueuePanel : ContentControl
     /// <summary>The list item itself, so the name a screen reader announces is on the element it actually reads.</summary>
     sealed partial class QueueRowHost : ListViewItem
     {
-        public QueueRowHost(QueueItemViewModel item)
+        readonly Action _changed;
+
+        public QueueRowHost(QueueItemViewModel item, Action changed)
         {
             Item = item;
+            _changed = changed;
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
             Row = new QueueRow(item);
             Content = Row;
-            item.PropertyChanged += (_, _) => Announce();
+            item.PropertyChanged += OnChanged;
             Announce();
         }
 
         public QueueItemViewModel Item { get; }
 
         public QueueRow Row { get; }
+
+        // Any row finishing can make CLEAR DONE pressable, so every change repaints the pads, not only the selected row's.
+        void OnChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            Announce();
+            _changed();
+        }
+
+        /// <summary>The row left the queue: it stops listening to its job, and so does its row's look.</summary>
+        public void Detach()
+        {
+            Item.PropertyChanged -= OnChanged;
+            Row.Detach();
+        }
 
         void Announce() => AutomationProperties.SetName(this, $"{Item.Title}: {Item.Status}");
     }
