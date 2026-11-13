@@ -15,7 +15,8 @@ public class GuideTests
         return dir!.FullName;
     }
 
-    static string Panels() => string.Concat(Directory.GetFiles(Path.Combine(Root(), "src", "Stx.App", "Panels"), "*.cs").Where(f => !f.EndsWith("GuidePanel.cs", StringComparison.Ordinal)).Select(File.ReadAllText));
+    // Every panel, the guide's own included: its PREVIOUS, NEXT and SHOW ME are pads someone has to be able to look up.
+    static string Panels() => string.Concat(Directory.GetFiles(Path.Combine(Root(), "src", "Stx.App", "Panels"), "*.cs").Select(File.ReadAllText));
 
     static IEnumerable<GuideSection> Sections() => GuideContent.Sections;
 
@@ -195,43 +196,124 @@ public class GuideTests
         Assert.Equal(knobs, Regex.Count(panels, @"\.Captioned\(\)"));
     }
 
+    // Review 2026-11-12: the 89-second video showed stills of the console and taught nothing. The tutorials are tours of
+    // the live console now, so no recording ships, and nothing can fall behind the plates it shows.
     [Fact]
-    public void The_tutorial_ships_beside_the_app_and_a_release_cannot_leave_it_out()
+    public void No_tutorial_video_ships_any_more()
     {
-        Assert.True(File.Exists(Path.Combine(Root(), "src", "Stx.App", "Assets", "tutorial.mp4")), "The video isn't in Assets.");
-        Assert.Contains(@"Assets\tutorial.mp4", File.ReadAllText(Path.Combine(Root(), "src", "Stx.App", "Stx.App.csproj")));
-        Assert.Contains(@"Assets\tutorial.mp4", File.ReadAllText(Path.Combine(Root(), "tools", "Publish.ps1")));
+        Assert.False(File.Exists(Path.Combine(Root(), "src", "Stx.App", "Assets", "tutorial.mp4")));
+        Assert.DoesNotContain("tutorial.mp4", File.ReadAllText(Path.Combine(Root(), "src", "Stx.App", "Stx.App.csproj")), StringComparison.Ordinal);
+        Assert.DoesNotContain("tutorial.mp4", File.ReadAllText(Path.Combine(Root(), "tools", "Publish.ps1")), StringComparison.Ordinal);
+        Assert.DoesNotContain("second walkthrough", GuideContent.Reopen, StringComparison.Ordinal);
     }
 
-    // The guide and the README say how long the tutorial is. A scene added to tools/tutorial (the Player, 2026-11-09)
-    // changes that, and the shipped video has to be rendered again from it.
+    static IEnumerable<(string Where, TourStep Step)> TourSteps() =>
+        TutorialContent.Tours.SelectMany(tour => tour.Steps.Select((step, n) => ($"{tour.Title}, step {n + 1}", step)));
+
     [Fact]
-    public void The_tutorial_length_the_guide_gives_is_the_shipped_videos_and_its_projects()
+    public void Every_control_a_tutorial_names_is_on_the_console()
     {
-        string project = File.ReadAllText(Path.Combine(Root(), "tools", "tutorial", "index.html"));
-        var root = Regex.Match(project, @"id=""root""[^>]*data-duration=""(\d+(?:\.\d+)?)""");
-        Assert.True(root.Success, "The tutorial project's root has no data-duration.");
-        double authored = double.Parse(root.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-
-        double shipped = Mp4Seconds(Path.Combine(Root(), "src", "Stx.App", "Assets", "tutorial.mp4"));
-        Assert.True(Math.Abs(shipped - authored) < 0.5, $"Assets/tutorial.mp4 runs {shipped:F2} s, its project {authored} s: render it again.");
-
-        string said = $"{Math.Round(authored)}-second walkthrough";
-        Assert.Contains(said, GuideContent.Reopen);
-        Assert.Equal(2, Regex.Count(File.ReadAllText(Path.Combine(Root(), "README.md")), Regex.Escape($"{Math.Round(authored)}-second")));
+        var console = ConsoleControls();
+        foreach (var (where, step) in TourSteps())
+            foreach (string control in step.Controls)
+                Assert.True(console.Contains(control), $"{where} names {control}, and no panel has it.");
     }
 
-    // The movie's length from its mvhd box: the time scale and the duration, version 0 (32-bit) or 1 (64-bit), big-endian.
-    static double Mp4Seconds(string file)
+    [Fact]
+    public void Every_readout_a_tutorial_names_is_in_the_source()
     {
-        byte[] bytes = File.ReadAllBytes(file);
-        int at = bytes.AsSpan().IndexOf("mvhd"u8);
-        Assert.True(at > 0, $"{file} has no mvhd box.");
-        var box = bytes.AsSpan(at + 4);
-        bool wide = box[0] == 1;
-        var times = box[(wide ? 20 : 12)..];
-        uint scale = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(times);
-        ulong duration = wide ? System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(times[4..]) : System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(times[4..]);
-        return (double)duration / scale;
+        string source = string.Concat(Directory.GetFiles(Path.Combine(Root(), "src"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !f.EndsWith("GuideContent.cs", StringComparison.Ordinal) && !f.EndsWith("TutorialContent.cs", StringComparison.Ordinal))
+            .Select(File.ReadAllText));
+        string shown = source + string.Concat(Regex.Matches(source, @"""([^""\r\n]*)""").Select(m => m.Groups[1].Value.ToUpperInvariant() + "\n"));
+        foreach (var (where, step) in TourSteps())
+            foreach (string readout in step.Readouts)
+                Assert.True(shown.Contains(readout, StringComparison.Ordinal), $"{where} names {readout}, and the app never shows it.");
+    }
+
+    [Fact]
+    public void Every_name_a_step_lists_is_said_in_its_line()
+    {
+        foreach (var (where, step) in TourSteps())
+            foreach (string name in step.Marked)
+                Assert.True(GuideContent.Spans(step.Line, [name]).Any(span => span.Marked), $"{where} lists {name} and doesn't say it as a word of its own.");
+    }
+
+    // A step points at the real control: its key is marked where the panel builds it, and so is the plate it falls back to.
+    [Fact]
+    public void Every_step_lands_on_a_control_a_panel_marks()
+    {
+        string app = string.Concat(Directory.GetFiles(Path.Combine(Root(), "src", "Stx.App"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)).Select(File.ReadAllText));
+        var marked = Regex.Matches(app, @"TourTargets\.Mark\(.*?,\s*""([a-z.]+)""\)")
+            .Select(m => m.Groups[1].Value).ToHashSet(StringComparer.Ordinal);
+        foreach (var (where, step) in TourSteps())
+        {
+            Assert.True(marked.Contains(step.Target), $"{where} lands on {step.Target}, and no panel marks it.");
+            Assert.True(marked.Contains(step.Plate), $"{where} falls back to the {step.Plate} plate, and no panel marks it.");
+            Assert.Contains(step.Plate, TutorialContent.Plates);
+        }
+    }
+
+    [Fact]
+    public void The_tutorials_are_a_series_of_short_chapters()
+    {
+        var tours = TutorialContent.Tours;
+        Assert.InRange(tours.Count, 5, 10);
+        Assert.Equal(tours.Count, tours.Select(t => t.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains(tours, t => t.Level == TourLevel.Basics);
+        Assert.Contains(tours, t => t.Level == TourLevel.Advanced);
+        foreach (var tour in tours)
+        {
+            Assert.InRange(tour.Steps.Count, 4, 12);
+            Assert.False(string.IsNullOrWhiteSpace(tour.Summary), tour.Title);
+            Assert.All(tour.Steps, step => Assert.InRange(step.Line.Length, 20, 220));
+        }
+        Assert.Equal("first-save", tours[0].Id);
+    }
+
+    // Every plate the guide has a section for can be shown: SHOW ME on its page runs a chapter that lands on that plate.
+    [Fact]
+    public void Show_me_runs_a_chapter_for_each_plates_section()
+    {
+        foreach (string plate in new[] { "Queue", "Library", "Source truth", "Settings", "Player" })
+        {
+            var tour = TutorialContent.ForGuideSection(plate);
+            Assert.NotNull(tour);
+        }
+        foreach (var section in GuideContent.Sections)
+            if (TutorialContent.ForGuideSection(section.Title) is { } tour) Assert.Same(tour, TutorialContent.Find(tour.Id));
+    }
+
+    [Fact]
+    public void A_finished_chapter_stays_finished_across_launches()
+    {
+        string file = Path.Combine(Path.GetTempPath(), "stx-tutorials-" + Guid.NewGuid() + ".json");
+        try
+        {
+            var settings = new SettingsViewModel(new SettingsStore(file), new FakeStartup());
+            Assert.False(settings.IsTutorialDone("queue"));
+            settings.MarkTutorialDone("queue");
+            settings.MarkTutorialDone("queue");
+            Assert.True(settings.IsTutorialDone("queue"));
+            Assert.Equal(["queue"], new SettingsStore(file).Load().TutorialsDone);
+            Assert.True(new SettingsViewModel(new SettingsStore(file), new FakeStartup()).IsTutorialDone("queue"));
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    // What STX plays is read from the list it registers, so the guide can't claim a type the engine isn't tested on.
+    [Fact]
+    public void The_formats_section_lists_exactly_the_registered_types()
+    {
+        var section = GuideContent.Sections.Single(s => s.Title == "What STX plays");
+        Assert.StartsWith($"{Stx.Core.Library.MediaTypes.All.Count} file types", section.Summary, StringComparison.Ordinal);
+        string listed = string.Join(' ', section.Lines.Take(2));
+        foreach (string type in Stx.Core.Library.MediaTypes.All)
+            Assert.Matches($@"\b{Regex.Escape(type.TrimStart('.').ToUpperInvariant())}\b", listed);
     }
 }

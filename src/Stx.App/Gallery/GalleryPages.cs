@@ -36,6 +36,9 @@ internal static class GalleryPages
         "rack" => ConsoleSample.Rack(),
         "guide" => ConsoleSample.Guide(),
         "tutorial" => ConsoleSample.Tutorial(),
+        "guide-wide" => ConsoleSample.GuideWide(),
+        "deck" => ConsoleSample.Deck(),
+        "tour" => ConsoleSample.TourStep(),
         _ => new Grid(),
     };
 

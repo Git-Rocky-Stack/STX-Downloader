@@ -55,7 +55,7 @@ $docs = New-Item -ItemType Directory -Force (Join-Path $stage 'docs')
 foreach ($doc in 'THIRD_PARTY.md', 'PERFORMANCE.md', 'REAL-SITE-CHECKS.md') { Copy-Item -LiteralPath (Join-Path $root "docs\$doc") $docs }
 Get-ChildItem -LiteralPath $stage -Filter *.pdb -Recurse | Remove-Item -Confirm:$false
 
-foreach ($needed in 'STXDownloader.exe', 'STXDownloader.pri', 'App.xbf', 'Themes\Generic.xbf', 'STXNativeHost.exe', 'Assets\badge.png', 'Assets\stx.ico', 'Assets\tutorial.mp4', 'Assets\tutorial-poster.png',
+foreach ($needed in 'STXDownloader.exe', 'STXDownloader.pri', 'App.xbf', 'Themes\Generic.xbf', 'STXNativeHost.exe', 'Assets\badge.png', 'Assets\stx.ico',
     'libvlc\win-x64\libvlc.dll', 'libvlc\win-x64\libvlccore.dll', 'libvlc\win-x64\plugins\plugins.dat', 'libvlc\soundfonts\FluidR3_GM.sf3', 'libvlc\soundfonts\FluidR3_GM-COPYRIGHT.txt',
     'extension\manifest.json', 'extension\icons\icon-128.png', 'tools\Register-NativeHost.ps1',
     'hostfxr.dll', 'hostpolicy.dll', 'coreclr.dll', 'System.Private.CoreLib.dll') {

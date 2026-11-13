@@ -1227,6 +1227,774 @@
       "audio": true,
       "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a libopus -f ogg {out}",
       "note": "Opus in Ogg. VideoLAN's 3.0.24 feature list has no Opus line, so this proves the container and the extension STX registers."
+    },
+    {
+      "file": "container.3g2",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "H.264 / MPEG-4 AVC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -f 3g2 {out}"
+    },
+    {
+      "file": "container.3gp2",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "H.264 / MPEG-4 AVC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -f 3g2 {out}",
+      "note": "The 3GPP2 file format under its long extension."
+    },
+    {
+      "file": "container.3gpp",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "H.263 / H.263i",
+        "AMR (3GPP)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=sample_rate=8000 -t 4 -c:v h263 -c:a libopencore_amrnb -ar 8000 -ac 1 -b:a 12.2k -f 3gp {out}"
+    },
+    {
+      "file": "container.amv",
+      "features": [],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=22050 -t 4 -c:v amv -pix_fmt yuvj420p -c:a adpcm_ima_amv -ac 1 -block_size 882 -f amv {out}",
+      "note": "AMV, the cheap MP4 players' AVI variant. VideoLAN's 3.0.24 feature list has no AMV line, so this proves the container and the extension STX registers."
+    },
+    {
+      "file": "container.divx",
+      "features": [
+        "AVI",
+        "DivX (1/2/3/4/5/6)",
+        "MPEG-4 ASP"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v mpeg4 -vtag DX50 -c:a libmp3lame -f avi {out}"
+    },
+    {
+      "file": "container.xvid",
+      "features": [
+        "AVI",
+        "XviD",
+        "MPEG-4 ASP"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v mpeg4 -vtag XVID -c:a libmp3lame -f avi {out}"
+    },
+    {
+      "file": "container.evo",
+      "features": [
+        "MPEG PS",
+        "MPEG-1/2",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a ac3 -f vob {out}",
+      "note": "HD DVD EVO: an MPEG-2 program stream."
+    },
+    {
+      "file": "container.f4v",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "H.264 / MPEG-4 AVC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -f f4v {out}"
+    },
+    {
+      "file": "container.gxf",
+      "features": [],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=720x576:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a pcm_s16le -ac 1 -f gxf {out}"
+    },
+    {
+      "file": "raw.h264",
+      "features": [
+        "H.264 / MPEG-4 AVC"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libx264 -pix_fmt yuv420p -f h264 {out}"
+    },
+    {
+      "file": "raw.264",
+      "features": [
+        "H.264 / MPEG-4 AVC"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libx264 -pix_fmt yuv420p -f h264 {out}"
+    },
+    {
+      "file": "raw.h265",
+      "features": [],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libx265 -pix_fmt yuv420p -f hevc {out}",
+      "note": "An HEVC Main (8-bit) elementary stream."
+    },
+    {
+      "file": "raw.265",
+      "features": [],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libx265 -pix_fmt yuv420p -f hevc {out}",
+      "note": "An HEVC Main (8-bit) elementary stream."
+    },
+    {
+      "file": "raw.hevc",
+      "features": [],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libx265 -pix_fmt yuv420p -f hevc {out}",
+      "note": "An HEVC Main (8-bit) elementary stream."
+    },
+    {
+      "file": "container.mk3d",
+      "features": [
+        "Matroska (MKV)",
+        "H.264 / MPEG-4 AVC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -f matroska {out}",
+      "note": "Matroska's 3D spelling."
+    },
+    {
+      "file": "container.m2t",
+      "features": [
+        "MPEG TS",
+        "MPEG-1/2",
+        "MPEG Layer 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a mp2 -f mpegts {out}",
+      "note": "HDV: MPEG-2 video and MPEG audio in a transport stream."
+    },
+    {
+      "file": "raw.mjpg",
+      "features": [
+        "MJPEG (A/B)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mjpeg -pix_fmt yuvj420p -f mjpeg {out}"
+    },
+    {
+      "file": "raw.mjpeg",
+      "features": [
+        "MJPEG (A/B)"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mjpeg -pix_fmt yuvj420p -f mjpeg {out}"
+    },
+    {
+      "file": "container.mpe",
+      "features": [
+        "MPEG PS",
+        "MPEG-1/2",
+        "MPEG Layer 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v mpeg1video -c:a mp2 -f mpeg {out}"
+    },
+    {
+      "file": "raw.mpv",
+      "features": [
+        "MPEG ES",
+        "MPEG-1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mpeg2video -f mpeg2video {out}"
+    },
+    {
+      "file": "raw.mp2v",
+      "features": [
+        "MPEG ES",
+        "MPEG-1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mpeg2video -f mpeg2video {out}"
+    },
+    {
+      "file": "raw.mpv2",
+      "features": [
+        "MPEG ES",
+        "MPEG-1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v mpeg2video -f mpeg2video {out}"
+    },
+    {
+      "file": "container.m2p",
+      "features": [
+        "MPEG PS",
+        "MPEG-1/2",
+        "MPEG Layer 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a mp2 -f vob {out}"
+    },
+    {
+      "file": "container.ogx",
+      "features": [
+        "OGG",
+        "Theora",
+        "Vorbis"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libtheora -c:a libvorbis -f ogg {out}"
+    },
+    {
+      "file": "container.qt",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "H.264 / MPEG-4 AVC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -f mov {out}"
+    },
+    {
+      "file": "container.tp",
+      "features": [
+        "MPEG TS",
+        "H.264 / MPEG-4 AVC",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a ac3 -f mpegts {out}"
+    },
+    {
+      "file": "container.trp",
+      "features": [
+        "MPEG TS",
+        "H.264 / MPEG-4 AVC",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a ac3 -f mpegts {out}"
+    },
+    {
+      "file": "container.tod",
+      "features": [
+        "MPEG TS",
+        "MPEG-1/2",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a ac3 -f mpegts {out}",
+      "note": "A JVC camcorder's TOD: MPEG-2 video and AC-3 in a transport stream."
+    },
+    {
+      "file": "container.vro",
+      "features": [
+        "MPEG PS",
+        "MPEG-1/2",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a ac3 -f vob {out}",
+      "note": "A DVD-VR recording: an MPEG-2 program stream."
+    },
+    {
+      "file": "container.wm",
+      "features": [
+        "ASF / WMV / WMA",
+        "WMV 1/2",
+        "WMA 1/2"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:v wmv2 -c:a wmav2 -f asf {out}"
+    },
+    {
+      "file": "raw.y4m",
+      "features": [],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -pix_fmt yuv420p -f yuv4mpegpipe {out}",
+      "note": "YUV4MPEG2, uncompressed pictures. VideoLAN's 3.0.24 feature list has no line for it, so this proves the container and the extension STX registers."
+    },
+    {
+      "file": "container.ivf",
+      "features": [
+        "VP9"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": false,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -t 4 -c:v libvpx-vp9 -f ivf {out}"
+    },
+    {
+      "file": "camcorder.mod",
+      "features": [
+        "MPEG PS",
+        "MPEG-1/2",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": true,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i testsrc2=size=176x144:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:v mpeg2video -c:a ac3 -f vob {out}",
+      "note": "A JVC or Panasonic camcorder's MOD: an MPEG-2 program stream. STX registers .mod as sound for tracker modules (sine.mod); this proves the camcorder kind plays too."
+    },
+    {
+      "file": "vp3-mp3.nsv",
+      "features": [
+        "On2 VP3/VP5/VP6",
+        "MP3 - MPEG Layer 3"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/nsv/64vp3.nsv",
+      "sha256": "8746b5ad935bd183b5816fd61f5891d8a991d50413b4f528c48086b13bb28aca",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "rtjpeg.nuv",
+      "features": [
+        "LPCM"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/nuv/Today.nuv",
+      "sha256": "309c35443d226c114b3720f5d6727cf34a4b195265dd5967ac8b9a9aa4bd6141",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "note": "NuppelVideo (MythTV): RTjpeg video and PCM sound."
+    },
+    {
+      "file": "mpeg2-ac3.dvr-ms",
+      "features": [
+        "ASF / WMV / WMA",
+        "MPEG-1/2",
+        "AC3 - A/52"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/dvr_ms/SS2.dvr-ms",
+      "sha256": "8c8cc5643910cf2fcec9f229c2c31eb7f8870ee664897a2afa8ff979d2009a00",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "note": "Windows Media Center recording: MPEG-2 video and AC-3 in ASF."
+    },
+    {
+      "file": "container.au",
+      "features": [
+        "LPCM"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a pcm_s16be -f au {out}"
+    },
+    {
+      "file": "container.snd",
+      "features": [
+        "LPCM"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a pcm_s16be -f au {out}",
+      "note": "Sun / NeXT audio under its other extension."
+    },
+    {
+      "file": "container.caf",
+      "features": [
+        "ALAC"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a alac -f caf {out}"
+    },
+    {
+      "file": "container.w64",
+      "features": [
+        "LPCM"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a pcm_s16le -f w64 {out}"
+    },
+    {
+      "file": "container.amr",
+      "features": [
+        "AMR (3GPP)"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=8000 -t 4 -c:a libopencore_amrnb -ar 8000 -ac 1 -b:a 12.2k -f amr {out}"
+    },
+    {
+      "file": "container.3ga",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "AMR (3GPP)"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=8000 -t 4 -c:a libopencore_amrnb -ar 8000 -ac 1 -b:a 12.2k -f 3gp {out}",
+      "note": "A phone voice recording: AMR in a 3GPP file."
+    },
+    {
+      "file": "container.gsm",
+      "features": [],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/GSM/sample.gsm",
+      "sha256": "601e3370b2729e1ed8ce7d4d772f9643f0c838fc78e3d69508aa04fb9db2254c",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped"
+    },
+    {
+      "file": "container.m4b",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a aac -f ipod {out}",
+      "note": "An audiobook: AAC in MP4."
+    },
+    {
+      "file": "container.m4r",
+      "features": [
+        "MP4 / MOV / 3GP",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a aac -f ipod {out}",
+      "note": "An iPhone ringtone: AAC in MP4."
+    },
+    {
+      "file": "layer1.mp1",
+      "features": [
+        "MPEG Layer 1/2"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://samples.ffmpeg.org/A-codecs/mp1-sample.mp1",
+      "sha256": "8bffe46c1a1ba709b35f4782c1a661d0081e8ef84222edcf518ee5e4c2e77f13",
+      "license": "unknown: FFmpeg project sample archive; fetched for local testing only, never committed or shipped",
+      "note": "ISO's MPEG-1 Layer I conformance file fl1.mpg; no FFmpeg encoder writes Layer I."
+    },
+    {
+      "file": "container.mpa",
+      "features": [
+        "MPEG Layer 1/2"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a mp2 -f mp2 {out}"
+    },
+    {
+      "file": "container.mpga",
+      "features": [
+        "MP3",
+        "MP3 - MPEG Layer 3"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a libmp3lame -f mp3 {out}"
+    },
+    {
+      "file": "container.ra",
+      "features": [
+        "Real",
+        "Real Audio"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=8000 -t 4 -c:a real_144 -ar 8000 -ac 1 -f rm {out}"
+    },
+    {
+      "file": "container.weba",
+      "features": [
+        "Matroska (MKV)"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=sample_rate=48000 -t 4 -c:a libopus -f webm {out}",
+      "note": "WebM sound: Opus in WebM."
+    },
+    {
+      "file": "container.adts",
+      "features": [
+        "Raw AAC",
+        "AAC - MPEG-4 part3"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a aac -f adts {out}"
+    },
+    {
+      "file": "container.a52",
+      "features": [
+        "Raw AC3/A52",
+        "AC3 - A/52"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 -c:a ac3 -f ac3 {out}"
+    },
+    {
+      "file": "container.aifc",
+      "features": [
+        "Alaw/µlaw"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100 -t 4 -c:a pcm_alaw -f aiff {out}",
+      "note": "AIFF-C, compressed AIFF: A-law sound."
+    },
+    {
+      "file": "karaoke.kar",
+      "features": [
+        "Standard MIDI / SMF",
+        "MIDI"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/karaoke.kar (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "arpeggio.rmi",
+      "features": [
+        "Standard MIDI / SMF",
+        "MIDI"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/arpeggio.rmi (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "sine.s3m",
+      "features": [
+        "Mod"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/sine.s3m (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "sine.xm",
+      "features": [
+        "Mod"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/sine.xm (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "sine.it",
+      "features": [
+        "Mod"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/sine.it (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "sine.669",
+      "features": [
+        "Mod"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/sine.669 (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "sine.mtm",
+      "features": [
+        "Mod"
+      ],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/sine.mtm (written by tools/corpus/make-own-binaries.py)"
+    },
+    {
+      "file": "arpeggio.vgm",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/arpeggio.vgm (written by tools/corpus/make-own-binaries.py)",
+      "note": "Video Game Music: a Sega SN76489 sound chip's register writes. VideoLAN's 3.0.24 feature list has no line for game music; VLC plays it with Game Music Emu."
+    },
+    {
+      "file": "tone.gbs",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "copy own/tone.gbs (written by tools/corpus/make-own-binaries.py)",
+      "note": "Game Boy Sound System: Game Boy code that drives the console's sound chip. VLC plays it with Game Music Emu."
+    },
+    {
+      "file": "amr-wb.3gp",
+      "features": [
+        "MP4 / MOV / 3GP"
+      ],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://fate-suite.ffmpeg.org/amrwb/seed-6k60.awb",
+      "sha256": "5cd9696ce3b0df137c5c53f02392c3a9ee2ef0a614908d12f93c33fefa21b92f",
+      "license": "unknown: FFmpeg's FATE test suite; fetched for local testing only, never committed or shipped",
+      "note": "AMR-WB in a 3GPP file. FATE names it .awb, but it is a 3GPP file, so the corpus calls it .3gp; container.awb is the raw AMR-WB made from it."
+    },
+    {
+      "file": "container.awb",
+      "features": [],
+      "source": "generated",
+      "video": false,
+      "audio": true,
+      "make": "ffmpeg -i {files}/amr-wb.3gp -c:a copy -f amr {out}",
+      "note": "Raw AMR-WB (\"#!AMR-WB\" storage format), its frames copied out of amr-wb.3gp; FFmpeg has no AMR-WB encoder. VideoLAN's 3.0.24 feature list has no line for it; the engine opens it with the avformat demuxer built into its avcodec plugin."
+    },
+    {
+      "file": "mpeg2-mp2.wtv",
+      "features": [
+        "MPEG-1/2",
+        "MPEG Layer 1/2"
+      ],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://fate-suite.ffmpeg.org/wtv/law-and-order-partial.wtv",
+      "sha256": "1eb14237d0edc4968ea4e26ffa9f8567b3e2976a885705d6ed23386a694ecdd5",
+      "license": "unknown: FFmpeg's FATE test suite; fetched for local testing only, never committed or shipped",
+      "note": "A Windows Media Center recording (the first megabyte of one): MPEG-2 video and MPEG audio. VideoLAN's 3.0.24 feature list has no line for it; the engine opens it with the avformat demuxer built into its avcodec plugin."
+    },
+    {
+      "file": "shorten.shn",
+      "features": [],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://fate-suite.ffmpeg.org/lossless-audio/luckynight-partial.shn",
+      "sha256": "84e58dfb03c6b7ed6fc44f09fd6c25021be6b578db3485c1025f417b8aaeb6ba",
+      "license": "unknown: FFmpeg's FATE test suite; fetched for local testing only, never committed or shipped",
+      "note": "Shorten, lossless. VideoLAN's 3.0.24 feature list has no line for it; the engine opens it with the avformat demuxer built into its avcodec plugin."
+    },
+    {
+      "file": "tak.tak",
+      "features": [],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://fate-suite.ffmpeg.org/lossless-audio/luckynight-partial.tak",
+      "sha256": "e84f57bd1e070bfd0fec20971bfc5b9bede4a58f74ef669d03080c547e2fd0e0",
+      "license": "unknown: FFmpeg's FATE test suite; fetched for local testing only, never committed or shipped",
+      "note": "Tom's lossless Audio Kompressor. VideoLAN's 3.0.24 feature list has no line for it; the engine opens it with the avformat demuxer built into its avcodec plugin."
+    },
+    {
+      "file": "twinvq.vqf",
+      "features": [],
+      "source": "fetched",
+      "video": false,
+      "audio": true,
+      "url": "https://fate-suite.ffmpeg.org/vqf/achterba.vqf",
+      "sha256": "481a27f6ed8f76fb952fc31957610d5809723656dc88789cf0f55740f087931a",
+      "license": "unknown: FFmpeg's FATE test suite; fetched for local testing only, never committed or shipped",
+      "note": "TwinVQ. VideoLAN's 3.0.24 feature list has no line for it; the engine opens it with the avformat demuxer built into its avcodec plugin."
+    },
+    {
+      "file": "bink.bik",
+      "features": [],
+      "source": "fetched",
+      "video": true,
+      "audio": true,
+      "url": "https://fate-suite.ffmpeg.org/bink/RazOnBull.bik",
+      "sha256": "c803f82c05d7be97cd57be372ba302529717c95640650eefcc1dcb5cf76e6458",
+      "license": "unknown: FFmpeg's FATE test suite; fetched for local testing only, never committed or shipped",
+      "note": "Bink, the games' cut-scene format: Bink video and Bink audio. VideoLAN's 3.0.24 feature list has no line for it; the engine opens it with the avformat demuxer built into its avcodec plugin."
     }
   ]
 }

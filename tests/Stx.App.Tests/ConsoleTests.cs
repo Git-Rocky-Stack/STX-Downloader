@@ -16,6 +16,7 @@ sealed class MemoryJobs : IJobRepo
     public void Update(Job job) => _jobs[job.Id] = job;
     public Job? Get(long id) => _jobs.GetValueOrDefault(id);
     public IReadOnlyList<Job> All() => _jobs.Values.OrderBy(j => j.Id).ToList();
+    public void Remove(long id) => _jobs.Remove(id);
 }
 
 sealed class MemoryCatalog : IMediaCatalog
@@ -320,6 +321,53 @@ public class QueuePanelTests : ConsoleFixture
         var job = Start();
         Assert.Equal(LedState.Strike, Item(job.Id).LedState);
         Assert.Equal(LedState.Busy, StrikeTimeline.After(Item(job.Id).LedState));
+    }
+
+    [Fact]
+    public void Clear_takes_a_finished_row_off_and_leaves_its_file_in_the_library()
+    {
+        var job = Start();
+        Assert.False(Item(job.Id).CanClear);
+        Queue.Clear(Item(job.Id));
+        Assert.Single(Queue.Items);
+
+        Runner.Finish(job.Id, JobOutcome.Success);
+        Assert.True(Item(job.Id).CanClear);
+        Assert.True(Queue.HasFinished);
+        Queue.Clear(Item(job.Id));
+
+        Assert.Empty(Queue.Items);
+        Assert.Null(Jobs.Get(job.Id));
+        Assert.NotNull(Catalog.GetItem(job.MediaId));
+        Assert.False(Queue.HasFinished);
+    }
+
+    [Fact]
+    public void Clear_done_takes_every_finished_row_and_keeps_work_under_way()
+    {
+        var done = Start();
+        Runner.Finish(done.Id, JobOutcome.Success);
+        var failed = Start();
+        Runner.Finish(failed.Id, JobOutcome.Failure(ErrorKind.DrmDetected));
+        var running = Start();
+
+        Assert.Equal(2, Queue.ClearFinished());
+
+        Assert.Equal(running.Id, Assert.Single(Queue.Items).JobId);
+    }
+
+    // Rows hidden at startup (more than HistoryShown finished jobs) go too: CLEAR DONE empties the history, not the screen.
+    [Fact]
+    public void Clear_done_reaches_finished_jobs_not_shown()
+    {
+        for (int i = 0; i < QueueViewModel.HistoryShown + 5; i++) Runner.Finish(Start().Id, JobOutcome.Success);
+        var fresh = new QueueViewModel(Engine, Catalog, Shell, run => run());
+        fresh.Load();
+        Assert.Equal(QueueViewModel.HistoryShown, fresh.Items.Count);
+
+        Assert.Equal(QueueViewModel.HistoryShown + 5, fresh.ClearFinished());
+        Assert.Empty(fresh.Items);
+        Assert.Empty(Jobs.All());
     }
 
     [Fact]

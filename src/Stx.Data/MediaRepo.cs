@@ -212,6 +212,49 @@ public sealed class MediaRepo : IMediaCatalog, ILibraryCatalog, IFactsStore, ICo
         }
     }
 
+    public int Forget(IReadOnlyCollection<string> paths)
+    {
+        if (paths.Count == 0) return 0;
+        lock (_connection)
+        {
+            using var transaction = _connection.BeginTransaction();
+            using var items = _connection.CreateCommand();
+            items.Transaction = transaction;
+            items.CommandText = "SELECT DISTINCT media_id FROM media_files WHERE path_key = $key;";
+            var itemKey = items.Parameters.Add("$key", SqliteType.Text);
+            using var files = _connection.CreateCommand();
+            files.Transaction = transaction;
+            // Every row for the path goes, in any case: path_key folds it as Windows does. Their measurements and
+            // playlist places go with them (ON DELETE CASCADE); the triggers keep the listed flag right for the rest.
+            files.CommandText = "DELETE FROM media_files WHERE path_key = $key;";
+            var fileKey = files.Parameters.Add("$key", SqliteType.Text);
+
+            var touched = new HashSet<long>();
+            int listed = 0;
+            foreach (string key in paths.Select(path => CaseKey.Of(path)!).Distinct(StringComparer.Ordinal))
+            {
+                itemKey.Value = key;
+                using (var reader = items.ExecuteReader())
+                    while (reader.Read()) touched.Add(reader.GetInt64(0));
+                fileKey.Value = key;
+                if (files.ExecuteNonQuery() > 0) listed++;
+            }
+
+            // An item with no file left is gone too, and with it its capture keys, so a download can be saved again.
+            using var empty = _connection.CreateCommand();
+            empty.Transaction = transaction;
+            empty.CommandText = "DELETE FROM media_items WHERE id = $id AND NOT EXISTS (SELECT 1 FROM media_files WHERE media_id = $id);";
+            var id = empty.Parameters.Add("$id", SqliteType.Integer);
+            foreach (long media in touched)
+            {
+                id.Value = media;
+                empty.ExecuteNonQuery();
+            }
+            transaction.Commit();
+            return listed;
+        }
+    }
+
     /// <summary>
     /// The search's conditions: each word, its case folded as the keys are, has to be in the title's key or the
     /// path's. instr is SQLite's own, so the walk stays in SQLite: about 10 ms over 50,000 rows, at any word length.

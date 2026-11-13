@@ -360,6 +360,7 @@ public class LibraryCollectionTests
         public IReadOnlyList<LibraryEntry> RowsBefore(LibrarySearch search, LibraryKey before, int limit) => inner.RowsBefore(search, before, limit);
         public LibraryEntry? Row(string path) => inner.Row(path);
         public IReadOnlyList<ShrinkPair> ShrinkCopies() => inner.ShrinkCopies();
+        public int Forget(IReadOnlyCollection<string> paths) => inner.Forget(paths);
     }
 }
 

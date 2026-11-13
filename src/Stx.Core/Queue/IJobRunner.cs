@@ -20,6 +20,9 @@ public interface IJobRepo
     void Update(Job job);
     Job? Get(long id);
     IReadOnlyList<Job> All();
+
+    /// <summary>Deletes the job's row. Nothing else refers to it: the media it saved stays in the Library.</summary>
+    void Remove(long id);
 }
 
 public interface IClock

@@ -41,6 +41,13 @@ public interface ILibraryCatalog
 
     /// <summary>Every listed shrink copy, with its item's original, for what deleting originals would free.</summary>
     IReadOnlyList<ShrinkPair> ShrinkCopies();
+
+    /// <summary>
+    /// Takes files off the Library (REMOVE, CLEAR MISSING): every row for each path, in any case, so no second link to
+    /// the same file takes its place, and each item left with no file at all. Nothing on disk is touched. A download
+    /// removed this way can be saved again. Returns how many of the paths were listed.
+    /// </summary>
+    int Forget(IReadOnlyCollection<string> paths);
 }
 
 /// <summary>
@@ -130,9 +137,33 @@ public abstract class InMemoryLibrary : ILibraryCatalog
     /// <summary>Every item, newest first, each with its files in the order they were saved.</summary>
     protected abstract IReadOnlyList<LibraryItem> AllItems();
 
+    // Paths taken off the Library. A file under one of them is no longer an item's file; an item left with none is gone.
+    readonly HashSet<string> _forgotten = new(StringComparer.OrdinalIgnoreCase);
+
+    public int Forget(IReadOnlyCollection<string> paths)
+    {
+        lock (_forgotten)
+        {
+            var listed = Listed().Select(e => e.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            int count = paths.Distinct(StringComparer.OrdinalIgnoreCase).Count(listed.Contains);
+            _forgotten.UnionWith(paths);
+            return count;
+        }
+    }
+
+    IReadOnlyList<LibraryItem> Kept()
+    {
+        lock (_forgotten)
+        {
+            var items = AllItems();
+            if (_forgotten.Count == 0) return items;
+            return [.. items.Select(i => i with { Files = [.. i.Files.Where(f => !_forgotten.Contains(f.Path))] }).Where(i => i.Files.Count > 0)];
+        }
+    }
+
     IEnumerable<LibraryEntry> Listed()
     {
-        var items = AllItems();
+        var items = Kept();
         var first = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in items.SelectMany(i => i.Files))
             if (!first.TryGetValue(file.Path, out long id) || file.Id < id) first[file.Path] = file.Id;

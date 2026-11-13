@@ -54,6 +54,17 @@ public sealed class JobRepo(SqliteConnection connection) : IJobRepo
         }
     }
 
+    public void Remove(long id)
+    {
+        lock (connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM jobs WHERE id = $id;";
+            command.Parameters.AddWithValue("$id", id);
+            command.ExecuteNonQuery();
+        }
+    }
+
     public IReadOnlyList<Job> All()
     {
         lock (connection)

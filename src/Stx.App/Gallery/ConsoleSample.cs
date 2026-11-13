@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Stx.App.Panels;
+using Stx.App.Primitives;
 using Stx.Audio;
 using Stx.Core.Errors;
 using Stx.Core.Jobs;
@@ -97,13 +98,90 @@ internal static class ConsoleSample
 
     public static UIElement Guide() => new ScrollViewer { Content = new GuidePanel(() => { }) { Margin = new Thickness(8) } };
 
-    /// <summary>Opened straight away, so a capture shows the plate as it is when the pad is pressed.</summary>
+    /// <summary>The guide at the real window's width, scrolled to its index and page: the Queue's section, with SHOW ME.</summary>
+    public static UIElement GuideWide()
+    {
+        var guide = new GuidePanel(() => { }, _ => { }) { Margin = new Thickness(8) };
+        var scroller = new ScrollViewer { Content = guide };
+        guide.Loaded += (_, _) =>
+        {
+            guide.ShowSectionTitled("Queue");
+            scroller.UpdateLayout();
+            scroller.ChangeView(null, 470, null, disableAnimation: true);
+        };
+        return scroller;
+    }
+
+    // A queue with one job running, two finished and one failed, so CLEAR, CLEAR DONE and the meters' ramp all show.
+    static QueuePanel SampleQueue(out QueueViewModel queue)
+    {
+        var jobs = new Memory();
+        var catalog = new Catalog();
+        var engine = new QueueEngine(jobs, new NeverRuns(), new QueuePolicy { MaxParallel = 0 }, new SystemClock(), new CaptureVault());
+        var model = new QueueViewModel(engine, catalog, new NoShell(), run => run());
+        Seed("SAMPLE MUSIC VIDEO", JobState.Running, null);
+        Seed("SAMPLE TECHNICAL WEBINAR", JobState.Completed, null);
+        Seed("SAMPLE LIVE SESSION", JobState.Completed, null);
+        Seed("SAMPLE PROTECTED STREAM", JobState.Failed, ErrorKind.DrmDetected);
+        model.Load();
+        model.SetProgress(1, new Stx.Tools.Progress(62, "412MiB", "6.2MiB/s", "00:41"));
+        queue = model;
+        return new QueuePanel(model);
+
+        void Seed(string title, JobState state, ErrorKind? error)
+        {
+            long media = catalog.AddItem("https://example.com/sample", title, title);
+            jobs.Add(new Job(0, media, JobKind.Link, state, 0, error, "Keep original", DateTimeOffset.UnixEpoch));
+        }
+    }
+
+    static UIElement SampleDeck()
+    {
+        var engine = new QueueEngine(new Memory(), new NeverRuns(), new QueuePolicy { MaxParallel = 0 }, new SystemClock(), new CaptureVault());
+        var library = new LibraryViewModel(new SampleLibrary(), engine, new NoShell(), path => !path.Contains("moved"), _ => { });
+        library.Refresh();
+        var deck = new DeckPanel { LeftWeight = 1.2, RightWeight = 1, Spacing = 8 };
+        deck.Children.Add(DeckPanel.Column(SampleQueue(out _), new LibraryPanel(library, _ => { })));
+        // The right column as tall as the Player and Source truth make it, so the Library has to stretch to meet it.
+        var player = new Border { Height = 980, Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 20, 22, 24)) };
+        deck.Children.Add(DeckPanel.Column(player, (FrameworkElement)SourceTruth()));
+        return deck;
+    }
+
+    /// <summary>The deck at the window's size: Queue and Library beside a column as tall as the Player's, bottoms meeting.</summary>
+    public static UIElement Deck()
+    {
+        var rack = new StackPanel { Spacing = 8, Padding = new Thickness(8) };
+        rack.Children.Add(SampleDeck());
+        var scroller = new ScrollViewer { Content = rack };
+        scroller.Loaded += (_, _) => scroller.ChangeView(null, 900, null, disableAnimation: true);
+        return scroller;
+    }
+
+    /// <summary>A tutorial running on the sample console, held on the Queue chapter's CLEAR step.</summary>
+    public static UIElement TourStep()
+    {
+        var root = new Grid();
+        var rack = new StackPanel { Spacing = 8, Padding = new Thickness(8) };
+        rack.Children.Add(SampleDeck());
+        var scroller = new ScrollViewer { Content = rack };
+        root.Children.Add(scroller);
+        var tour = new TourOverlay(root, scroller, _ => false, (_, _) => { });
+        root.Children.Add(tour);
+        var queue = TutorialContent.Find("queue")!;
+        root.Loaded += (_, _) =>
+        {
+            tour.Start(queue);
+            tour.GoTo(queue.Steps.ToList().FindIndex(s => s.Target == "queue.clear"));
+        };
+        return root;
+    }
+
+    /// <summary>The Tutorials plate as the pad opens it, with the first two chapters finished, so both lamp states show.</summary>
     public static UIElement Tutorial()
     {
-        var plate = new TutorialPanel(() => { }) { Margin = new Thickness(8) };
-        plate.Loaded += (_, _) => plate.Open();
-        plate.Unloaded += (_, _) => plate.Stop();
-        return new ScrollViewer { Content = plate };
+        var finished = new HashSet<string>(TutorialContent.Tours.Take(2).Select(t => t.Id), StringComparer.Ordinal);
+        return new ScrollViewer { Content = new TutorialPanel(() => { }, _ => { }, finished.Contains) { Margin = new Thickness(8) } };
     }
 
     public static UIElement FirstRun()
@@ -142,6 +220,7 @@ internal static class ConsoleSample
         public void Update(Job job) => _jobs[job.Id] = job;
         public Job? Get(long id) => _jobs.GetValueOrDefault(id);
         public IReadOnlyList<Job> All() => _jobs.Values.OrderBy(j => j.Id).ToList();
+        public void Remove(long id) => _jobs.Remove(id);
     }
 
     sealed class Catalog : IMediaCatalog

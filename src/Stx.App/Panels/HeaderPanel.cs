@@ -50,11 +50,11 @@ public sealed partial class HeaderPanel : ContentControl
         name.Children.Add(subLabel);
 
         var lights = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 24, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
-        lights.Children.Add(Pair(_engine, _engineText));
+        lights.Children.Add(TourTargets.Mark(Pair(_engine, _engineText), "header.engine"));
         lights.Children.Add(Pair(_fault, new EngravedLabel { Kind = LabelKind.Label, Text = "Fault" }));
         if (openSettings is not null)
         {
-            var settings = new Pad { Content = "SETTINGS" };
+            var settings = TourTargets.Mark(new Pad { Content = "SETTINGS" }, "header.settings");
             settings.Click += (_, _) => openSettings();
             lights.Children.Add(settings);
         }
@@ -65,6 +65,7 @@ public sealed partial class HeaderPanel : ContentControl
         Grid.SetColumn(lights, 1);
         row.Children.Add(name);
         row.Children.Add(lights);
+        TourTargets.Mark(this, "header");
         Content = new Faceplate { PanelName = "header", Padding = new Thickness(36, 18, 36, 18), Content = row };
 
         status.PropertyChanged += (_, _) => Paint(status);

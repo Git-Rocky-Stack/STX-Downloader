@@ -34,7 +34,8 @@ public sealed partial class SourcePanel : ContentControl
         _clipboard = clipboard;
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
 
-        var paste = new Pad { Content = "PASTE" };
+        var paste = TourTargets.Mark(new Pad { Content = "PASTE" }, "source.paste");
+        TourTargets.Mark(_analyze, "source.analyze");
         paste.Click += async (_, _) => await PasteAsync();
         _analyze.Click += async (_, _) => await source.AnalyzeCommand.ExecuteAsync(null);
         _box.TextChanged += (_, _) => { if (source.Link != _box.Text) source.Link = _box.Text; };
@@ -49,7 +50,7 @@ public sealed partial class SourcePanel : ContentControl
         line.ColumnDefinitions.Add(new ColumnDefinition());
         line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var field = new Display { Tone = DisplayTone.Cyan, Padding = new Thickness(6), Content = _box, VerticalAlignment = VerticalAlignment.Center };
+        var field = TourTargets.Mark(new Display { Tone = DisplayTone.Cyan, Padding = new Thickness(6), Content = _box, VerticalAlignment = VerticalAlignment.Center }, "source.link");
         Grid.SetColumn(_analyze, 1);
         Grid.SetColumn(paste, 2);
         line.Children.Add(field);
@@ -81,13 +82,13 @@ public sealed partial class SourcePanel : ContentControl
             var play = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
             if (playStream is not null)
             {
-                var stream = new Pad { Content = "PLAY STREAM" };
+                var stream = TourTargets.Mark(new Pad { Content = "PLAY STREAM" }, "source.playstream");
                 stream.Click += async (_, _) => await playStream();
                 play.Children.Add(stream);
             }
             if (playDisc is not null)
             {
-                var disc = new Pad { Content = "PLAY DISC" };
+                var disc = TourTargets.Mark(new Pad { Content = "PLAY DISC" }, "source.playdisc");
                 disc.Click += async (_, _) => await playDisc();
                 play.Children.Add(disc);
             }
@@ -97,6 +98,7 @@ public sealed partial class SourcePanel : ContentControl
         column.Children.Add(_next);
         column.Children.Add(_offer);
         column.Children.Add(_clipRow);
+        TourTargets.Mark(this, "source");
         Content = new Faceplate { PanelName = "source", Padding = new Thickness(36, 28, 36, 28), Content = column };
 
         if (clipboard is not null) BuildClipboardRow(clipboard, source);

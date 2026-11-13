@@ -38,8 +38,68 @@ public class BargraphLogicTests
     [Theory]
     [InlineData(0)]
     [InlineData(29)]
-    public void Progress_meters_stay_green(int index) =>
-        Assert.Equal(LedColor.Green, BargraphLogic.ZoneColor(index, 30, BargraphZones.Progress));
+    public void Progress_meters_never_warn(int index) =>
+        Assert.Equal(LedColor.Blue, BargraphLogic.ZoneColor(index, 30, BargraphZones.Progress));
+
+    [Fact]
+    public void A_progress_meter_sweeps_from_aqua_to_violet()
+    {
+        Assert.Equal("#22E6B4", BargraphLogic.ZoneHex(0, 30, BargraphZones.Progress));
+        Assert.Equal("#B06BFF", BargraphLogic.ZoneHex(29, 30, BargraphZones.Progress));
+        // No step is amber or red: blue is always strong, and red never leads both others.
+        for (int i = 0; i < 30; i++)
+        {
+            var (r, g, b) = Rgb(BargraphLogic.ZoneHex(i, 30, BargraphZones.Progress));
+            Assert.True(b >= 150, $"segment {i} is {r},{g},{b}");
+            Assert.True(r < g || r < b, $"segment {i} is {r},{g},{b}");
+        }
+    }
+
+    [Fact]
+    public void A_progress_meter_changes_color_gradually()
+    {
+        for (int i = 1; i < 30; i++)
+        {
+            var (r1, g1, b1) = Rgb(BargraphLogic.ZoneHex(i - 1, 30, BargraphZones.Progress));
+            var (r2, g2, b2) = Rgb(BargraphLogic.ZoneHex(i, 30, BargraphZones.Progress));
+            Assert.True(Math.Abs(r1 - r2) + Math.Abs(g1 - g2) + Math.Abs(b1 - b2) <= 90, $"a jump between segments {i - 1} and {i}");
+        }
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(30)]
+    [InlineData(40)]
+    [InlineData(100)]
+    public void A_ramp_is_cut_into_a_few_shared_colors(int segments)
+    {
+        foreach (var zones in new[] { BargraphZones.Progress, BargraphZones.Vu })
+        {
+            int colors = Enumerable.Range(0, segments).Select(i => BargraphLogic.ZoneHex(i, segments, zones)).Distinct().Count();
+            Assert.InRange(colors, 1, BargraphLogic.RampSteps * 3);
+        }
+    }
+
+    [Fact]
+    public void Each_level_segment_is_drawn_in_its_zones_family()
+    {
+        for (int i = 0; i < 100; i++)
+        {
+            var (r, g, b) = Rgb(BargraphLogic.ZoneHex(i, 100, BargraphZones.Vu));
+            switch (BargraphLogic.ZoneColor(i, 100, BargraphZones.Vu))
+            {
+                case LedColor.Green: Assert.True(g > r && g > b, $"segment {i} should read green: {r},{g},{b}"); break;
+                case LedColor.Amber: Assert.True(r > b && g > b && r >= g, $"segment {i} should read amber: {r},{g},{b}"); break;
+                default: Assert.True(r > g * 2 && r > b, $"segment {i} should read red: {r},{g},{b}"); break;
+            }
+        }
+    }
+
+    static (int R, int G, int B) Rgb(string hex)
+    {
+        Assert.Matches("^#[0-9A-F]{6}$", hex);
+        return (Convert.ToInt32(hex[1..3], 16), Convert.ToInt32(hex[3..5], 16), Convert.ToInt32(hex[5..7], 16));
+    }
 
     [Fact]
     public void Only_segments_that_changed_are_touched_when_the_value_rises() =>

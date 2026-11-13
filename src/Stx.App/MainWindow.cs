@@ -20,6 +20,12 @@ public sealed partial class MainWindow : Window
     readonly GuidePanel _guide;
     readonly TutorialPanel _tutorial;
     readonly PlayerPanel _player;
+    readonly SettingsPanel _settings;
+    readonly TourOverlay _tour;
+    // Where a running tutorial came from (the Tutorials plate, or the guide's SHOW ME), to go back to when it ends,
+    // and whether it opened Settings itself, so it can fold Settings away again.
+    ContentControl? _tourFrom;
+    bool _tourOpenedSettings;
     bool _quitting;
 
     public MainWindow(bool startHidden = false, bool pointerLight = false)
@@ -31,9 +37,9 @@ public sealed partial class MainWindow : Window
         _app = new Composition(DispatcherQueue);
         StartsHidden = startHidden && _app.Settings.Current.TrayMode;
 
-        _guide = new GuidePanel(() => ShowHelp(null)) { Visibility = Visibility.Collapsed };
-        _tutorial = new TutorialPanel(() => ShowHelp(null)) { Visibility = Visibility.Collapsed };
-        var settings = new SettingsPanel(_app.Settings, this,
+        _guide = new GuidePanel(() => ShowHelp(null), tour => StartTour(tour, _guide)) { Visibility = Visibility.Collapsed };
+        _tutorial = new TutorialPanel(() => ShowHelp(null), tour => StartTour(tour, _tutorial), _app.Settings.IsTutorialDone) { Visibility = Visibility.Collapsed };
+        var settings = _settings = new SettingsPanel(_app.Settings, this,
             () => ShowHelp(_guide.Visibility == Visibility.Visible ? null : _guide),
             () => ShowHelp(_tutorial.Visibility == Visibility.Visible ? null : _tutorial), _app.DefaultPlayer) { Visibility = Visibility.Collapsed };
         var first = new FirstRunPanel(_app.FirstRun);
@@ -49,17 +55,12 @@ public sealed partial class MainWindow : Window
         rack.Children.Add(new SourcePanel(_app.Source, _app.Clipboard, () => _app.PlayStreamAsync(_app.Source.Link), PickDiscAsync));
 
         // The deck: QUEUE and LIBRARY on the left; the PLAYER, with SOURCE TRUTH under it reading the same file, on the right.
-        var deck = new Grid { ColumnSpacing = 8 };
-        deck.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
-        deck.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var left = new StackPanel { Spacing = 8 };
-        left.Children.Add(new QueuePanel(_app.Queue));
-        left.Children.Add(new LibraryPanel(_app.Library, _app.Select, PickShrinkFolderAsync));
+        // Each column's last plate stretches (a star row), and the deck gives both columns the taller one's height, so
+        // their bottoms meet: no dead space under either, full or empty (review 2026-11-12).
+        var deck = new DeckPanel { LeftWeight = 1.2, RightWeight = 1, Spacing = 8 };
+        var left = DeckPanel.Column(new QueuePanel(_app.Queue), new LibraryPanel(_app.Library, _app.Select, PickShrinkFolderAsync));
         _player = new PlayerPanel(_app.Player, _app.PlayerEngine, _app.Enhance);
-        var right = new StackPanel { Spacing = 8 };
-        right.Children.Add(_player);
-        right.Children.Add(truth);
-        Grid.SetColumn(right, 1);
+        var right = DeckPanel.Column(_player, truth);
         deck.Children.Add(left);
         deck.Children.Add(right);
         rack.Children.Add(deck);
@@ -68,15 +69,19 @@ public sealed partial class MainWindow : Window
         var root = new Grid { RequestedTheme = ElementTheme.Dark, Background = new SolidColorBrush(ColorHelper.FromArgb(255, 8, 9, 10)) };
         var scroller = new ScrollViewer { Content = rack };
         root.Children.Add(scroller);
+        // Tutorials run over the whole window, on the real controls.
+        _tour = new TourOverlay(root, scroller, RevealForTour, EndTour);
+        root.Children.Add(_tour);
 
         // Full screen in place: every other plate folds away and the player's column takes the window. The video
         // never changes parent (spike S1, finding F1).
         _player.FullScreenChanged += (_, on) =>
         {
+            // FULL pressed inside a tutorial's spotlight: the rack it was showing folds away, so the tour ends there.
+            if (on) _tour.Stop();
             foreach (var plate in rack.Children) if (!ReferenceEquals(plate, deck)) plate.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+            // A collapsed left column gives the player's column the deck's whole width.
             left.Visibility = truth.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
-            deck.ColumnDefinitions[0].Width = on ? new GridLength(0) : new GridLength(1.2, GridUnitType.Star);
-            deck.ColumnSpacing = on ? 0 : 8;
             rack.Padding = new Thickness(on ? 0 : 8);
             scroller.ChangeView(null, 0, null, disableAnimation: true);
             scroller.VerticalScrollMode = on ? ScrollMode.Disabled : ScrollMode.Enabled;
@@ -110,6 +115,7 @@ public sealed partial class MainWindow : Window
     public bool StartsHidden { get; }
 
 
+
     // Prototype, on only with --pointer-light, until Rocky decides whether it stays.
     static void AddPointerLight(Grid root)
     {
@@ -125,14 +131,42 @@ public sealed partial class MainWindow : Window
         root.PointerExited += (_, _) => light.Hide();
     }
 
-    // One help plate at a time, and a closed tutorial holds no video.
+    // One help plate at a time. The Tutorials plate reads which chapters are finished each time it opens.
     void ShowHelp(ContentControl? plate)
     {
-        _tutorial.Stop();
         _guide.Visibility = ReferenceEquals(plate, _guide) ? Visibility.Visible : Visibility.Collapsed;
         _tutorial.Visibility = ReferenceEquals(plate, _tutorial) ? Visibility.Visible : Visibility.Collapsed;
-        if (ReferenceEquals(plate, _tutorial)) _tutorial.Open();
+        if (ReferenceEquals(plate, _tutorial)) _tutorial.Refresh();
         if (plate is not null) DispatcherQueue.TryEnqueue(() => plate.StartBringIntoView());
+    }
+
+    // A tutorial runs on the console as it normally looks, so the help plate that started it folds away until it ends.
+    void StartTour(Stx.ViewModels.Tour tour, ContentControl? from)
+    {
+        _tourFrom = from;
+        _tourOpenedSettings = false;
+        ShowHelp(null);
+        _tour.Start(tour);
+    }
+
+    // A step on a plate that's folded away shows it: only Settings folds away while the console runs.
+    bool RevealForTour(string plate)
+    {
+        if (plate != "settings" || _settings.Visibility == Visibility.Visible) return false;
+        _settings.Visibility = Visibility.Visible;
+        _tourOpenedSettings = true;
+        return true;
+    }
+
+    void EndTour(Stx.ViewModels.Tour tour, bool finished)
+    {
+        if (finished) _app.Settings.MarkTutorialDone(tour.Id);
+        if (_tourOpenedSettings) _settings.Visibility = Visibility.Collapsed;
+        _tourOpenedSettings = false;
+        var from = _tourFrom;
+        _tourFrom = null;
+        // Back where it started, unless the window is in full screen now.
+        if (from is not null && !_app.Player.IsFullScreen) ShowHelp(from);
     }
 
     /// <summary>A file from File Explorer or a second launch: it joins the Library and plays, and the window comes forward.</summary>
@@ -199,7 +233,7 @@ public sealed partial class MainWindow : Window
 
     void Shutdown()
     {
-        _tutorial.Stop();
+        _tour.Detach();
         _tray.Dispose();
         _clipboard.Dispose();
         _app.Dispose();
