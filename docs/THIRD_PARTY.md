@@ -22,7 +22,7 @@ The app carries its own .NET and its own Windows App SDK, so the setup needs not
 
 | Component | Used for | Source | License |
 |---|---|---|---|
-| .NET 10 runtime (10.0.14 in 1.1.0) | Running the app | [Microsoft.NETCore.App.Runtime.win-x64](https://www.nuget.org/packages/Microsoft.NETCore.App.Runtime.win-x64) on NuGet, from Microsoft | [MIT](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) |
+| .NET 10 runtime (10.0.14 in 1.2.0) | Running the app | [Microsoft.NETCore.App.Runtime.win-x64](https://www.nuget.org/packages/Microsoft.NETCore.App.Runtime.win-x64) on NuGet, from Microsoft | [MIT](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) |
 | Windows App SDK 2.6.4 | WinUI 3: the window, its controls and text | [Microsoft.WindowsAppSDK](https://www.nuget.org/packages/Microsoft.WindowsAppSDK/2.6.4) on NuGet, from Microsoft | [Microsoft Software License Terms](https://www.nuget.org/packages/Microsoft.WindowsAppSDK/2.6.4/License), which allow shipping it inside an app |
 | CommunityToolkit.Mvvm 8.4.0 | The app's view models | [NuGet](https://www.nuget.org/packages/CommunityToolkit.Mvvm/8.4.0) | [MIT](https://github.com/CommunityToolkit/dotnet/blob/main/License.md) |
 | Microsoft.Data.Sqlite 10.0.14, with SQLitePCLRaw 2.1.13 and SQLite | The queue and the Library's database | [NuGet](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.14) | [MIT](https://github.com/dotnet/efcore/blob/main/LICENSE.txt); SQLitePCLRaw [Apache-2.0](https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT); SQLite is [public domain](https://sqlite.org/copyright.html) |
