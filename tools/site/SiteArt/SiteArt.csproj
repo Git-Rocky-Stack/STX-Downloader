@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Not -windows: the art code has no WinUI dependency, so this runs anywhere. The drift check only runs on Windows,
+         since compressed bytes may differ across operating systems. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Stx.Art\Stx.Art.csproj" />
+  </ItemGroup>
+</Project>

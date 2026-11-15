@@ -51,10 +51,14 @@ jobs:
       - name: Test
         shell: pwsh
         run: |
-          foreach ($project in 'Look', 'Art', 'Core', 'Data', 'Tools', 'Audio', 'Bridge', 'App', 'Playback') {
+          foreach ($project in 'Look', 'Art', 'Core', 'Data', 'Tools', 'Audio', 'Bridge', 'App', 'Playback', 'SiteArt') {
             dotnet test --project "tests/Stx.$project.Tests" -c Release -p:Platform=x64 --filter-not-trait "Category=Device" --filter-not-trait "Category=Corpus" --filter-not-trait "Category=Network"
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
           }
+      # The project site's hardware images (site/art) are drawn by Stx.Art, so they must not fall behind it: this redraws them
+      # and fails naming any file whose bytes differ. Windows only, since compressed bytes may differ across operating systems.
+      - name: Site art is current
+        run: dotnet run --project tools/site/SiteArt -c Release -- --check site/art
       - name: Test extension
         run: node --test "extension/test/*.test.js"
 
