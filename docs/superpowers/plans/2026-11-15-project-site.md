@@ -104,18 +104,18 @@
     - `led-housing`, `led-lit-{green,red,amber,blue}`, `led-flare-{green,red,amber,blue}`: `LedArt.LedArtLogical` square.
     - `seg-level-{lit,unlit,peak}`: sprite strips of 32 segments (zones `Vu`). `seg-progress-{lit,unlit}`: strips of 24 (zones `Progress`). Each cell is `SegmentArtWidth` x `SegmentArtHeight`, laid side by side.
     - `digits`: a strip of `0123456789` cells, `DigitWidth+2*DigitGlow` by `DigitHeight+2*DigitGlow`, plus a dead `8` cell for unlit positions.
-    - `pad-well-{dark,light}`, `pad-face-{off,green,blue}`, `pad-press`, `pad-bloom-{green,blue}`: rendered at a reference 160x52 logical, used as CSS `border-image` 3-slices with slice width `PadRadius + WellInset + 2` (bloom adds `PadBloomOverhang`).
+    - Pads come in four fixed size classes, rendered at exact size (ruling R8: `ControlArt.PadFace` shades across its width, so it can't be stretched; the app also renders each pad at its own size). Classes, logical face size: `s` 96x40, `m` 128x52, `l` 176x52, `xl` 240x72. Per class `{c}`: `pad-{c}-well-{dark,light}` (face size plus `WellInset` on every side), `pad-{c}-face-{off,green,blue}`, `pad-{c}-press`, `pad-{c}-bloom-{green,blue}` (face size plus `PadBloomOverhang` on every side). The page gives each pad the smallest class its label fits in.
 
 - [ ] **Step 1: Write failing tests** in `SiteArtTests.cs`:
   - `Png_round_trips_an_opaque_pixel`: a 2x1 buffer of (10,20,30,1) and (200,100,50,1) encodes to bytes that start with the PNG signature and whose IHDR says 2x1, 8-bit, color type 6.
   - `Png_unpremultiplies`: a pixel set with `Set(x,y,200,100,50,0.5)` encodes RGBA (200,100,50,128) ± 1.
   - `Every_part_renders_at_both_scales_at_its_logical_size_times_scale`.
   - `Part_names_are_unique_and_match_the_plan` (asserts the exact list above).
-  - `Pad_face_middle_columns_are_identical`: for each `pad-face-*` at 2x, every column between the two slice widths is byte-identical to the first such column. Plain 3-slice stretching depends on this.
+  - `Pad_classes_have_the_planned_face_sizes`: `pad-s-face-off` is 96x40, `pad-m-face-off` 128x52, `pad-l-face-off` 176x52, `pad-xl-face-off` 240x72 logical; each class's well and bloom are larger by `WellInset` and `PadBloomOverhang` per side. (Replaces the 3-slice column test, per ruling R8.)
   - `Grain_dark_texture_matches_the_mockup`: luma std 7.2 ± 0.5.
   - `Check_mode_reports_a_changed_file`: write to a temp dir, flip one byte, `--check` returns 1 and names it.
 - [ ] **Step 2: Run, expect FAIL.** `dotnet test --project tests/Stx.SiteArt.Tests`.
-- [ ] **Step 3: Implement** `PngWriter`, `Parts`, `Program`. If `Pad_face_middle_columns_are_identical` fails because `PadFace` varies across its width, stop and report. Do not change the app's pad art to make it pass.
+- [ ] **Step 3: Implement** `PngWriter`, `Parts`, `Program`. Do not change the app's pad art.
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Break-check** `Png_unpremultiplies` (drop the divide by alpha) and `Check_mode_reports_a_changed_file` (always return 0). Paste each failure, then the restored pass.
 - [ ] **Step 6: Generate.** `dotnet run --project tools/site/SiteArt -- --out site/art`, then open three PNGs (`screw-a@2x`, `led-lit-green@2x`, `pad-face-blue@2x`) with the Read tool and confirm they look like the app's parts.
@@ -190,7 +190,7 @@
   - JS functions in `stx.js`, each idempotent and safe without the others: `initFinish()`, `initStrip()`, `initSeven()`, `initTyping()`, `initMeters()`, `initChannels()`, `initCopy()`, `initPointerLight()`.
 
 - [ ] **Step 1: Build the head:** title, description, canonical, Open Graph and Twitter tags, icons, manifest, `SoftwareApplication` JSON-LD (operatingSystem "Windows 10, Windows 11", offers price 0, downloadUrl = setup URL, softwareVersion = README version), `@font-face` with `font-display: swap`. Preload the hero's console capture and `grain-*@2x`.
-- [ ] **Step 2: Build the CSS primitives** to match `docs/design/site-v2/hero-rack-stack.html`. Plates use `grain-{finish}` via `image-set()` blended over the CSS gradient. Screws, LEDs, segments, digits and pad faces/wells/bloom use the Task 2 parts: pads as `border-image` 3-slices, segments and digits by `background-position` on their strips. Spacing is on an 8px grid. Use `1U = 44px` for unit heights.
+- [ ] **Step 2: Build the CSS primitives** to match `docs/design/site-v2/hero-rack-stack.html`. Plates use `grain-{finish}` via `image-set()` blended over the CSS gradient. Screws, LEDs, segments, digits and pad faces/wells/bloom use the Task 2 parts: each pad uses the smallest size class (`s`, `m`, `l`, `xl`) its label fits in, as fixed-size layered images (well, face, bloom; `pad-{c}-press` overlaid while pressed), never stretched (ruling R8); segments and digits by `background-position` on their strips. Labels that fit no class get shorter wording, not a stretched pad. Spacing is on an 8px grid. Use `1U = 44px` for unit heights.
 - [ ] **Step 3: Build the sticky 1U strip:** POWER LED (green, strike on load), engraved name, BLACK and ALUMINUM latching pads (green when on), nav pads with a small LED that lights for the unit in view (IntersectionObserver), a small lit DOWNLOAD pad (blue) linking to `#download`, and a 24-segment `progress` meter that fills with scroll position.
 - [ ] **Step 4: `initFinish()`:** starts from `prefers-color-scheme`, then a stored choice. Every `localStorage` access goes in try/catch. Pressing a finish pad sets `data-finish`, `aria-pressed`, and swaps every `<img data-src-dark data-src-light>`. Verify: in Playwright, override `localStorage.setItem` to throw, reload, press ALUMINUM, and confirm `data-finish="light"` and no console error. Paste the console output.
 - [ ] **Step 4b: `initPointerLight()`:** a soft highlight on plates that follows the pointer, after `src/Stx.Look/PointerLightLayout.cs`: 760x260 ellipse, peak alpha 22/255 dark and 64/255 light. Set as CSS variables on `pointermove`, throttled to one rAF. Off under reduced motion and `(hover: none)`.
