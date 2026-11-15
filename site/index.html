@@ -27,8 +27,10 @@
 <meta name="twitter:title" content="STX Downloader: save, check and play. All in one app.">
 <meta name="twitter:description" content="Open-source Windows app that saves media you're allowed to keep, tells you what its audio really is, and plays it all on VLC's engine.">
 <meta name="twitter:image" content="https://git-rocky-stack.github.io/STX-Downloader/img/social-card.png">
-<link rel="preload" as="image" href="art/grain-dark@2x.png" imagesrcset="art/grain-dark@1x.png 1x, art/grain-dark@2x.png 2x" media="not all and (prefers-color-scheme: light)">
-<link rel="preload" as="image" href="art/grain-light@2x.png" imagesrcset="art/grain-light@1x.png 1x, art/grain-light@2x.png 2x" media="(prefers-color-scheme: light)">
+<link rel="preload" as="image" href="art/grain-dark@1x.png" media="(max-width: 699px) and (prefers-color-scheme: dark)" fetchpriority="high">
+<link rel="preload" as="image" href="art/grain-light@1x.png" media="(max-width: 699px) and (prefers-color-scheme: light)" fetchpriority="high">
+<link rel="preload" as="image" href="art/grain-dark@2x.png" imagesrcset="art/grain-dark@1x.png 1x, art/grain-dark@2x.png 2x" media="(min-width: 700px) and (prefers-color-scheme: dark)" fetchpriority="high">
+<link rel="preload" as="image" href="art/grain-light@2x.png" imagesrcset="art/grain-light@1x.png 1x, art/grain-light@2x.png 2x" media="(min-width: 700px) and (prefers-color-scheme: light)" fetchpriority="high">
 <link rel="preload" as="image" href="screens/console-dark.webp" media="not all and (prefers-color-scheme: light)" fetchpriority="high">
 <link rel="preload" as="image" href="screens/console-light.webp" media="(prefers-color-scheme: light)" fetchpriority="high">
 <link rel="stylesheet" href="css/stx.css">
@@ -71,8 +73,11 @@ try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'lig
     <span class="meter" data-kind="progress" data-segments="24" aria-hidden="true"></span>
   </div>
   <div class="pads">
-    <button class="pad" type="button" data-pad="s" data-tone="off" data-finish-pad="dark" aria-pressed="false"><span class="face">Black</span></button>
-    <button class="pad" type="button" data-pad="s" data-tone="off" data-finish-pad="light" aria-pressed="false"><span class="face">Aluminum</span></button>
+    <div class="menu-panel" id="strip-menu">
+    <div class="finish" role="group" aria-label="Finish">
+      <button class="pad" type="button" data-pad="s" data-tone="off" data-finish-pad="dark" aria-pressed="false"><span class="face">Black</span></button>
+      <button class="pad" type="button" data-pad="s" data-tone="off" data-finish-pad="light" aria-pressed="false"><span class="face">Aluminum</span></button>
+    </div>
     <nav aria-label="Sections">
       <ul>
         <li><a class="pad" data-pad="s" data-tone="off" href="#features"><span class="face"><span class="led" data-color="green" data-state="off"><i></i></span>Features</span></a></li>
@@ -81,6 +86,8 @@ try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'lig
         <li><a class="pad" data-pad="s" data-tone="off" href="#proof"><span class="face"><span class="led" data-color="green" data-state="off"><i></i></span>Proof</span></a></li>
       </ul>
     </nav>
+    </div>
+    <button class="pad menu" type="button" data-pad="s" data-tone="off" aria-expanded="false" aria-controls="strip-menu"><span class="face">Menu</span></button>
     <a class="pad" data-pad="s" data-tone="blue" href="#download"><span class="face">Download</span></a>
   </div>
 </header>

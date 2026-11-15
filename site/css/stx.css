@@ -204,11 +204,11 @@ body{margin:0;min-height:100vh;padding:24px var(--gutter) 96px;color:var(--ink);
 .meter>i::after{content:"";position:absolute;left:calc(-8px * var(--sx));top:calc(-8px * var(--sy));width:var(--cw);height:var(--ch);opacity:0;
   background-size:calc(var(--cells) * var(--cw)) var(--ch);background-position:calc(var(--i) * -1 * var(--cw)) 0}
 .meter>i.on::after{opacity:1}
-.meter[data-kind="progress"]>i{background-image:image-set(url("../art/seg-progress-unlit@1x.png") 1x,url("../art/seg-progress-unlit@2x.png") 2x)}
-.meter[data-kind="progress"]>i::after{background-image:image-set(url("../art/seg-progress-lit@1x.png") 1x,url("../art/seg-progress-lit@2x.png") 2x)}
-.meter[data-kind="level"]>i{background-image:image-set(url("../art/seg-level-unlit@1x.png") 1x,url("../art/seg-level-unlit@2x.png") 2x)}
-.meter[data-kind="level"]>i::after{background-image:image-set(url("../art/seg-level-lit@1x.png") 1x,url("../art/seg-level-lit@2x.png") 2x)}
-.meter[data-kind="level"]>i.peak::after{opacity:1;background-image:image-set(url("../art/seg-level-peak@1x.png") 1x,url("../art/seg-level-peak@2x.png") 2x)}
+.meter[data-kind="progress"]>i{background-image:url("../art/seg-progress-unlit@1x.png")}
+.meter[data-kind="progress"]>i::after{background-image:url("../art/seg-progress-lit@1x.png")}
+.meter[data-kind="level"]>i{background-image:url("../art/seg-level-unlit@1x.png")}
+.meter[data-kind="level"]>i::after{background-image:url("../art/seg-level-lit@1x.png")}
+.meter[data-kind="level"]>i.peak::after{opacity:1;background-image:url("../art/seg-level-peak@1x.png")}
 
 /* ---- Silicone pad in its milled well (Pad.cs and its template): the face sits 3px in, travels 3px when pressed
    with the press shade over it, glows 4% white on hover, and a lit pad throws its bloom 28px past the face.
@@ -278,9 +278,26 @@ body{margin:0;min-height:100vh;padding:24px var(--gutter) 96px;color:var(--ink);
 .strip{position:sticky;top:0;z-index:20;padding:8px 56px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .strip .power,.strip .left{display:flex;align-items:center;gap:8px}
 .strip .left{gap:24px}
-.strip .pads{display:flex;align-items:center;gap:8px}
-.strip nav ul{display:flex;gap:8px;margin:0;padding:0;list-style:none}
-html:not(.js) .strip [data-finish-pad]{visibility:hidden}
+.strip{overflow:visible}
+.strip .pads{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.strip .menu-panel{display:contents}
+.strip .finish{display:flex;gap:8px}
+.strip nav ul{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.strip .menu{display:none}
+html:not(.js) .strip [data-finish-pad]{display:none}
+/* The MENU dropdown: a small plate hung under the strip (ruling R29). */
+.js .strip[data-menu="open"] nav,.js .strip[data-menu="open"] .menu-panel{position:absolute;top:calc(100% + 4px);right:56px;z-index:30;padding:16px;border-radius:3px;
+  background:var(--grain) 0 0/512px 256px,linear-gradient(178deg,var(--plate-top),var(--plate-mid) 26%,var(--plate-bot));background-blend-mode:overlay,normal;
+  box-shadow:inset 0 1px 0 var(--edge-hi),inset 0 -1px 0 var(--edge-lo),0 12px 32px rgba(0,0,0,.8),0 0 0 1px #000}
+@media (max-width:1359px){
+  .js .strip .menu{display:inline-block}
+  .js .strip nav{display:none}
+  .js .strip[data-menu="open"] nav{display:block}
+  .js .strip[data-menu="open"] nav ul{flex-direction:column}
+}
+@media (max-width:1099px){
+  .strip .left .engrave,.strip .left .meter{display:none}
+}
 
 /* ---- Units ---- */
 .unit>h2{margin:0}
@@ -426,3 +443,41 @@ html:not(.js) [data-copy]{display:none}
   *,*::before,*::after{animation:none!important;transition:none!important}
   .plate::before{display:none}
 }
+
+/* Phones take the @1x grain: the hero plate's grain is the largest paint there (ruling R30). */
+@media (max-width:699px){
+  :root{--grain:url("../art/grain-dark@1x.png")}
+  :root[data-finish="light"]{--grain:url("../art/grain-light@1x.png")}
+}
+@media (max-width:699px) and (prefers-color-scheme:light){
+  :root:not([data-finish="dark"]){--grain:url("../art/grain-light@1x.png")}
+}
+
+/* ---- Phone: the rails thin to 8px, ears narrow, every grid is one column (ruling R29 for the strip) ---- */
+@media (max-width:699px){
+  body{padding:16px 16px 64px}
+  html{scroll-padding-top:72px}
+  .rack{padding:0 8px}
+  .rack::before,.rack::after{width:8px;background:var(--grain) 0 0/512px 256px,linear-gradient(90deg,#5d6268,#9aa0a6 30%,#7a8086 55%,#4a4e53);background-blend-mode:overlay,normal}
+  .stack{margin:0 -4px}
+  .plate{padding:24px 32px;background-position:24px 0,calc(100% - 24px) 0,0 0,0 0}
+  .s-tl,.s-bl,.s-ml{left:3px}.s-tr,.s-br,.s-mr{right:3px}
+  .strip{padding:8px 32px}
+  .strip .power .silk{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .js .strip .menu-panel{display:none}
+  .js .strip[data-menu="open"] .menu-panel{display:flex;flex-direction:column;gap:16px;right:16px}
+  .js .strip[data-menu="open"] nav{position:static;padding:0;background:none;box-shadow:none}
+  .vfd{padding:12px 16px}
+  .pitch{font-size:22px}
+  .hero{grid-template-columns:minmax(0,1fr)}
+  .monitor{padding:6px}
+  .dl{grid-template-columns:minmax(0,1fr);grid-template-areas:"pad" "glass" "copy" "note"}
+  .releases li{grid-template-columns:auto minmax(0,1fr)}
+  .releases li>.pad{grid-column:2}
+  .channel-pads .pad{flex:none}
+  .footer{gap:0 24px}
+}
+
+/* Units below the hero render only as they near the screen: the first view paints the strip, the console and
+   the download unit, not the whole rack. Their last measured size is kept, so scrolling back doesn't jump. */
+main>section:not(.monitor-unit):not(.hero),.stack>footer{content-visibility:auto;contain-intrinsic-size:auto 1000px}

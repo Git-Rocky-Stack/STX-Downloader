@@ -169,6 +169,25 @@ export function initStrip() {
 
   if (!once(root(), 'stripWired')) return;
   const doc = () => document.scrollingElement || root();
+
+  // MENU, below 1360 px: opens the nav (and below 700 px the finish pair too) as a panel under the strip.
+  // Esc, a click outside, or choosing a section closes it; it's lit green while open (ruling R29).
+  const menu = document.querySelector('.strip .menu');
+  const strip = menu?.closest('.strip');
+  if (menu && strip) {
+    const isOpen = () => menu.getAttribute('aria-expanded') === 'true';
+    const set = (open, refocus) => {
+      strip.dataset.menu = open ? 'open' : '';
+      menu.setAttribute('aria-expanded', String(open));
+      menu.dataset.tone = open ? 'green' : 'off';
+      if (!open && refocus) menu.focus();
+    };
+    menu.addEventListener('click', () => set(!isOpen(), false));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) set(false, true); });
+    document.addEventListener('click', (e) => { if (isOpen() && !strip.contains(e.target)) set(false, false); });
+    strip.querySelectorAll('nav a').forEach((a) => a.addEventListener('click', () => { if (isOpen()) set(false, false); }));
+    addEventListener('resize', () => { if (isOpen() && !menu.offsetParent) set(false, false); }, { passive: true });
+  }
   const atBottom = () => doc().scrollTop >= doc().scrollHeight - doc().clientHeight - 1;
 
   // Nav LEDs: the unit crossing a line at 40% of the viewport is in view, or the last unit once the page is at its end.
@@ -290,14 +309,21 @@ export function initMeters() {
     requestAnimationFrame(frame);
   };
   const start = () => { if (!running) { running = true; requestAnimationFrame(frame); } };
-  if (typeof IntersectionObserver !== 'function') { visible = true; start(); return; }
-  const seen = new Set();
-  const observer = new IntersectionObserver((entries) => {
-    for (const e of entries) { if (e.isIntersecting) seen.add(e.target); else seen.delete(e.target); }
-    visible = seen.size > 0;
-    if (visible) start();
+  // Decoration waits until the page has loaded and gone idle, so the DOWNLOAD pad is ready first (ruling R30).
+  const whenIdle = (fn) => {
+    const idle = () => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 200));
+    if (document.readyState === 'complete') idle(); else addEventListener('load', idle, { once: true });
+  };
+  whenIdle(() => {
+    if (typeof IntersectionObserver !== 'function') { visible = true; start(); return; }
+    const seen = new Set();
+    const observer = new IntersectionObserver((entries) => {
+      for (const e of entries) { if (e.isIntersecting) seen.add(e.target); else seen.delete(e.target); }
+      visible = seen.size > 0;
+      if (visible) start();
+    });
+    all.forEach((m) => observer.observe(m.el));
   });
-  all.forEach((m) => observer.observe(m.el));
 }
 
 /**
