@@ -1,0 +1,2 @@
+# The site art is compared byte for byte by the drift check (SiteArt --check), so git must not convert its line endings.
+site/art/** -text
