@@ -1,0 +1,56 @@
+name: pages
+
+# Publishes the project page in site/ to GitHub Pages: https://git-rocky-stack.github.io/STX-Downloader/
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'tools/site/**'
+      - 'README.md'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publish at a time; a newer push waits for the one running rather than cancelling it halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Pinned to each release's commit, as in build.yml; Dependabot proposes new releases.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Missing files, a sitemap that doesn't match, broken JSON-LD, em dashes or emojis stop the publish here.
+      - name: Check the page
+        run: node tools/site/check-site.mjs
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      # Tells Bing, Yandex and the other IndexNow engines the page changed. The key is public by design: the file
+      # site/<key>.txt proves this site owns it. A failed ping doesn't undo the publish.
+      - name: Ping IndexNow
+        continue-on-error: true
+        run: |
+          key=$(ls site | grep -E '^[0-9a-f]{32}\.txt$' | sed 's/\.txt$//')
+          base='https://git-rocky-stack.github.io/STX-Downloader/'
+          body=$(printf '{"host":"git-rocky-stack.github.io","key":"%s","keyLocation":"%s%s.txt","urlList":["%s","%sllms.txt","%sllms-full.txt"]}' \
+            "$key" "$base" "$key" "$base" "$base" "$base")
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST 'https://api.indexnow.org/indexnow' \
+            -H 'Content-Type: application/json; charset=utf-8' -d "$body")
+          echo "IndexNow answered HTTP $status"
+          case "$status" in 200|202) ;; *) exit 1 ;; esac

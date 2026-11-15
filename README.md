@@ -2,6 +2,10 @@
 
 A Windows app that saves media you're allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine. It looks like a piece of solid-state rack gear, because that's the point.
 
+**[Download 1.2.0](https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0)** · [Project page](https://git-rocky-stack.github.io/STX-Downloader/) · [Changelog](CHANGELOG.md) · [MIT license](LICENSE)
+
+![The STX console: the header with ENGINE CURRENT lit, the Source plate, and a Queue of three jobs with their meters](site/screenshots/console-dark.png)
+
 > [!IMPORTANT]
 > **DRM is out of scope.** STX doesn't save or play DRM-protected media. When it sees DRM, it says so and stops.
 >
@@ -13,10 +17,12 @@ Published by Strategia-X (Rocky Elsalaymeh). Support: support@strategia-x.com ·
 
 - [Install](#install)
 - [Quick start](#quick-start)
+- [Screens](#screens)
 - [What it does](#what-it-does): [saving](#saving), [capturing from a page](#capturing-from-a-page), [your secrets](#your-secrets), [Source Truth](#source-truth), [your whole collection](#your-whole-collection), [playing](#playing), [shrinking](#shrinking), [the console](#the-console)
 - [What has and hasn't been tested](#what-has-and-hasnt-been-tested)
 - [Build](#build)
 - [More documentation](#more-documentation)
+- [Contributing](#contributing)
 - [License](#license)
 
 ## Install
@@ -27,6 +33,15 @@ Published by Strategia-X (Rocky Elsalaymeh). Support: support@strategia-x.com ·
 | **Disk** | About 400 MB for the app, and about 430 MB for its tools, which the setup installs with it |
 | **Account** | Your own: no administrator prompt |
 | **Nothing else** | .NET and the Windows App SDK ship inside the app, so there's no runtime to install first (`Stx.App.csproj`, `SelfContained`) |
+
+Download from the [1.2.0 release](https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0):
+
+| File | Size | SHA-256 |
+|---|---|---|
+| [`STXDownloader-1.2.0-setup.exe`](https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe), the installer | 254 MB | 1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363 |
+| [`STXDownloader-1.2.0-win-x64.zip`](https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-win-x64.zip), the app alone | 171 MB | FEAF84A7A1CE1168F31DB827D637F42745886DB1AFF17DA30DFA86BAB53308F1 |
+
+To check a download, run `Get-FileHash .\STXDownloader-1.2.0-setup.exe -Algorithm SHA256` in PowerShell and compare.
 
 1. Run `STXDownloader-1.2.0-setup.exe`. It installs for your account only, and uninstalls from Windows Settings (`tools/installer/STXDownloader.iss`, `PrivilegesRequired=lowest`). Your saved media is never removed.
 2. The setup also installs yt-dlp, FFmpeg and Deno, each checked against the checksum its publisher posts when the setup was built, so the first launch has nothing to download and works offline (`tools/Publish.ps1`). While **TOOL UPDATES** is on, STX keeps yt-dlp current by itself. The zip carries the app alone, and its first launch downloads the tools. See [third-party software](docs/THIRD_PARTY.md).
@@ -51,6 +66,19 @@ The same four steps open the in-app user guide, which shows by itself on the fir
 | 2 | **Save a link** | Copy a video's link, then press **PASTE** on the Source plate. A playlist asks first. |
 | 3 | **Watch it save** | The Queue shows each job's meter. Saves go to `Videos\STX Downloader` unless you choose another folder in Settings. |
 | 4 | **Play and check it** | Select it in the Library and press **OPEN**. Source Truth shows what its audio really is. |
+
+## Screens
+
+Captured from 1.2.0. Each screen is drawn by the app's own panels on sample data (`tools/Capture-Gallery.ps1`, `ConsoleSample`), so no one's real files appear. The [project page](https://git-rocky-stack.github.io/STX-Downloader/#screens) has them all.
+
+| | |
+|---|---|
+| ![The Source Truth plate: AAC 386 kbps, 48 kHz, 6 channels, roll-off 17.8 kHz, minus 14.2 LUFS, a spectrum, level meters and the OUTPUT FORMAT knob](site/screenshots/source-truth.png) | ![The PLAYER plate: a test picture, the time, VOLUME and ENHANCE knobs, and the PREV, PLAY, NEXT, STOP and FULL pads](site/screenshots/player.png) |
+| **Source Truth** measures the audio and gives a plain verdict. | **Player**, on VLC's engine, with ENHANCE. |
+| ![The LIBRARY plate: search, three rows with one FILE MISSING, its pads, and the SHRINK TO knob](site/screenshots/library.png) | ![The SETTINGS plate: quality and parallel-download knobs, switches, folders, PERFORMANCE and BIT-PERFECT](site/screenshots/settings.png) |
+| **Library**, your whole collection. | **Settings**, with USER GUIDE and TUTORIALS. |
+
+![A tutorial on the live console: a spotlight on the Queue's CLEAR pad and a card reading MANAGING THE QUEUE, step 5 of 7](site/screenshots/tutorial.png)
 
 ## What it does
 
@@ -162,6 +190,11 @@ tools\Publish.ps1        # the zip and the installer; add -Sign to sign
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Memory, CPU and playback measurements, and Shrink's quality checks |
 | [docs/REAL-SITE-CHECKS.md](docs/REAL-SITE-CHECKS.md) | Saving from real sites, as checked on 2026-11-01 |
 | [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md) | What ships inside the app, what it downloads, and their licenses |
+| [Project page](https://git-rocky-stack.github.io/STX-Downloader/) | Screens, downloads and release history, published from `site/` by `.github/workflows/pages.yml` |
+
+## Contributing
+
+Issues and pull requests are welcome on [GitHub](https://github.com/Git-Rocky-Stack/STX-Downloader/issues). CI builds and tests every push (`.github/workflows/build.yml`). The screenshot, Device and Corpus tests need a real PC and run locally, as the workflow's comments say. Signing a build (`tools\Publish.ps1 -Sign`) needs the publisher's Azure signing account, so builds made from a fork are unsigned. For security issues, write to support@strategia-x.com rather than opening a public issue.
 
 ## License
 
