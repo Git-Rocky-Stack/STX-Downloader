@@ -59,6 +59,27 @@ export const screwFor = (index) => SCREWS[index % SCREWS.length];
 /** The pointer light's peak opacity, 0 to 1. */
 export const pointerPeakAlpha = (finish) => POINTER_PEAK[finish === 'light' ? 'light' : 'dark'] / 255;
 
+/** How long a level meter holds its peak segment, in ms. */
+export const PEAK_HOLD_MS = 900;
+
+/**
+ * The demo meters' made-up programme: a beat twice a second and some phrasing, per channel. It is the approved
+ * mockup's level() (docs/design/site-v2/hero-rack-stack.html); `noise` is -0.5 to 0.5.
+ */
+export function levelAt(ch, t, noise) {
+  const beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 * 2)), 6);
+  const phrase = 0.62 + 0.25 * Math.sin(t * 0.7 + ch) + 0.1 * Math.sin(t * 2.3 + ch * 2);
+  return Math.min(1.05, phrase * 0.82 + beat * 0.25 + noise * 0.08);
+}
+
+/** One frame of a level meter: fast attack, slow release, and a peak segment held for PEAK_HOLD_MS. */
+export function meterStep(state, target, now, count) {
+  const v = state.v + (target - state.v) * (target > state.v ? 0.55 : 0.12);
+  const lit = Math.round(Math.max(0, Math.min(1, v)) * count);
+  const fresh = lit >= state.peak || now - state.peakT > PEAK_HOLD_MS;
+  return { v, lit, peak: fresh ? lit : state.peak, peakT: fresh ? now : state.peakT };
+}
+
 // ---- DOM ----
 
 const root = () => document.documentElement;
@@ -76,6 +97,8 @@ function applyFinish(finish) {
     pad.dataset.tone = on ? 'green' : 'off';
   }
   for (const img of document.querySelectorAll('img[data-src-dark][data-src-light]')) {
+    // A <picture> picks by the OS's scheme before the script runs; from here on the finish pads decide.
+    img.closest('picture')?.querySelectorAll('source').forEach((source) => source.remove());
     const src = finish === 'light' ? img.dataset.srcLight : img.dataset.srcDark;
     if (img.getAttribute('src') !== src) img.setAttribute('src', src);
   }
@@ -178,6 +201,78 @@ export function initSeven() {
   }
 }
 
+/**
+ * The VFD types its line once. The whole line stays in the HTML, in aria-label and in a screen-reader copy. Every
+ * character is laid out from the start and only its opacity changes, so nothing on the page moves while it types
+ * (a block cursor sits on the next character). Under reduced motion the line is simply there.
+ */
+export function initTyping() {
+  const reduce = media('(prefers-reduced-motion: reduce)');
+  document.querySelectorAll('[data-type]').forEach((el, n) => {
+    if (!once(el, 'typing')) return;
+    const full = el.textContent.replace(/\s+/g, ' ').trim();
+    el.setAttribute('aria-label', full);
+    if (reduce) return;
+    const copy = document.createElement('span');
+    copy.className = 'sr';
+    copy.textContent = full;
+    const shown = document.createElement('span');
+    shown.setAttribute('aria-hidden', 'true');
+    const chars = [...full].map((ch) => {
+      const span = document.createElement('span');
+      span.className = 'ch';
+      span.textContent = ch;
+      return span;
+    });
+    shown.append(...chars);
+    el.replaceChildren(copy, shown);
+    chars[0]?.classList.add('cur');
+    let i = 0;
+    const tick = () => {
+      chars[i].classList.replace('cur', 'on');
+      i += 1;
+      if (i < chars.length) { chars[i].classList.add('cur'); setTimeout(tick, 38 + Math.random() * 40); }
+      else el.dataset.typed = '';
+    };
+    setTimeout(tick, 300 + n * 150);
+  });
+}
+
+/**
+ * The L/R pair silkscreened DEMO: decoration, labeled as such. They run only while on screen and hold still under
+ * reduced motion, showing 20 of 32 segments as the mockup does.
+ */
+export function initMeters() {
+  const meters = [...document.querySelectorAll('.meter[data-kind="level"]')].filter((m) => once(m, 'wired'));
+  if (!meters.length) return;
+  const all = meters.map((el) => ({ el, segs: buildMeter(el), ch: Number(el.dataset.ch) || 0, state: { v: 0, peak: 0, peakT: 0 } }));
+  const show = (m, lit, peak) => m.segs.forEach((seg, i) => {
+    seg.classList.toggle('on', i < lit);
+    seg.classList.toggle('peak', i === peak - 1 && i >= lit);
+  });
+  if (media('(prefers-reduced-motion: reduce)')) { all.forEach((m) => show(m, 20, 0)); return; }
+  const t0 = performance.now();
+  let running = false, visible = false;
+  const frame = (now) => {
+    if (!visible) { running = false; return; }
+    const t = (now - t0) / 1000;
+    for (const m of all) {
+      m.state = meterStep(m.state, levelAt(m.ch, t, Math.random() - 0.5), now, m.segs.length);
+      show(m, m.state.lit, m.state.peak);
+    }
+    requestAnimationFrame(frame);
+  };
+  const start = () => { if (!running) { running = true; requestAnimationFrame(frame); } };
+  if (typeof IntersectionObserver !== 'function') { visible = true; start(); return; }
+  const seen = new Set();
+  const observer = new IntersectionObserver((entries) => {
+    for (const e of entries) { if (e.isIntersecting) seen.add(e.target); else seen.delete(e.target); }
+    visible = seen.size > 0;
+    if (visible) start();
+  });
+  all.forEach((m) => observer.observe(m.el));
+}
+
 /** A soft light on the plate under the pointer, as the app's PointerLight. Off on touch screens and under reduced motion. */
 export function initPointerLight() {
   if (media('(prefers-reduced-motion: reduce)') || media('(hover: none)') || !once(root(), 'pointerWired')) return;
@@ -206,5 +301,7 @@ if (typeof document !== 'undefined') {
   initFinish();
   initStrip();
   initSeven();
+  initTyping();
+  initMeters();
   initPointerLight();
 }

@@ -213,3 +213,26 @@ test('fails_when_json_ld_version_or_download_differs_from_readme', async () => {
   only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(`"downloadUrl":"${SETUP_URL}"`, `"downloadUrl":"${SETUP_URL.replace('1.2.0', '1.1.0')}"`))), /downloadUrl/);
   only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(/,"softwareVersion":"1\.2\.0"/, ''))), /softwareVersion/);
 });
+
+test('fails_when_version_readout_differs_from_readme', async () => {
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('data-release="version" data-value="1.2.0"', 'data-release="version" data-value="1.1.0"'))), /data-release="version".*1\.1\.0/);
+});
+
+test('fails_when_visible_release_text_is_stale', async () => {
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('Setup, 254 MB', 'Setup, 250 MB'))), /250 MB/);
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(`<code>${HASH}</code>`, `<code>${'B'.repeat(64)}</code>`))), /B{64}/);
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('<p>STXDownloader-1.2.0-setup.exe, 254 MB</p>', '<p>STXDownloader-1.1.0-setup.exe, 254 MB</p>'))), /STXDownloader-1\.1\.0-setup\.exe/);
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('<p>171 MB</p>', '<p>170 MB</p>'))), /zip.*170 MB/);
+});
+
+test('text_outside_release_elements_is_not_held_to_the_table', async () => {
+  // "Captured from STX Downloader 1.2.0" is history, not the current release: other versions may appear outside them.
+  assert.deepEqual(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('Captured from STX Downloader 1.2.0', 'Captured from STX Downloader 1.1.0'))), []);
+});
+
+test('release_text_reaches_past_nested_elements_of_the_same_name', async () => {
+  // The zip block's anchor sits in its own <div>; the stale size after that inner </div> is still the zip block's.
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h
+    .replace(/(<div data-release-file="zip"[^>]*>\n)(<a [^\n]*<\/a>)/, '$1<div>$2</div>')
+    .replace('<p>171 MB</p>', '<p>170 MB</p>'))), /zip.*170 MB/);
+});

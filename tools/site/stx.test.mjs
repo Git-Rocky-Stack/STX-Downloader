@@ -2,7 +2,7 @@
 // so these pure helpers import cleanly into Node. Wiring (pads, observers, swaps) is checked in a browser per task.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseFinish, readStoredFinish, storeFinish, litSegments, digitCells, screwFor, pointerPeakAlpha, FINISH_KEY } from '../../site/js/stx.js';
+import { chooseFinish, readStoredFinish, storeFinish, litSegments, digitCells, screwFor, pointerPeakAlpha, FINISH_KEY, levelAt, meterStep, PEAK_HOLD_MS } from '../../site/js/stx.js';
 
 const storage = (items = {}) => ({ getItem: (k) => (k in items ? items[k] : null), setItem: (k, v) => { items[k] = String(v); }, items });
 const throwing = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
@@ -52,4 +52,29 @@ test('screws_turn_round_robin', () => {
 test('pointer_light_peak_follows_PointerLightLayout', () => {
   assert.equal(pointerPeakAlpha('dark'), 22 / 255);
   assert.equal(pointerPeakAlpha('light'), 64 / 255);
+});
+
+test('demo_level_follows_the_mockup_signal', () => {
+  // docs/design/site-v2/hero-rack-stack.html level(): phrase * 0.82 + beat * 0.25 + noise * 0.08, capped at 1.05.
+  assert.ok(Math.abs(levelAt(0, 0, 0) - 0.62 * 0.82) < 1e-9);
+  const beatPeak = 0.125; // sin(2 * pi * 2 * t) = 1, so beat = 1
+  const phrase = 0.62 + 0.25 * Math.sin(0.7 * beatPeak + 1) + 0.1 * Math.sin(2.3 * beatPeak + 2);
+  assert.ok(Math.abs(levelAt(1, beatPeak, 0) - (phrase * 0.82 + 0.25)) < 1e-9);
+  for (let t = 0; t < 20; t += 0.01) assert.ok(levelAt(0, t, 0.5) <= 1.05);
+});
+
+test('demo_meter_attacks_fast_releases_slow_and_holds_its_peak', () => {
+  assert.equal(PEAK_HOLD_MS, 900);
+  let s = { v: 0, peak: 0, peakT: 0 };
+  s = meterStep(s, 1, 0, 32);
+  assert.ok(Math.abs(s.v - 0.55) < 1e-9, 'attack 0.55');
+  assert.equal(s.lit, 18);
+  assert.equal(s.peak, 18);
+  s = meterStep({ v: 1, peak: 32, peakT: 0 }, 0, 100, 32);
+  assert.ok(Math.abs(s.v - 0.88) < 1e-9, 'release 0.12');
+  assert.equal(s.lit, 28);
+  assert.equal(s.peak, 32, 'peak held under 900 ms');
+  s = meterStep({ v: 1, peak: 32, peakT: 0 }, 0, 901, 32);
+  assert.equal(s.peak, 28, 'peak falls to the level after 900 ms');
+  assert.equal(meterStep({ v: 2, peak: 0, peakT: 0 }, 2, 0, 32).lit, 32, 'clamped to the meter');
 });

@@ -28,11 +28,54 @@ function attrsOf(source) {
   return attrs;
 }
 
+// The page without comments, and with script and style bodies emptied, so neither is read as markup.
+const bareOf = (html) => html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, (m) => m.slice(0, m.indexOf('>') + 1));
+const OPEN_TAG = /<([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
+
 function tagsOf(html) {
-  const bare = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, (m) => m.slice(0, m.indexOf('>') + 1));
   const tags = [];
-  for (const m of bare.matchAll(/<([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g)) tags.push({ name: m[1].toLowerCase(), attrs: attrsOf(m[2]) });
+  for (const m of bareOf(html).matchAll(OPEN_TAG)) tags.push({ name: m[1].toLowerCase(), attrs: attrsOf(m[2]) });
   return tags;
+}
+
+// The text people read inside each element that carries data-release-file, up to its own closing tag.
+function releaseTexts(html) {
+  const bare = bareOf(html);
+  const out = [];
+  for (const m of bare.matchAll(OPEN_TAG)) {
+    const kind = attrsOf(m[2])['data-release-file'];
+    if (!kind) continue;
+    const start = m.index + m[0].length;
+    const tag = new RegExp(`<(/?)${m[1]}\\b[^>]*>`, 'gi');
+    tag.lastIndex = start;
+    let depth = 1, end = bare.length, t;
+    while ((t = tag.exec(bare))) { depth += t[1] ? -1 : 1; if (depth === 0) { end = t.index; break; } }
+    out.push({ kind, text: bare.slice(start, end).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() });
+  }
+  return out;
+}
+
+// Release facts written in that text: each must be the README row's own (ruling R24).
+function checkReleaseText(rows, html, problems) {
+  for (const { kind, text } of releaseTexts(html)) {
+    const row = rows[kind];
+    if (!row) continue;
+    const where = `site/index.html: the ${kind} download's text`;
+    let rest = text;
+    for (const [file] of text.matchAll(/STXDownloader-[\w.-]+?\.(?:exe|zip)\b/g)) {
+      if (file !== row.file) problems.push(`${where} names ${file}, README says ${row.file}`);
+      rest = rest.replaceAll(file, ' ');
+    }
+    for (const [hash] of rest.matchAll(/\b[0-9a-fA-F]{64}\b/g)) {
+      if (hash.toLowerCase() !== row.sha256.toLowerCase()) problems.push(`${where} shows SHA-256 ${hash}, README says ${row.sha256}`);
+    }
+    for (const [size] of rest.matchAll(/\b\d+(?:\.\d+)?\s?[KMG]B\b/g)) {
+      if (size.replace(/\s+/, ' ') !== row.size) problems.push(`${where} shows ${size}, README says ${row.size}`);
+    }
+    for (const [version] of rest.matchAll(/\b\d+\.\d+\.\d+\b/g)) {
+      if (version !== row.version) problems.push(`${where} shows version ${version}, README says ${row.version}`);
+    }
+  }
 }
 
 // ---- README release table ----
@@ -125,7 +168,13 @@ export async function checkSite(repoRoot) {
   const rows = readme === null ? null : readmeRows(readme);
   if (readme !== null) {
     if (!rows) problems.push('README.md: no "| File | Size | SHA-256 |" download table');
-    else checkParity(rows, tags, problems);
+    else {
+      checkParity(rows, tags, problems);
+      checkReleaseText(rows, html, problems);
+      for (const { attrs } of tags.filter((t) => t.attrs['data-release'] === 'version')) {
+        if (attrs['data-value'] !== rows.setup?.version) problems.push(`site/index.html: data-release="version" shows ${attrs['data-value']}, README says ${rows.setup?.version}`);
+      }
+    }
     for (const m of readme.matchAll(/\]\(https:\/\/git-rocky-stack\.github\.io\/STX-Downloader\/#([^)\s]+)\)/g)) {
       if (!ids.has(m[1])) problems.push(`README.md:${lineOf(readme, m.index)}: links to ${PAGE_URL}#${m[1]}, but site/index.html has no element with id="${m[1]}"`);
     }

@@ -77,7 +77,7 @@ body{margin:0;min-height:100vh;padding:24px var(--gutter) 96px;color:var(--ink);
 .rack::before,.rack::after{content:"";position:absolute;top:0;bottom:0;width:30px;
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='44'><rect x='10' y='3' width='9' height='9' rx='1' fill='%23000'/><rect x='10' y='11' width='9' height='1' fill='%23ffffff' opacity='.13'/><rect x='10' y='18' width='9' height='9' rx='1' fill='%23000'/><rect x='10' y='26' width='9' height='1' fill='%23ffffff' opacity='.13'/><rect x='10' y='33' width='9' height='9' rx='1' fill='%23000'/><rect x='10' y='41' width='9' height='1' fill='%23ffffff' opacity='.13'/></svg>") 0 12px/30px 44px repeat-y,
-    image-set(url("../art/grain-light@1x.png") 1x,url("../art/grain-light@2x.png") 2x) 0 0/512px 256px,
+    var(--grain) 0 0/512px 256px,
     linear-gradient(90deg,#5d6268,#9aa0a6 30%,#7a8086 55%,#4a4e53);
   background-blend-mode:normal,overlay,normal;box-shadow:inset -1px 0 0 rgba(0,0,0,.7),inset 1px 0 0 rgba(255,255,255,.25)}
 .rack::before{left:0;border-radius:6px 0 0 6px}
@@ -191,8 +191,12 @@ body{margin:0;min-height:100vh;padding:24px var(--gutter) 96px;color:var(--ink);
 
 /* ---- Segment bargraph in a well, under glass (Bargraph.cs). Segments are cells of their strip: 16x14 cores in
    32x30 cells with 8px of glow, scaled to the meter as the app stretches them (Bargraph.cs:134-145). ---- */
-.meter{position:relative;display:inline-flex;gap:2px;padding:6px;border-radius:2px;background:linear-gradient(#020303,#090b0c);
-  box-shadow:0 0 0 1px #000,0 1px 0 1px var(--edge-hi),inset 0 2px 4px #000;--sw:6px;--sh:10px;--sx:.375;--sy:.7142857}
+.meter{position:relative;display:inline-flex;flex:none;gap:2px;padding:6px;border-radius:2px;background:linear-gradient(#020303,#090b0c);
+  box-shadow:0 0 0 1px #000,0 1px 0 1px var(--edge-hi),inset 0 2px 4px #000;--sw:6px;--sh:10px;--sx:.375;--sy:.7142857;
+  /* Sized from its segment count before the script builds the segments, so building them moves nothing. */
+  width:calc(var(--cells) * var(--sw) + (var(--cells) - 1) * 2px + 12px);height:calc(var(--sh) + 12px)}
+.meter[data-segments="24"]{--cells:24}
+.meter[data-segments="32"]{--cells:32}
 .meter::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
   background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,0) 14%),linear-gradient(115.17deg,rgba(255,255,255,.1),rgba(255,255,255,.05) 16%,transparent 16%)}
 .meter>i{position:relative;flex:none;width:var(--sw);height:var(--sh);--cw:calc(32px * var(--sx));--ch:calc(30px * var(--sy));
@@ -224,50 +228,50 @@ body{margin:0;min-height:100vh;padding:24px var(--gutter) 96px;color:var(--ink);
 .pad .led{transform:scale(.75)}
 /* pad art (generated from site/art/manifest.json, one block per size class) */
 /* PAD-ART:BEGIN */
-.pad[data-size="s"]{--fw:96px;--fh:40px;width:102px;height:46px;--bw:152px;--bh:96px;background-image:image-set(url("../art/pad-s-well-dark@1x.png") 1x, url("../art/pad-s-well-dark@2x.png") 2x)}
-:root[data-finish="light"] .pad[data-size="s"]{background-image:image-set(url("../art/pad-s-well-light@1x.png") 1x, url("../art/pad-s-well-light@2x.png") 2x)}
-@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="s"]{background-image:image-set(url("../art/pad-s-well-light@1x.png") 1x, url("../art/pad-s-well-light@2x.png") 2x)}}
-.pad[data-size="s"] .face{background-image:image-set(url("../art/pad-s-face-off@1x.png") 1x, url("../art/pad-s-face-off@2x.png") 2x)}
-.pad[data-size="s"][data-tone="green"] .face{background-image:image-set(url("../art/pad-s-face-green@1x.png") 1x, url("../art/pad-s-face-green@2x.png") 2x)}
-.pad[data-size="s"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-s-face-blue@1x.png") 1x, url("../art/pad-s-face-blue@2x.png") 2x)}
-.pad[data-size="s"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-off@1x.png") 1x, url("../art/pad-s-face-off@2x.png") 2x)}
-.pad[data-size="s"][data-tone="green"]::before{background-image:image-set(url("../art/pad-s-bloom-green@1x.png") 1x, url("../art/pad-s-bloom-green@2x.png") 2x)}
-.pad[data-size="s"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-green@1x.png") 1x, url("../art/pad-s-face-green@2x.png") 2x)}
-.pad[data-size="s"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-s-bloom-blue@1x.png") 1x, url("../art/pad-s-bloom-blue@2x.png") 2x)}
-.pad[data-size="s"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-blue@1x.png") 1x, url("../art/pad-s-face-blue@2x.png") 2x)}
-.pad[data-size="m"]{--fw:128px;--fh:52px;width:134px;height:58px;--bw:184px;--bh:108px;background-image:image-set(url("../art/pad-m-well-dark@1x.png") 1x, url("../art/pad-m-well-dark@2x.png") 2x)}
-:root[data-finish="light"] .pad[data-size="m"]{background-image:image-set(url("../art/pad-m-well-light@1x.png") 1x, url("../art/pad-m-well-light@2x.png") 2x)}
-@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="m"]{background-image:image-set(url("../art/pad-m-well-light@1x.png") 1x, url("../art/pad-m-well-light@2x.png") 2x)}}
-.pad[data-size="m"] .face{background-image:image-set(url("../art/pad-m-face-off@1x.png") 1x, url("../art/pad-m-face-off@2x.png") 2x)}
-.pad[data-size="m"][data-tone="green"] .face{background-image:image-set(url("../art/pad-m-face-green@1x.png") 1x, url("../art/pad-m-face-green@2x.png") 2x)}
-.pad[data-size="m"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-m-face-blue@1x.png") 1x, url("../art/pad-m-face-blue@2x.png") 2x)}
-.pad[data-size="m"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-off@1x.png") 1x, url("../art/pad-m-face-off@2x.png") 2x)}
-.pad[data-size="m"][data-tone="green"]::before{background-image:image-set(url("../art/pad-m-bloom-green@1x.png") 1x, url("../art/pad-m-bloom-green@2x.png") 2x)}
-.pad[data-size="m"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-green@1x.png") 1x, url("../art/pad-m-face-green@2x.png") 2x)}
-.pad[data-size="m"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-m-bloom-blue@1x.png") 1x, url("../art/pad-m-bloom-blue@2x.png") 2x)}
-.pad[data-size="m"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-blue@1x.png") 1x, url("../art/pad-m-face-blue@2x.png") 2x)}
-.pad[data-size="l"]{--fw:176px;--fh:52px;width:182px;height:58px;--bw:232px;--bh:108px;background-image:image-set(url("../art/pad-l-well-dark@1x.png") 1x, url("../art/pad-l-well-dark@2x.png") 2x)}
-:root[data-finish="light"] .pad[data-size="l"]{background-image:image-set(url("../art/pad-l-well-light@1x.png") 1x, url("../art/pad-l-well-light@2x.png") 2x)}
-@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="l"]{background-image:image-set(url("../art/pad-l-well-light@1x.png") 1x, url("../art/pad-l-well-light@2x.png") 2x)}}
-.pad[data-size="l"] .face{background-image:image-set(url("../art/pad-l-face-off@1x.png") 1x, url("../art/pad-l-face-off@2x.png") 2x)}
-.pad[data-size="l"][data-tone="green"] .face{background-image:image-set(url("../art/pad-l-face-green@1x.png") 1x, url("../art/pad-l-face-green@2x.png") 2x)}
-.pad[data-size="l"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-l-face-blue@1x.png") 1x, url("../art/pad-l-face-blue@2x.png") 2x)}
-.pad[data-size="l"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-off@1x.png") 1x, url("../art/pad-l-face-off@2x.png") 2x)}
-.pad[data-size="l"][data-tone="green"]::before{background-image:image-set(url("../art/pad-l-bloom-green@1x.png") 1x, url("../art/pad-l-bloom-green@2x.png") 2x)}
-.pad[data-size="l"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-green@1x.png") 1x, url("../art/pad-l-face-green@2x.png") 2x)}
-.pad[data-size="l"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-l-bloom-blue@1x.png") 1x, url("../art/pad-l-bloom-blue@2x.png") 2x)}
-.pad[data-size="l"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-blue@1x.png") 1x, url("../art/pad-l-face-blue@2x.png") 2x)}
-.pad[data-size="xl"]{--fw:240px;--fh:72px;width:246px;height:78px;--bw:296px;--bh:128px;background-image:image-set(url("../art/pad-xl-well-dark@1x.png") 1x, url("../art/pad-xl-well-dark@2x.png") 2x)}
-:root[data-finish="light"] .pad[data-size="xl"]{background-image:image-set(url("../art/pad-xl-well-light@1x.png") 1x, url("../art/pad-xl-well-light@2x.png") 2x)}
-@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="xl"]{background-image:image-set(url("../art/pad-xl-well-light@1x.png") 1x, url("../art/pad-xl-well-light@2x.png") 2x)}}
-.pad[data-size="xl"] .face{background-image:image-set(url("../art/pad-xl-face-off@1x.png") 1x, url("../art/pad-xl-face-off@2x.png") 2x)}
-.pad[data-size="xl"][data-tone="green"] .face{background-image:image-set(url("../art/pad-xl-face-green@1x.png") 1x, url("../art/pad-xl-face-green@2x.png") 2x)}
-.pad[data-size="xl"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-xl-face-blue@1x.png") 1x, url("../art/pad-xl-face-blue@2x.png") 2x)}
-.pad[data-size="xl"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-off@1x.png") 1x, url("../art/pad-xl-face-off@2x.png") 2x)}
-.pad[data-size="xl"][data-tone="green"]::before{background-image:image-set(url("../art/pad-xl-bloom-green@1x.png") 1x, url("../art/pad-xl-bloom-green@2x.png") 2x)}
-.pad[data-size="xl"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-green@1x.png") 1x, url("../art/pad-xl-face-green@2x.png") 2x)}
-.pad[data-size="xl"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-xl-bloom-blue@1x.png") 1x, url("../art/pad-xl-bloom-blue@2x.png") 2x)}
-.pad[data-size="xl"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-blue@1x.png") 1x, url("../art/pad-xl-face-blue@2x.png") 2x)}
+.pad[data-pad="s"]{--fw:96px;--fh:40px;width:102px;height:46px;--bw:152px;--bh:96px;background-image:image-set(url("../art/pad-s-well-dark@1x.png") 1x, url("../art/pad-s-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-pad="s"]{background-image:image-set(url("../art/pad-s-well-light@1x.png") 1x, url("../art/pad-s-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-pad="s"]{background-image:image-set(url("../art/pad-s-well-light@1x.png") 1x, url("../art/pad-s-well-light@2x.png") 2x)}}
+.pad[data-pad="s"] .face{background-image:image-set(url("../art/pad-s-face-off@1x.png") 1x, url("../art/pad-s-face-off@2x.png") 2x)}
+.pad[data-pad="s"][data-tone="green"] .face{background-image:image-set(url("../art/pad-s-face-green@1x.png") 1x, url("../art/pad-s-face-green@2x.png") 2x)}
+.pad[data-pad="s"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-s-face-blue@1x.png") 1x, url("../art/pad-s-face-blue@2x.png") 2x)}
+.pad[data-pad="s"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-off@1x.png") 1x, url("../art/pad-s-face-off@2x.png") 2x)}
+.pad[data-pad="s"][data-tone="green"]::before{background-image:image-set(url("../art/pad-s-bloom-green@1x.png") 1x, url("../art/pad-s-bloom-green@2x.png") 2x)}
+.pad[data-pad="s"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-green@1x.png") 1x, url("../art/pad-s-face-green@2x.png") 2x)}
+.pad[data-pad="s"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-s-bloom-blue@1x.png") 1x, url("../art/pad-s-bloom-blue@2x.png") 2x)}
+.pad[data-pad="s"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-blue@1x.png") 1x, url("../art/pad-s-face-blue@2x.png") 2x)}
+.pad[data-pad="m"]{--fw:128px;--fh:52px;width:134px;height:58px;--bw:184px;--bh:108px;background-image:image-set(url("../art/pad-m-well-dark@1x.png") 1x, url("../art/pad-m-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-pad="m"]{background-image:image-set(url("../art/pad-m-well-light@1x.png") 1x, url("../art/pad-m-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-pad="m"]{background-image:image-set(url("../art/pad-m-well-light@1x.png") 1x, url("../art/pad-m-well-light@2x.png") 2x)}}
+.pad[data-pad="m"] .face{background-image:image-set(url("../art/pad-m-face-off@1x.png") 1x, url("../art/pad-m-face-off@2x.png") 2x)}
+.pad[data-pad="m"][data-tone="green"] .face{background-image:image-set(url("../art/pad-m-face-green@1x.png") 1x, url("../art/pad-m-face-green@2x.png") 2x)}
+.pad[data-pad="m"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-m-face-blue@1x.png") 1x, url("../art/pad-m-face-blue@2x.png") 2x)}
+.pad[data-pad="m"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-off@1x.png") 1x, url("../art/pad-m-face-off@2x.png") 2x)}
+.pad[data-pad="m"][data-tone="green"]::before{background-image:image-set(url("../art/pad-m-bloom-green@1x.png") 1x, url("../art/pad-m-bloom-green@2x.png") 2x)}
+.pad[data-pad="m"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-green@1x.png") 1x, url("../art/pad-m-face-green@2x.png") 2x)}
+.pad[data-pad="m"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-m-bloom-blue@1x.png") 1x, url("../art/pad-m-bloom-blue@2x.png") 2x)}
+.pad[data-pad="m"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-blue@1x.png") 1x, url("../art/pad-m-face-blue@2x.png") 2x)}
+.pad[data-pad="l"]{--fw:176px;--fh:52px;width:182px;height:58px;--bw:232px;--bh:108px;background-image:image-set(url("../art/pad-l-well-dark@1x.png") 1x, url("../art/pad-l-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-pad="l"]{background-image:image-set(url("../art/pad-l-well-light@1x.png") 1x, url("../art/pad-l-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-pad="l"]{background-image:image-set(url("../art/pad-l-well-light@1x.png") 1x, url("../art/pad-l-well-light@2x.png") 2x)}}
+.pad[data-pad="l"] .face{background-image:image-set(url("../art/pad-l-face-off@1x.png") 1x, url("../art/pad-l-face-off@2x.png") 2x)}
+.pad[data-pad="l"][data-tone="green"] .face{background-image:image-set(url("../art/pad-l-face-green@1x.png") 1x, url("../art/pad-l-face-green@2x.png") 2x)}
+.pad[data-pad="l"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-l-face-blue@1x.png") 1x, url("../art/pad-l-face-blue@2x.png") 2x)}
+.pad[data-pad="l"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-off@1x.png") 1x, url("../art/pad-l-face-off@2x.png") 2x)}
+.pad[data-pad="l"][data-tone="green"]::before{background-image:image-set(url("../art/pad-l-bloom-green@1x.png") 1x, url("../art/pad-l-bloom-green@2x.png") 2x)}
+.pad[data-pad="l"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-green@1x.png") 1x, url("../art/pad-l-face-green@2x.png") 2x)}
+.pad[data-pad="l"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-l-bloom-blue@1x.png") 1x, url("../art/pad-l-bloom-blue@2x.png") 2x)}
+.pad[data-pad="l"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-blue@1x.png") 1x, url("../art/pad-l-face-blue@2x.png") 2x)}
+.pad[data-pad="xl"]{--fw:240px;--fh:72px;width:246px;height:78px;--bw:296px;--bh:128px;background-image:image-set(url("../art/pad-xl-well-dark@1x.png") 1x, url("../art/pad-xl-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-pad="xl"]{background-image:image-set(url("../art/pad-xl-well-light@1x.png") 1x, url("../art/pad-xl-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-pad="xl"]{background-image:image-set(url("../art/pad-xl-well-light@1x.png") 1x, url("../art/pad-xl-well-light@2x.png") 2x)}}
+.pad[data-pad="xl"] .face{background-image:image-set(url("../art/pad-xl-face-off@1x.png") 1x, url("../art/pad-xl-face-off@2x.png") 2x)}
+.pad[data-pad="xl"][data-tone="green"] .face{background-image:image-set(url("../art/pad-xl-face-green@1x.png") 1x, url("../art/pad-xl-face-green@2x.png") 2x)}
+.pad[data-pad="xl"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-xl-face-blue@1x.png") 1x, url("../art/pad-xl-face-blue@2x.png") 2x)}
+.pad[data-pad="xl"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-off@1x.png") 1x, url("../art/pad-xl-face-off@2x.png") 2x)}
+.pad[data-pad="xl"][data-tone="green"]::before{background-image:image-set(url("../art/pad-xl-bloom-green@1x.png") 1x, url("../art/pad-xl-bloom-green@2x.png") 2x)}
+.pad[data-pad="xl"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-green@1x.png") 1x, url("../art/pad-xl-face-green@2x.png") 2x)}
+.pad[data-pad="xl"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-xl-bloom-blue@1x.png") 1x, url("../art/pad-xl-bloom-blue@2x.png") 2x)}
+.pad[data-pad="xl"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-blue@1x.png") 1x, url("../art/pad-xl-face-blue@2x.png") 2x)}
 /* PAD-ART:END */
 
 /* ---- The sticky 1U strip ---- */
@@ -281,6 +285,43 @@ html:not(.js) .strip [data-finish-pad]{visibility:hidden}
 /* ---- Units ---- */
 .unit>h2{margin:0}
 .blank{display:flex;align-items:center}
+
+/* Monitor unit: the real console behind deep glass, shown no larger than it was captured, so it stays sharp. */
+.monitor-unit{display:flex;flex-direction:column;align-items:center;gap:16px}
+.monitor{position:relative;width:100%;max-width:964px;border-radius:6px;padding:10px;background:linear-gradient(170deg,#25282c,#09090a 40%,#141619);
+  box-shadow:0 0 0 1px #000,0 1px 0 1px var(--edge-hi),inset 0 1px 0 rgba(255,255,255,.12)}
+.monitor-glass{position:relative;overflow:hidden;border-radius:3px;box-shadow:inset 0 0 0 1px #000,0 0 0 1px #000}
+.monitor-glass img{display:block;width:100%;height:auto;aspect-ratio:944/601}
+.monitor-glass::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115.17deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.05) 16%,transparent 16%,transparent 56%,rgba(255,255,255,.035) 56%,rgba(255,255,255,.035) 72%,transparent 72%),
+    linear-gradient(180deg,rgba(255,255,255,.06),transparent 10%);
+  box-shadow:inset 0 10px 22px rgba(0,0,0,.75),inset 0 0 0 1px rgba(0,0,0,.9)}
+.caption{width:100%;max-width:964px;margin:0}
+
+/* The 2U download unit: the pitch on glass, the version, the demo meters and the lit DOWNLOAD pad. */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:24px 32px}
+.hero-glass{min-width:0}
+.pitch{margin:0 0 8px;font:700 28px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+  text-shadow:0 0 1px #d4f6ff,0 0 7px rgba(88,199,255,.85),0 0 18px rgba(88,199,255,.28),1px 2px 1px rgba(0,0,0,.55)}
+.hero .vfd p{margin:0;max-width:60ch}
+.hero-side{display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+.version{display:flex;align-items:center;gap:12px}
+.demo{display:grid;grid-template-columns:auto auto;align-items:center;gap:6px 8px}
+.demo .meter{--sw:4px;--sh:8px;--sx:.25;--sy:.5714286}
+.demo-tag{grid-column:2;justify-self:end}
+.pad .go{display:flex;flex-direction:column;align-items:center;gap:4px}
+.pad[data-pad="xl"]{font-size:15px}
+.pad small{font-size:10px;letter-spacing:.14em;font-weight:600;opacity:.9}
+/* Typing: every character is laid out from the start and only shows when typed, so the line never reflows. */
+.ch{opacity:0}
+.ch.on{opacity:1}
+.ch.cur{opacity:1;color:transparent;text-shadow:none;background:#8ae8ff;box-shadow:0 0 8px #58c7ff}
+/* Until the script takes over the line, a failed script can't leave the pitch blank: it shows by itself after 2.5 s. */
+@media (prefers-reduced-motion:no-preference){
+  html.js [data-type]:not([data-typing]){color:transparent;text-shadow:none;animation:type-failsafe 0s 2.5s forwards}
+}
+@keyframes type-failsafe{to{color:#8ae8ff;text-shadow:0 0 1px #d4f6ff,0 0 7px rgba(88,199,255,.85)}}
+@media (max-width:1100px){.hero{grid-template-columns:minmax(0,1fr) auto}.hero>.pad{grid-column:1 / -1;justify-self:start}}
 
 @media (hover:none){.plate::before{display:none}}
 @media (prefers-reduced-motion:reduce){
