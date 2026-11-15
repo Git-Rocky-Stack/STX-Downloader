@@ -1,13 +1,17 @@
 // Pre-publish check for the project page in site/. .github/workflows/pages.yml runs it, and so can you:
 // `node tools/site/check-site.mjs`. It exits 1 and lists every problem, so a page that disagrees with the README's
 // release table, links to a missing file, or carries an em dash or an emoji never reaches GitHub Pages.
-import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync, realpathSync } from 'node:fs';
 import { join, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const PAGE_URL = 'https://git-rocky-stack.github.io/STX-Downloader/';
+// GitHub Pages serves site/ at this path, so a root-absolute reference anywhere else leaves the project.
+const BASE_PATH = '/STX-Downloader/';
 const EM_DASH = /\u2014/;
-const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/u;
+// Any pictograph, plus the parts that build emoji out of plain characters: flag letters, the keycap and VS16.
+const EMOJI = /\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}\u{20E3}\u{FE0F}]/u;
+const OPEN_GRAPH = ['og:title', 'og:description', 'og:image', 'twitter:card'];
 const TITLE_LEN = [30, 65];
 const DESC_LEN = [120, 165];
 
@@ -57,7 +61,7 @@ function checkParity(rows, tags, problems) {
     const releaseVersion = /\/releases\/download\/v([^/]+)\//.exec(row.url)?.[1];
     if (releaseVersion !== row.version) problems.push(`README.md: ${row.file} has version ${row.version} but its release link says ${releaseVersion}`);
     const els = tags.filter((t) => t.attrs['data-release-file'] === kind);
-    if (!els.length) { if (kind === 'setup') problems.push('site/index.html: no element has data-release-file="setup"'); continue; }
+    if (!els.length) problems.push(`site/index.html: no element has data-release-file="${kind}"`);
     for (const { attrs } of els) {
       const where = `site/index.html: data-release-file="${kind}"`;
       if (attrs['data-version'] !== row.version) problems.push(`${where} has data-version "${attrs['data-version']}", README says "${row.version}"`);
@@ -73,12 +77,24 @@ function checkParity(rows, tags, problems) {
 
 const isRemote = (ref) => /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(ref);
 
+// A reference must land on a file in site/. Relative refs resolve from `baseDir`; the page's own URL and
+// /STX-Downloader/ paths resolve from site/; any other root-absolute path is outside what Pages serves for us.
+// A path ending in / means its index.html.
 function checkRef(ref, baseDir, siteDir, owner, problems) {
-  if (!ref || isRemote(ref)) return;
-  const clean = decodeURI(ref.split('#')[0].split('?')[0]);
-  if (!clean) return;
-  const target = clean.startsWith('/') ? join(siteDir, clean) : resolve(baseDir, clean);
-  const inside = target === siteDir || target.startsWith(siteDir + sep);
+  if (!ref) return;
+  const path = ref.split('#')[0].split('?')[0];
+  let target;
+  if (ref.startsWith(PAGE_URL)) target = join(siteDir, decodeURI(path.slice(PAGE_URL.length)));
+  else if (path.startsWith('/') && !path.startsWith('//')) {
+    if (path !== BASE_PATH.slice(0, -1) && !path.startsWith(BASE_PATH)) {
+      problems.push(`${owner}: points at ${ref}, which is outside ${BASE_PATH} (Pages serves site/ there)`);
+      return;
+    }
+    target = join(siteDir, decodeURI(path.slice(BASE_PATH.length - 1)));
+  } else if (isRemote(ref) || !path) return;
+  else target = resolve(baseDir, decodeURI(path));
+  if (path.endsWith('/') || target === siteDir || (existsSync(target) && statSync(target).isDirectory())) target = join(target, 'index.html');
+  const inside = target.startsWith(siteDir + sep);
   if (!inside || !existsSync(target)) problems.push(`${owner}: points at ${ref}, which isn't in site/`);
 }
 
@@ -103,13 +119,13 @@ export async function checkSite(repoRoot) {
   const readme = existsSync(readmePath) ? read(readmePath) : null;
   if (readme === null) problems.push('README.md: missing');
   const tags = tagsOf(html);
+  const ids = new Set(tags.map((t) => t.attrs.id).filter(Boolean));
 
   // README parity
   if (readme !== null) {
     const rows = readmeRows(readme);
     if (!rows) problems.push('README.md: no "| File | Size | SHA-256 |" download table');
     else checkParity(rows, tags, problems);
-    const ids = new Set(tags.map((t) => t.attrs.id).filter(Boolean));
     for (const m of readme.matchAll(/\]\(https:\/\/git-rocky-stack\.github\.io\/STX-Downloader\/#([^)\s]+)\)/g)) {
       if (!ids.has(m[1])) problems.push(`README.md:${lineOf(readme, m.index)}: links to ${PAGE_URL}#${m[1]}, but site/index.html has no element with id="${m[1]}"`);
     }
@@ -135,11 +151,29 @@ export async function checkSite(repoRoot) {
     if (!t.attrs.width || !t.attrs.height) problems.push(`site/index.html: <img ${src}> needs both width and height`);
   }
 
-  // local references: html src, href, srcset; css url() and image-set()
-  for (const { attrs } of tags) {
+  // local references: html src, href, srcset, og:image and twitter:image; css url() and image-set()
+  for (const { name, attrs } of tags) {
     for (const key of ['src', 'href']) if (attrs[key] !== undefined) checkRef(attrs[key], siteDir, siteDir, 'site/index.html', problems);
     if (attrs.srcset) for (const part of attrs.srcset.split(',')) checkRef(part.trim().split(/\s+/)[0], siteDir, siteDir, 'site/index.html', problems);
+    if (name === 'meta' && ['og:image', 'twitter:image'].includes(attrs.property ?? attrs.name)) checkRef(attrs.content, siteDir, siteDir, 'site/index.html', problems);
   }
+
+  // in-page links: every href="#id" has its element
+  for (const { attrs } of tags) {
+    if (!attrs.href?.startsWith('#') || attrs.href.length < 2) continue;
+    const id = decodeURIComponent(attrs.href.slice(1));
+    if (!ids.has(id)) problems.push(`site/index.html: links to #${id}, but no element has id="${id}"`);
+  }
+
+  // language, canonical, Open Graph and Twitter card
+  if (!tags.find((t) => t.name === 'html')?.attrs.lang) problems.push('site/index.html: <html> has no lang attribute');
+  const canonicals = tags.filter((t) => t.name === 'link' && (t.attrs.rel ?? '').toLowerCase().split(/\s+/).includes('canonical'));
+  if (canonicals.length !== 1) problems.push(`site/index.html: want one <link rel="canonical">, found ${canonicals.length}`);
+  else if (canonicals[0].attrs.href !== PAGE_URL) problems.push(`site/index.html: canonical is "${canonicals[0].attrs.href}", want "${PAGE_URL}"`);
+  const metaContent = (key) => tags.find((t) => t.name === 'meta' && (t.attrs.property === key || t.attrs.name === key))?.attrs.content;
+  for (const key of OPEN_GRAPH) if (!metaContent(key)) problems.push(`site/index.html: no ${key} meta tag with content`);
+  const ogImage = metaContent('og:image');
+  if (ogImage && !ogImage.startsWith('https://')) problems.push(`site/index.html: og:image "${ogImage}" must be an absolute https URL`);
   const cssDir = join(siteDir, 'css');
   if (existsSync(cssDir)) {
     for (const name of readdirSync(cssDir).filter((n) => n.endsWith('.css'))) {
@@ -152,8 +186,14 @@ export async function checkSite(repoRoot) {
   let hasApp = false;
   const hasType = (node) => Array.isArray(node) ? node.some(hasType) : node && typeof node === 'object'
     && ([].concat(node['@type'] ?? []).includes('SoftwareApplication') || hasType(node['@graph'] ?? []));
+  // Every block is parsed and checked: none is skipped once the SoftwareApplication block has been seen.
   for (const [i, block] of blocks.entries()) {
-    try { hasApp ||= hasType(JSON.parse(block)); } catch (e) { problems.push(`site/index.html: JSON-LD block ${i + 1} is not valid JSON (${e.message})`); }
+    let data;
+    try { data = JSON.parse(block); } catch (e) { problems.push(`site/index.html: JSON-LD block ${i + 1} is not valid JSON (${e.message})`); continue; }
+    for (const node of [].concat(data)) {
+      if (node?.['@context'] !== 'https://schema.org') problems.push(`site/index.html: JSON-LD block ${i + 1} has @context ${JSON.stringify(node?.['@context'])}, want "https://schema.org"`);
+    }
+    if (hasType(data)) hasApp = true;
   }
   if (!hasApp) problems.push('site/index.html: no JSON-LD block of @type SoftwareApplication');
 
@@ -164,6 +204,13 @@ export async function checkSite(repoRoot) {
     const urls = [...read(sitemapPath).matchAll(/<url>([\s\S]*?)<\/url>/g)];
     if (!urls.length) problems.push('site/sitemap.xml: lists no <url>');
     for (const u of urls) if (!/<lastmod>\s*\S[^<]*<\/lastmod>/.test(u[1])) problems.push(`site/sitemap.xml: a <url> has no lastmod (${/<loc>([^<]*)/.exec(u[1])?.[1] ?? 'no loc'})`);
+    const locs = urls.map((u) => /<loc>\s*([^<\s]+)\s*<\/loc>/.exec(u[1])?.[1]);
+    for (const loc of locs) {
+      if (!loc) problems.push('site/sitemap.xml: a <url> has no <loc>');
+      else if (!loc.startsWith(PAGE_URL)) problems.push(`site/sitemap.xml: ${loc} is not under ${PAGE_URL}`);
+      else checkRef(loc, siteDir, siteDir, 'site/sitemap.xml', problems);
+    }
+    if (urls.length && !locs.includes(PAGE_URL)) problems.push(`site/sitemap.xml: does not list the page itself, ${PAGE_URL}`);
   }
   const robotsPath = join(siteDir, 'robots.txt');
   if (!existsSync(robotsPath)) problems.push('site/robots.txt: missing');
@@ -183,8 +230,24 @@ export async function checkSite(repoRoot) {
   return problems;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+// True when `argv1` (process.argv[1]) is this module run as the entry script. Node 22.18+/24.2+ answer through
+// `main` (import.meta.main); older Node compares real paths, so a symlinked checkout or a drive letter in another
+// case can't make the check skip itself and exit 0 unchecked.
+export function isEntry(argv1, moduleUrl, main, platform = process.platform) {
+  if (typeof main === 'boolean') return main;
+  if (!argv1) return false;
+  try {
+    const a = realpathSync(resolve(argv1));
+    const b = realpathSync(fileURLToPath(moduleUrl));
+    return platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  } catch {
+    return false;
+  }
+}
+
+// `node tools/site/check-site.mjs [repoRoot]`: checks the repo it lives in unless a root is given.
+if (isEntry(process.argv[1], import.meta.url, import.meta.main)) {
+  const root = process.argv[2] ? resolve(process.argv[2]) : join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const problems = await checkSite(root);
   if (problems.length) {
     console.error(`${problems.length} problem(s):\n` + problems.map((p) => `  - ${p}`).join('\n'));
