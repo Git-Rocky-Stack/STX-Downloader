@@ -1,0 +1,290 @@
+/* STX Downloader's project page: the page is a rack. Fixed-size parts (screws, LEDs, segments, digits, pads, grain)
+   are images drawn by the app's own art code (tools/site/SiteArt, into site/art/). Plates, glass and screens are CSS
+   built from the app's numbers, each cited where it is used. Spacing is on an 8px grid; 1U is 44px. */
+
+/* ---- Fonts: self-hosted subsets (docs/THIRD_PARTY.md). Segoe UI comes first where Windows has it. ---- */
+@font-face{font-family:"STX Mono";src:url("../fonts/cascadia-mono.woff2") format("woff2");font-weight:200 700;font-display:swap}
+@font-face{font-family:"STX Label";src:url("../fonts/selawik.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"STX Label";src:url("../fonts/selawik-semibold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"STX Label";src:url("../fonts/selawik-bold.woff2") format("woff2");font-weight:700;font-display:swap}
+
+/* ---- Finish tokens: src/Stx.Look/LookTokens.cs (Dark 13-24, Light 29-39). #AARRGGBB there is rgba() here. ---- */
+:root{
+  --plate-top:#3a3d41;--plate-mid:#2a2c2f;--plate-bot:#1d1f22;
+  --ink:#dfe3e8;--ink-dim:#a4abb3;
+  --edge-hi:rgba(255,255,255,.2);--edge-lo:rgba(0,0,0,.8);
+  --chassis:#08090a;
+  --engrave-hi:rgba(255,255,255,.141);--engrave-lo:rgba(0,0,0,.851);
+  --accent:#7fd4ff;
+  /* Sheen and ear seams, as the approved mockup (docs/design/site-v2/hero-rack-stack.html). */
+  --sheen:rgba(255,255,255,.10);--sheen-blend:soft-light;--sheen-op:1;
+  --seam-lo:rgba(0,0,0,.28);--seam-hi:rgba(255,255,255,.07);
+  --room-hi:#1a1c1f;
+  --grain:image-set(url("../art/grain-dark@1x.png") 1x,url("../art/grain-dark@2x.png") 2x);
+  --pointer-peak:.0863;
+  --u:44px;
+  --gutter:16px;
+  --label:"Segoe UI","STX Label",system-ui,sans-serif;
+  --mono:"Cascadia Mono","STX Mono",Consolas,monospace;
+  color-scheme:dark;
+}
+:root[data-finish="light"]{
+  --plate-top:#e0e2e5;--plate-mid:#c4c7cb;--plate-bot:#a6aaaf;
+  --ink:#121417;--ink-dim:#33383e;
+  --edge-hi:rgba(255,255,255,.851);--edge-lo:rgba(0,0,0,.549);
+  --chassis:#26282b;
+  --engrave-hi:rgba(0,0,0,.278);--engrave-lo:rgba(255,255,255,.702);
+  --accent:#073457;
+  --sheen:rgba(255,255,255,.55);--sheen-blend:normal;--sheen-op:.45;
+  --seam-lo:rgba(0,0,0,.19);--seam-hi:rgba(255,255,255,.3);
+  --room-hi:#3a3d41;
+  --grain:image-set(url("../art/grain-light@1x.png") 1x,url("../art/grain-light@2x.png") 2x);
+  --pointer-peak:.251;
+  color-scheme:light;
+}
+/* No script: the OS's scheme picks the finish (the pads that switch it need the script, so they are hidden). */
+@media (prefers-color-scheme:light){
+  :root:not([data-finish="dark"]){
+    --plate-top:#e0e2e5;--plate-mid:#c4c7cb;--plate-bot:#a6aaaf;
+    --ink:#121417;--ink-dim:#33383e;
+    --edge-hi:rgba(255,255,255,.851);--edge-lo:rgba(0,0,0,.549);
+    --chassis:#26282b;
+    --engrave-hi:rgba(0,0,0,.278);--engrave-lo:rgba(255,255,255,.702);
+    --accent:#073457;
+    --sheen:rgba(255,255,255,.55);--sheen-blend:normal;--sheen-op:.45;
+    --seam-lo:rgba(0,0,0,.19);--seam-hi:rgba(255,255,255,.3);
+    --room-hi:#3a3d41;
+    --grain:image-set(url("../art/grain-light@1x.png") 1x,url("../art/grain-light@2x.png") 2x);
+    --pointer-peak:.251;
+    color-scheme:light;
+  }
+}
+
+/* ---- Room ---- */
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--chassis);scroll-behavior:smooth;scroll-padding-top:96px}
+body{margin:0;min-height:100vh;padding:24px var(--gutter) 96px;color:var(--ink);font:400 14px/1.5 var(--label);
+  background:radial-gradient(120% 60% at 50% -10%,var(--room-hi),var(--chassis) 60%) no-repeat,var(--chassis)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.skip{position:absolute;left:var(--gutter);top:-64px;z-index:100;padding:12px 16px;background:#000;color:#fff;font:700 14px/1.2 var(--label);border-radius:4px}
+.skip:focus{top:8px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---- Rack: rails with square cage-nut holes, three per U ---- */
+.rack{position:relative;max-width:1408px;margin:0 auto;padding:0 30px;border-radius:6px;
+  background:linear-gradient(90deg,#000 0,#0d0e10 30px,#040405 31px,#040405 calc(100% - 31px),#0d0e10 calc(100% - 30px),#000);
+  box-shadow:0 50px 90px rgba(0,0,0,.85),0 0 0 1px #000,inset 0 1px 0 rgba(255,255,255,.04)}
+.rack::before,.rack::after{content:"";position:absolute;top:0;bottom:0;width:30px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='44'><rect x='10' y='3' width='9' height='9' rx='1' fill='%23000'/><rect x='10' y='11' width='9' height='1' fill='%23ffffff' opacity='.13'/><rect x='10' y='18' width='9' height='9' rx='1' fill='%23000'/><rect x='10' y='26' width='9' height='1' fill='%23ffffff' opacity='.13'/><rect x='10' y='33' width='9' height='9' rx='1' fill='%23000'/><rect x='10' y='41' width='9' height='1' fill='%23ffffff' opacity='.13'/></svg>") 0 12px/30px 44px repeat-y,
+    image-set(url("../art/grain-light@1x.png") 1x,url("../art/grain-light@2x.png") 2x) 0 0/512px 256px,
+    linear-gradient(90deg,#5d6268,#9aa0a6 30%,#7a8086 55%,#4a4e53);
+  background-blend-mode:normal,overlay,normal;box-shadow:inset -1px 0 0 rgba(0,0,0,.7),inset 1px 0 0 rgba(255,255,255,.25)}
+.rack::before{left:0;border-radius:6px 0 0 6px}
+.rack::after{right:0;border-radius:0 6px 6px 0}
+.stack,.stack>main{position:relative;z-index:1;display:grid;gap:3px}
+.stack{margin:0 -26px}
+
+/* ---- Faceplate: the app's grain over its gradient (PlateArt), a chamfered edge, sheen from top left ---- */
+.plate{position:relative;isolation:isolate;overflow:hidden;border-radius:3px;padding:24px 64px;min-height:calc(var(--u) * var(--units,1));
+  background:
+    linear-gradient(90deg,var(--seam-lo),var(--seam-hi)) 48px 0/2px 100% no-repeat,
+    linear-gradient(90deg,var(--seam-lo),var(--seam-hi)) calc(100% - 48px) 0/2px 100% no-repeat,
+    var(--grain) 0 0/512px 256px,
+    linear-gradient(178deg,var(--plate-top),var(--plate-mid) 26%,var(--plate-bot));
+  background-blend-mode:normal,normal,overlay,normal;
+  box-shadow:inset 0 1px 0 var(--edge-hi),inset 0 2px 1px rgba(255,255,255,.06),inset 1px 0 0 rgba(255,255,255,.07),inset -1px 0 0 rgba(0,0,0,.45),inset 0 -1px 0 var(--edge-lo),inset 0 -3px 3px rgba(0,0,0,.28),0 3px 6px rgba(0,0,0,.95)}
+.plate::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:var(--sheen-op);mix-blend-mode:var(--sheen-blend);
+  background:radial-gradient(60% 140% at 30% 12%,var(--sheen),transparent 62%),
+             linear-gradient(100deg,transparent 16%,rgba(255,255,255,.05) 30%,transparent 44%)}
+/* Pointer light: src/Stx.Look/PointerLightLayout.cs, a 760x260 ellipse from its peak alpha to nothing (PointerLight.cs:17-21). */
+.plate::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:var(--pl,0);
+  background:radial-gradient(380px 130px at var(--px,-999px) var(--py,-999px),rgba(255,255,255,var(--pointer-peak)),rgba(255,255,255,0))}
+[data-u="1"]{--units:1}[data-u="2"]{--units:2}[data-u="3"]{--units:3}[data-u="4"]{--units:4}
+[data-u="5"]{--units:5}[data-u="6"]{--units:6}[data-u="7"]{--units:7}[data-u="8"]{--units:8}
+
+/* ---- Socket-cap screws, four drawn rotations (ScrewArt), on the rail holes in the ears ---- */
+.screw{position:absolute;z-index:6;width:18px;height:18px;background:image-set(url("../art/screw-a@1x.png") 1x,url("../art/screw-a@2x.png") 2x) 0 0/18px 18px}
+.screw[data-screw="b"]{background-image:image-set(url("../art/screw-b@1x.png") 1x,url("../art/screw-b@2x.png") 2x)}
+.screw[data-screw="c"]{background-image:image-set(url("../art/screw-c@1x.png") 1x,url("../art/screw-c@2x.png") 2x)}
+.screw[data-screw="d"]{background-image:image-set(url("../art/screw-d@1x.png") 1x,url("../art/screw-d@2x.png") 2x)}
+.s-tl{top:13px;left:15px}.s-tr{top:13px;right:15px}.s-bl{bottom:13px;left:15px}.s-br{bottom:13px;right:15px}
+.s-ml{top:calc(50% - 9px);left:15px}.s-mr{top:calc(50% - 9px);right:15px}
+
+/* ---- Silkscreen and engraving ---- */
+.silk{font:600 10.5px/1.2 var(--label);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim)}
+.engrave{margin:0;font:700 12px/1.2 var(--label);letter-spacing:.26em;text-transform:uppercase;color:var(--ink);
+  text-shadow:0 1px 0 var(--engrave-hi),0 -1px 0 var(--engrave-lo)}
+.rule{display:flex;align-items:center;gap:12px}
+.rule::after{content:"";flex:1;height:2px;background:linear-gradient(var(--edge-lo) 50%,var(--edge-hi) 50%);opacity:.6}
+
+/* ---- Indicator LED: 16px, art 64px with 24px of glow each side (LedArt.cs:11-13). Housing always; the lit
+   layer and the hotter flare layer fade by brightness as the app's Led does (StrikeTimeline.cs). ---- */
+.led{position:relative;display:inline-block;flex:none;width:16px;height:16px;vertical-align:middle}
+.led::before,.led::after,.led>i{content:"";position:absolute;left:-24px;top:-24px;width:64px;height:64px;pointer-events:none;background-size:64px 64px}
+.led::before{background-image:image-set(url("../art/led-housing@1x.png") 1x,url("../art/led-housing@2x.png") 2x)}
+.led::after,.led>i{opacity:0}
+.led[data-color="green"]::after{background-image:image-set(url("../art/led-lit-green@1x.png") 1x,url("../art/led-lit-green@2x.png") 2x)}
+.led[data-color="green"]>i{background-image:image-set(url("../art/led-flare-green@1x.png") 1x,url("../art/led-flare-green@2x.png") 2x)}
+.led[data-color="red"]::after{background-image:image-set(url("../art/led-lit-red@1x.png") 1x,url("../art/led-lit-red@2x.png") 2x)}
+.led[data-color="red"]>i{background-image:image-set(url("../art/led-flare-red@1x.png") 1x,url("../art/led-flare-red@2x.png") 2x)}
+.led[data-color="amber"]::after{background-image:image-set(url("../art/led-lit-amber@1x.png") 1x,url("../art/led-lit-amber@2x.png") 2x)}
+.led[data-color="amber"]>i{background-image:image-set(url("../art/led-flare-amber@1x.png") 1x,url("../art/led-flare-amber@2x.png") 2x)}
+.led[data-color="blue"]::after{background-image:image-set(url("../art/led-lit-blue@1x.png") 1x,url("../art/led-lit-blue@2x.png") 2x)}
+.led[data-color="blue"]>i{background-image:image-set(url("../art/led-flare-blue@1x.png") 1x,url("../art/led-flare-blue@2x.png") 2x)}
+.led[data-state="on"]::after,.led[data-state="strike"]::after{opacity:1}
+/* Strike: StrikeTimeline.Default over 1.1 s. Lit = min(b,1); flare = (b-1)/1.6 above 1. Ends on, as the app's On. */
+.led[data-state="strike"]::after{animation:led-lit 1.1s linear both}
+.led[data-state="strike"]>i{animation:led-flare 1.1s linear both}
+@keyframes led-lit{0%{opacity:.1}6%{opacity:1}14%{opacity:.15}24%{opacity:1}32%{opacity:.2}42%,100%{opacity:1}}
+@keyframes led-flare{0%{opacity:0}6%{opacity:1}14%{opacity:0}24%{opacity:.8125}32%{opacity:0}42%{opacity:.6875}56%,100%{opacity:0}}
+
+/* ---- Glass display: the milled bezel, the recessed screen (ScreenArt.cs), and the lens (GlassArt.cs).
+   Put a .glass where it has a definite width (a block, a grid cell, or flex:1): the lens is sized from it. ---- */
+.glass{position:relative;border-radius:4px;padding:5px;background:linear-gradient(170deg,#23262a,#0a0b0c 45%,#131517);
+  box-shadow:0 0 0 1px #000,0 1px 0 1px var(--edge-hi),0 -1px 0 1px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.14)}
+.vfd{position:relative;container-type:inline-size;overflow:hidden;border-radius:2px;padding:16px 24px;color:#8ae8ff;
+  font:500 15px/1.6 var(--mono);letter-spacing:.02em;
+  text-shadow:0 0 1px #d4f6ff,0 0 6px rgba(88,199,255,.55),1px 2px 1px rgba(0,0,0,.55);
+  /* Bezel shadow, heaviest from the top: 20% light at the edge, full at 8px from the sides, 12 from the top, 6 from the bottom. */
+  background:
+    linear-gradient(rgba(0,0,0,.8),rgba(0,0,0,0) 12px),
+    linear-gradient(0deg,rgba(0,0,0,.8),rgba(0,0,0,0) 6px),
+    linear-gradient(90deg,rgba(0,0,0,.8),rgba(0,0,0,0) 8px),
+    linear-gradient(270deg,rgba(0,0,0,.8),rgba(0,0,0,0) 8px),
+    /* Backlight: the cyan tone's center to edge over a 62% by 85% ellipse centered at 45% height (DisplayTones.cs:21-23). */
+    radial-gradient(62% 85% at 50% 45%,#0f3644,#020c11);
+  box-shadow:inset 0 0 0 1px #000}
+/* Pixel grid: every even column and row at 74% (ScreenArt.cs grid). */
+.vfd::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='2' height='2'><path d='M0 0h2v1H1v1H0z' fill='%23000' fill-opacity='.26'/></svg>") 0 0/2px 2px}
+/* Lens: lines of equal x + 0.47y run at 115.17deg. Light falls from .1 to .05 until that sum reaches 0.18 of the width,
+   a .035 band lies between 0.62 and 0.8 of the width, and light runs along the top 14% of the height. Distances along
+   the gradient line are the sum over 1.105, the length of (1, 0.47). */
+.vfd::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,0) 14%),
+    linear-gradient(115.17deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.05) calc(18cqw / 1.105),transparent calc(18cqw / 1.105),
+      transparent calc(62cqw / 1.105),rgba(255,255,255,.035) calc(62cqw / 1.105),rgba(255,255,255,.035) calc(80cqw / 1.105),transparent calc(80cqw / 1.105))}
+@supports not (width:1cqw){
+  .vfd::after{background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,0) 14%),
+    linear-gradient(115.17deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.05) 16%,transparent 16%,transparent 56%,rgba(255,255,255,.035) 56%,rgba(255,255,255,.035) 72%,transparent 72%)}
+}
+.vfd>*{position:relative;z-index:2}
+.vfd .dim{color:#40a6c8;text-shadow:0 0 4px rgba(64,166,200,.5)}
+
+/* ---- Seven-segment readout: digits at 13px with 2px between and 6px of glow (ControlArt.cs:8-10,
+   SevenSegmentReadout.cs:12, 71). Each digit is a cell of the digits strip (0-9, then a dark cell). ---- */
+.seven{position:relative;display:inline-flex;gap:2px;padding:9px 11px;border-radius:2px;overflow:hidden;
+  color:#ff9d2e;font:700 18px/23px var(--mono);
+  background:radial-gradient(90% 130% at 50% 40%,#16110a,#040302);
+  box-shadow:0 0 0 1px #000,0 0 0 3px #141518,0 1px 0 3px var(--edge-hi),inset 0 2px 5px #000}
+.seven::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115.17deg,rgba(255,255,255,.1),rgba(255,255,255,.05) 16%,transparent 16%)}
+.seven.built{font-size:0}
+.seven>i{position:relative;width:13px;height:23px}
+.seven>i::before{content:"";position:absolute;left:-6px;top:-6px;width:25px;height:35px;
+  background:image-set(url("../art/digits@1x.png") 1x,url("../art/digits@2x.png") 2x) calc(var(--d) * -25px) 0/275px 35px}
+/* The decimal point, which the digit art doesn't draw (ruling R18): lit in the digits' own amber, in the gap after its digit. */
+.seven>i[data-dot]{margin-right:4px}
+.seven>i[data-dot]::after{content:"";position:absolute;right:-5px;bottom:0;width:3px;height:3px;border-radius:50%;
+  background:rgb(255,157,46);box-shadow:0 0 2px rgb(255,157,46),0 0 6px rgba(255,157,46,.6)}
+
+/* ---- Segment bargraph in a well, under glass (Bargraph.cs). Segments are cells of their strip: 16x14 cores in
+   32x30 cells with 8px of glow, scaled to the meter as the app stretches them (Bargraph.cs:134-145). ---- */
+.meter{position:relative;display:inline-flex;gap:2px;padding:6px;border-radius:2px;background:linear-gradient(#020303,#090b0c);
+  box-shadow:0 0 0 1px #000,0 1px 0 1px var(--edge-hi),inset 0 2px 4px #000;--sw:6px;--sh:10px;--sx:.375;--sy:.7142857}
+.meter::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,0) 14%),linear-gradient(115.17deg,rgba(255,255,255,.1),rgba(255,255,255,.05) 16%,transparent 16%)}
+.meter>i{position:relative;flex:none;width:var(--sw);height:var(--sh);--cw:calc(32px * var(--sx));--ch:calc(30px * var(--sy));
+  background-size:calc(var(--cells) * var(--cw)) var(--ch);background-position:calc(var(--i) * -1 * var(--cw) - 8px * var(--sx)) calc(-8px * var(--sy))}
+.meter>i::after{content:"";position:absolute;left:calc(-8px * var(--sx));top:calc(-8px * var(--sy));width:var(--cw);height:var(--ch);opacity:0;
+  background-size:calc(var(--cells) * var(--cw)) var(--ch);background-position:calc(var(--i) * -1 * var(--cw)) 0}
+.meter>i.on::after{opacity:1}
+.meter[data-kind="progress"]>i{background-image:image-set(url("../art/seg-progress-unlit@1x.png") 1x,url("../art/seg-progress-unlit@2x.png") 2x)}
+.meter[data-kind="progress"]>i::after{background-image:image-set(url("../art/seg-progress-lit@1x.png") 1x,url("../art/seg-progress-lit@2x.png") 2x)}
+.meter[data-kind="level"]>i{background-image:image-set(url("../art/seg-level-unlit@1x.png") 1x,url("../art/seg-level-unlit@2x.png") 2x)}
+.meter[data-kind="level"]>i::after{background-image:image-set(url("../art/seg-level-lit@1x.png") 1x,url("../art/seg-level-lit@2x.png") 2x)}
+.meter[data-kind="level"]>i.peak::after{opacity:1;background-image:image-set(url("../art/seg-level-peak@1x.png") 1x,url("../art/seg-level-peak@2x.png") 2x)}
+
+/* ---- Silicone pad in its milled well (Pad.cs and its template): the face sits 3px in, travels 3px when pressed
+   with the press shade over it, glows 4% white on hover, and a lit pad throws its bloom 28px past the face.
+   Four fixed classes, never stretched (ruling R8); a label takes the smallest class it fits. ---- */
+.pad{position:relative;display:inline-block;flex:none;vertical-align:middle;border:0;padding:0;margin:0;cursor:pointer;
+  background:none 0 0/100% 100% no-repeat;text-decoration:none;-webkit-tap-highlight-color:transparent;
+  font:700 11px/1.2 var(--label);letter-spacing:.12em;text-transform:uppercase;color:#eef1f4}
+.pad::before{content:"";position:absolute;left:-25px;top:-25px;width:var(--bw);height:var(--bh);z-index:-1;pointer-events:none;background:none 0 0/100% 100% no-repeat}
+.pad .face{position:absolute;left:3px;top:3px;width:var(--fw);height:var(--fh);display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 8px;border-radius:7px;background:none 0 0/100% 100% no-repeat;text-shadow:0 -1px 0 rgba(0,0,0,.6);white-space:nowrap;
+  transition:transform 70ms ease-out}
+.pad .face::after{content:"";position:absolute;inset:0;border-radius:7px;background:#fff;opacity:0;pointer-events:none;transition:opacity .15s ease-out}
+.pad:hover .face::after{opacity:.04}
+.pad:active .face{transform:translateY(3px)}
+.pad[data-tone="green"],.pad[data-tone="blue"]{color:#fff}
+.pad:focus-visible{outline-offset:2px;border-radius:9px}
+.pad .led{transform:scale(.75)}
+/* pad art (generated from site/art/manifest.json, one block per size class) */
+/* PAD-ART:BEGIN */
+.pad[data-size="s"]{--fw:96px;--fh:40px;width:102px;height:46px;--bw:152px;--bh:96px;background-image:image-set(url("../art/pad-s-well-dark@1x.png") 1x, url("../art/pad-s-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-size="s"]{background-image:image-set(url("../art/pad-s-well-light@1x.png") 1x, url("../art/pad-s-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="s"]{background-image:image-set(url("../art/pad-s-well-light@1x.png") 1x, url("../art/pad-s-well-light@2x.png") 2x)}}
+.pad[data-size="s"] .face{background-image:image-set(url("../art/pad-s-face-off@1x.png") 1x, url("../art/pad-s-face-off@2x.png") 2x)}
+.pad[data-size="s"][data-tone="green"] .face{background-image:image-set(url("../art/pad-s-face-green@1x.png") 1x, url("../art/pad-s-face-green@2x.png") 2x)}
+.pad[data-size="s"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-s-face-blue@1x.png") 1x, url("../art/pad-s-face-blue@2x.png") 2x)}
+.pad[data-size="s"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-off@1x.png") 1x, url("../art/pad-s-face-off@2x.png") 2x)}
+.pad[data-size="s"][data-tone="green"]::before{background-image:image-set(url("../art/pad-s-bloom-green@1x.png") 1x, url("../art/pad-s-bloom-green@2x.png") 2x)}
+.pad[data-size="s"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-green@1x.png") 1x, url("../art/pad-s-face-green@2x.png") 2x)}
+.pad[data-size="s"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-s-bloom-blue@1x.png") 1x, url("../art/pad-s-bloom-blue@2x.png") 2x)}
+.pad[data-size="s"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-s-press@1x.png") 1x, url("../art/pad-s-press@2x.png") 2x),image-set(url("../art/pad-s-face-blue@1x.png") 1x, url("../art/pad-s-face-blue@2x.png") 2x)}
+.pad[data-size="m"]{--fw:128px;--fh:52px;width:134px;height:58px;--bw:184px;--bh:108px;background-image:image-set(url("../art/pad-m-well-dark@1x.png") 1x, url("../art/pad-m-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-size="m"]{background-image:image-set(url("../art/pad-m-well-light@1x.png") 1x, url("../art/pad-m-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="m"]{background-image:image-set(url("../art/pad-m-well-light@1x.png") 1x, url("../art/pad-m-well-light@2x.png") 2x)}}
+.pad[data-size="m"] .face{background-image:image-set(url("../art/pad-m-face-off@1x.png") 1x, url("../art/pad-m-face-off@2x.png") 2x)}
+.pad[data-size="m"][data-tone="green"] .face{background-image:image-set(url("../art/pad-m-face-green@1x.png") 1x, url("../art/pad-m-face-green@2x.png") 2x)}
+.pad[data-size="m"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-m-face-blue@1x.png") 1x, url("../art/pad-m-face-blue@2x.png") 2x)}
+.pad[data-size="m"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-off@1x.png") 1x, url("../art/pad-m-face-off@2x.png") 2x)}
+.pad[data-size="m"][data-tone="green"]::before{background-image:image-set(url("../art/pad-m-bloom-green@1x.png") 1x, url("../art/pad-m-bloom-green@2x.png") 2x)}
+.pad[data-size="m"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-green@1x.png") 1x, url("../art/pad-m-face-green@2x.png") 2x)}
+.pad[data-size="m"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-m-bloom-blue@1x.png") 1x, url("../art/pad-m-bloom-blue@2x.png") 2x)}
+.pad[data-size="m"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-m-press@1x.png") 1x, url("../art/pad-m-press@2x.png") 2x),image-set(url("../art/pad-m-face-blue@1x.png") 1x, url("../art/pad-m-face-blue@2x.png") 2x)}
+.pad[data-size="l"]{--fw:176px;--fh:52px;width:182px;height:58px;--bw:232px;--bh:108px;background-image:image-set(url("../art/pad-l-well-dark@1x.png") 1x, url("../art/pad-l-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-size="l"]{background-image:image-set(url("../art/pad-l-well-light@1x.png") 1x, url("../art/pad-l-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="l"]{background-image:image-set(url("../art/pad-l-well-light@1x.png") 1x, url("../art/pad-l-well-light@2x.png") 2x)}}
+.pad[data-size="l"] .face{background-image:image-set(url("../art/pad-l-face-off@1x.png") 1x, url("../art/pad-l-face-off@2x.png") 2x)}
+.pad[data-size="l"][data-tone="green"] .face{background-image:image-set(url("../art/pad-l-face-green@1x.png") 1x, url("../art/pad-l-face-green@2x.png") 2x)}
+.pad[data-size="l"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-l-face-blue@1x.png") 1x, url("../art/pad-l-face-blue@2x.png") 2x)}
+.pad[data-size="l"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-off@1x.png") 1x, url("../art/pad-l-face-off@2x.png") 2x)}
+.pad[data-size="l"][data-tone="green"]::before{background-image:image-set(url("../art/pad-l-bloom-green@1x.png") 1x, url("../art/pad-l-bloom-green@2x.png") 2x)}
+.pad[data-size="l"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-green@1x.png") 1x, url("../art/pad-l-face-green@2x.png") 2x)}
+.pad[data-size="l"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-l-bloom-blue@1x.png") 1x, url("../art/pad-l-bloom-blue@2x.png") 2x)}
+.pad[data-size="l"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-l-press@1x.png") 1x, url("../art/pad-l-press@2x.png") 2x),image-set(url("../art/pad-l-face-blue@1x.png") 1x, url("../art/pad-l-face-blue@2x.png") 2x)}
+.pad[data-size="xl"]{--fw:240px;--fh:72px;width:246px;height:78px;--bw:296px;--bh:128px;background-image:image-set(url("../art/pad-xl-well-dark@1x.png") 1x, url("../art/pad-xl-well-dark@2x.png") 2x)}
+:root[data-finish="light"] .pad[data-size="xl"]{background-image:image-set(url("../art/pad-xl-well-light@1x.png") 1x, url("../art/pad-xl-well-light@2x.png") 2x)}
+@media (prefers-color-scheme:light){:root:not([data-finish="dark"]) .pad[data-size="xl"]{background-image:image-set(url("../art/pad-xl-well-light@1x.png") 1x, url("../art/pad-xl-well-light@2x.png") 2x)}}
+.pad[data-size="xl"] .face{background-image:image-set(url("../art/pad-xl-face-off@1x.png") 1x, url("../art/pad-xl-face-off@2x.png") 2x)}
+.pad[data-size="xl"][data-tone="green"] .face{background-image:image-set(url("../art/pad-xl-face-green@1x.png") 1x, url("../art/pad-xl-face-green@2x.png") 2x)}
+.pad[data-size="xl"][data-tone="blue"] .face{background-image:image-set(url("../art/pad-xl-face-blue@1x.png") 1x, url("../art/pad-xl-face-blue@2x.png") 2x)}
+.pad[data-size="xl"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-off@1x.png") 1x, url("../art/pad-xl-face-off@2x.png") 2x)}
+.pad[data-size="xl"][data-tone="green"]::before{background-image:image-set(url("../art/pad-xl-bloom-green@1x.png") 1x, url("../art/pad-xl-bloom-green@2x.png") 2x)}
+.pad[data-size="xl"][data-tone="green"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-green@1x.png") 1x, url("../art/pad-xl-face-green@2x.png") 2x)}
+.pad[data-size="xl"][data-tone="blue"]::before{background-image:image-set(url("../art/pad-xl-bloom-blue@1x.png") 1x, url("../art/pad-xl-bloom-blue@2x.png") 2x)}
+.pad[data-size="xl"][data-tone="blue"]:active .face{background-image:image-set(url("../art/pad-xl-press@1x.png") 1x, url("../art/pad-xl-press@2x.png") 2x),image-set(url("../art/pad-xl-face-blue@1x.png") 1x, url("../art/pad-xl-face-blue@2x.png") 2x)}
+/* PAD-ART:END */
+
+/* ---- The sticky 1U strip ---- */
+.strip{position:sticky;top:0;z-index:20;padding:8px 56px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.strip .power,.strip .left{display:flex;align-items:center;gap:8px}
+.strip .left{gap:24px}
+.strip .pads{display:flex;align-items:center;gap:8px}
+.strip nav ul{display:flex;gap:8px;margin:0;padding:0;list-style:none}
+html:not(.js) .strip [data-finish-pad]{visibility:hidden}
+
+/* ---- Units ---- */
+.unit>h2{margin:0}
+.blank{display:flex;align-items:center}
+
+@media (hover:none){.plate::before{display:none}}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .plate::before{display:none}
+}

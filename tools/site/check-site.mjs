@@ -122,8 +122,8 @@ export async function checkSite(repoRoot) {
   const ids = new Set(tags.map((t) => t.attrs.id).filter(Boolean));
 
   // README parity
+  const rows = readme === null ? null : readmeRows(readme);
   if (readme !== null) {
-    const rows = readmeRows(readme);
     if (!rows) problems.push('README.md: no "| File | Size | SHA-256 |" download table');
     else checkParity(rows, tags, problems);
     for (const m of readme.matchAll(/\]\(https:\/\/git-rocky-stack\.github\.io\/STX-Downloader\/#([^)\s]+)\)/g)) {
@@ -184,8 +184,18 @@ export async function checkSite(repoRoot) {
   // JSON-LD
   const blocks = [...html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]);
   let hasApp = false;
-  const hasType = (node) => Array.isArray(node) ? node.some(hasType) : node && typeof node === 'object'
-    && ([].concat(node['@type'] ?? []).includes('SoftwareApplication') || hasType(node['@graph'] ?? []));
+  const isApp = (node) => [].concat(node?.['@type'] ?? []).includes('SoftwareApplication');
+  // Every SoftwareApplication node, at the top level, in an array or inside @graph.
+  const appsIn = (node) => Array.isArray(node) ? node.flatMap(appsIn)
+    : node && typeof node === 'object' ? [...(isApp(node) ? [node] : []), ...appsIn(node['@graph'] ?? [])] : [];
+  const hasType = (node) => appsIn(node).length > 0;
+  // The structured data names the release too, so it is held to the README table like the download links.
+  const checkAppRelease = (app, i) => {
+    const setup = rows?.setup;
+    if (!setup) return;
+    if (app.softwareVersion !== setup.version) problems.push(`site/index.html: JSON-LD block ${i + 1} has softwareVersion ${JSON.stringify(app.softwareVersion)}, README says "${setup.version}"`);
+    if (app.downloadUrl !== setup.url) problems.push(`site/index.html: JSON-LD block ${i + 1} has downloadUrl ${JSON.stringify(app.downloadUrl)}, README says "${setup.url}"`);
+  };
   // Every block is parsed and checked: none is skipped once the SoftwareApplication block has been seen.
   for (const [i, block] of blocks.entries()) {
     let data;
@@ -193,6 +203,7 @@ export async function checkSite(repoRoot) {
     for (const node of [].concat(data)) {
       if (node?.['@context'] !== 'https://schema.org') problems.push(`site/index.html: JSON-LD block ${i + 1} has @context ${JSON.stringify(node?.['@context'])}, want "https://schema.org"`);
     }
+    for (const app of appsIn(data)) checkAppRelease(app, i);
     if (hasType(data)) hasApp = true;
   }
   if (!hasApp) problems.push('site/index.html: no JSON-LD block of @type SoftwareApplication');

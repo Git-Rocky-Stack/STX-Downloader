@@ -207,3 +207,9 @@ test('isEntry_falls_back_to_real_paths_when_node_has_no_import_meta_main', async
   assert.equal(isEntry(join(here, 'no-such-file.mjs'), cliUrl, undefined), false);
   if (process.platform === 'win32') assert.equal(isEntry(cliPath.toUpperCase(), cliUrl, undefined, 'win32'), true);
 });
+
+test('fails_when_json_ld_version_or_download_differs_from_readme', async () => {
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('"softwareVersion":"1.2.0"', '"softwareVersion":"1.1.0"'))), /softwareVersion/);
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(`"downloadUrl":"${SETUP_URL}"`, `"downloadUrl":"${SETUP_URL.replace('1.2.0', '1.1.0')}"`))), /downloadUrl/);
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(/,"softwareVersion":"1\.2\.0"/, ''))), /softwareVersion/);
+});
