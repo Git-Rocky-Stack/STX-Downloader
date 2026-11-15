@@ -1,8 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 (2026-11-15)
 
 A user's review of 1.1.0 asked for six things: a guide that isn't a wall of text, far more file types, a way to clear finished rows, real tutorials, meters with some life in them, and no dead space under the Library. All six are below, in two rounds.
+
+### The release (2026-11-15)
+
+- **The setup is signed**, as are STX's own files in it, through Strategia-X's Azure Artifact Signing account, with a timestamp. It is 254 MB, down from 278 MB in 1.1.0, and installs the app (384 MB) and its tools (432 MB): yt-dlp 2026.10.26, FFmpeg and FFprobe n9.0.2 (the 2026-11-14 build), and Deno 2.9.8, each checked against its publisher's checksum and run once offline before it went in. The zip is 171 MB, down from 191 MB. The .NET runtime is still 10.0.14.
+
+- **Two tests that failed for reasons outside the app are fixed.** The tutorial video's playback tests were still in the suite after the video left the app, and failed on every PC; they're gone, and `GuideTests` still fails if the video comes back. The memory test's garbage stayed reachable in a Debug build, which keeps a local alive to the end of its method, so it failed in Debug and passed in Release; the garbage is now made in a frame of its own (`MemoryReturnTests.FillTheOldestGeneration`). Both failed before the fix.
 
 ### More file types: 120, up from 51 (2026-11-12)
 

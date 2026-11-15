@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Stx.Core.Memory;
 using Xunit;
 
@@ -55,16 +56,25 @@ public class MemoryReturnTests
         Assert.Equal(0, collected);
     }
 
+    // A scan's worth of paths, alive through a full collection, which moves them into the oldest generation. Returns the
+    // heap's size then. Its own frame, never inlined, so nothing in the caller holds the list: a Debug build keeps a
+    // local alive to the end of its method, and the garbage would never become garbage (2026-11-13: failed in Debug).
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static long FillTheOldestGeneration()
+    {
+        var garbage = new List<string>();
+        for (int n = 0; n < 200_000; n++) garbage.Add($@"D:\Music\Artist {n % 997}\{n:D6} Song.flac");
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+        long before = GC.GetGCMemoryInfo(GCKind.FullBlocking).HeapSizeBytes;
+        GC.KeepAlive(garbage);
+        return before;
+    }
+
     // The real collection: dead objects in the oldest generation are taken back, and the heap shrinks.
     [Fact]
     public void The_real_collection_takes_back_the_oldest_garbage()
     {
-        var garbage = new List<string>();
-        for (int n = 0; n < 200_000; n++) garbage.Add($@"D:\Music\Artist {n % 997}\{n:D6} Song.flac");
-        // Still alive through this collection, which moves it into the oldest generation; unreachable after it.
-        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
-        long before = GC.GetGCMemoryInfo(GCKind.FullBlocking).HeapSizeBytes;
-        GC.KeepAlive(garbage);
+        long before = FillTheOldestGeneration();
         MemoryReturn.Collect();
         var after = GC.GetGCMemoryInfo(GCKind.FullBlocking);
         Assert.True(after.Compacted, "the collection didn't compact");

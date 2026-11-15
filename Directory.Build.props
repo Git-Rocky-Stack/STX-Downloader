@@ -2,7 +2,7 @@
   <!-- Who made it, carried in every built file's properties. Version is the one place the release number is set:
        tools/Publish.ps1 reads it, and a test holds the browser extension's manifest to it. -->
   <PropertyGroup>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Company>Strategia-X</Company>
     <Authors>Rocky Elsalaymeh</Authors>
     <Product>STX Downloader</Product>
