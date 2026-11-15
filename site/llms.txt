@@ -1,24 +1,19 @@
 # STX Downloader
 
-> STX Downloader is an open-source Windows app, MIT licensed, published by Strategia-X (Rocky Elsalaymeh). It saves media you are allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine. DRM-protected media is out of scope: STX neither saves nor plays it.
+> A Windows app that saves media you're allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine. Open source under the MIT license, published by Strategia-X.
 
-Current version: 1.2.0, released 2026-11-15. Runs on Windows 10 version 2004 or later, x64. Support: support@strategia-x.com
+One Windows app for three jobs: save, check and play. DRM-protected media is out of scope: STX doesn't save or play it, and you're responsible for each site's terms and the law where you live.
 
 ## Pages
 
-- [Project page](https://git-rocky-stack.github.io/STX-Downloader/): what it does, screens, download, release history
-- [Full reference for language models](https://git-rocky-stack.github.io/STX-Downloader/llms-full.txt): every feature, install, requirements and what has been tested
+- [Project page](https://git-rocky-stack.github.io/STX-Downloader/): what STX does, its screens, whether it's safe, the download, and what has been tested
+- [Screens](https://git-rocky-stack.github.io/STX-Downloader/#screens): the Library, Settings, the user guide and the tutorials, captured from the app
+- [Download](https://git-rocky-stack.github.io/STX-Downloader/#download): the signed setup and the portable zip, with their SHA-256 hashes
+- [Full reference](https://git-rocky-stack.github.io/STX-Downloader/llms-full.txt): all of it in plain text
 
-## Source and releases
+## Source
 
-- [Source code on GitHub](https://github.com/Git-Rocky-Stack/STX-Downloader): the README names the code behind each feature, by file and member
-- [Release 1.2.0](https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0): the signed setup, the portable zip, and their SHA-256 hashes
-- [Changelog](https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md): every release, and every change in it
-- [Playback](https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/docs/PLAYBACK.md): the player, what it refuses and why, BIT-PERFECT, the parity corpus
-- [Performance](https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/docs/PERFORMANCE.md): memory, CPU and playback measurements, and Shrink's quality checks
-- [Third-party software](https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/docs/THIRD_PARTY.md): what ships inside the app and their licenses
-- [License](https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/LICENSE): MIT
-
-## Blog
-
-This project has no blog of its own.
+- [Source code](https://github.com/Git-Rocky-Stack/STX-Downloader)
+- [Releases](https://github.com/Git-Rocky-Stack/STX-Downloader/releases)
+- [Changelog](https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md)
+- [README](https://github.com/Git-Rocky-Stack/STX-Downloader#readme)

@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>STX Downloader: save, check and play media on Windows</title>
-<meta name="description" content="Open-source Windows app that saves media you're allowed to keep, tells you what its audio really is, and plays it all on VLC's engine.">
+<meta name="description" content="Open-source Windows app that saves media you're allowed to keep from YouTube and web pages, tells you what its audio really is, and plays it on VLC's engine.">
+<meta name="keywords" content="STX Downloader, Windows media downloader, yt-dlp, VLC engine, media player, Source Truth, audio analysis, bit-perfect, open source, MIT, Strategia-X">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="author" content="Rocky Elsalaymeh, Strategia-X">
 <meta name="color-scheme" content="dark light">
@@ -14,18 +15,19 @@
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="site.webmanifest">
+<link rel="alternate" type="text/plain" title="llms.txt" href="llms.txt">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="STX Downloader">
 <meta property="og:title" content="STX Downloader: save, check and play. All in one app.">
-<meta property="og:description" content="Open-source Windows app that saves media you're allowed to keep, tells you what its audio really is, and plays it all on VLC's engine.">
+<meta property="og:description" content="Open-source Windows app that saves media you're allowed to keep from YouTube and web pages, tells you what its audio really is, and plays it on VLC's engine.">
 <meta property="og:url" content="https://git-rocky-stack.github.io/STX-Downloader/">
 <meta property="og:image" content="https://git-rocky-stack.github.io/STX-Downloader/img/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="STX Downloader's console">
+<meta property="og:image:alt" content="The STX Downloader project page: the rack strip, the console behind glass, and the download unit with its lit DOWNLOAD pad">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="STX Downloader: save, check and play. All in one app.">
-<meta name="twitter:description" content="Open-source Windows app that saves media you're allowed to keep, tells you what its audio really is, and plays it all on VLC's engine.">
+<meta name="twitter:description" content="Open-source Windows app that saves media you're allowed to keep from YouTube and web pages, tells you what its audio really is, and plays it on VLC's engine.">
 <meta name="twitter:image" content="https://git-rocky-stack.github.io/STX-Downloader/img/social-card.png">
 <link rel="preload" as="image" href="art/grain-dark@1x.png" media="(max-width: 699px) and (prefers-color-scheme: dark)" fetchpriority="high">
 <link rel="preload" as="image" href="art/grain-light@1x.png" media="(max-width: 699px) and (prefers-color-scheme: light)" fetchpriority="high">
@@ -43,20 +45,73 @@ try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'lig
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "STX Downloader",
-  "url": "https://git-rocky-stack.github.io/STX-Downloader/",
-  "description": "A Windows app that saves media you're allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine.",
-  "applicationCategory": "MultimediaApplication",
-  "operatingSystem": "Windows 10, Windows 11",
-  "softwareVersion": "1.2.0",
-  "downloadUrl": "https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe",
-  "license": "https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/LICENSE",
-  "isAccessibleForFree": true,
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "author": { "@type": "Person", "name": "Rocky Elsalaymeh" },
-  "publisher": { "@type": "Organization", "name": "Strategia-X" },
-  "codeRepository": "https://github.com/Git-Rocky-Stack/STX-Downloader"
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://git-rocky-stack.github.io/STX-Downloader/#publisher",
+      "name": "Strategia-X",
+      "url": "https://strategia-x.com/",
+      "email": "support@strategia-x.com"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://git-rocky-stack.github.io/STX-Downloader/#website",
+      "url": "https://git-rocky-stack.github.io/STX-Downloader/",
+      "name": "STX Downloader",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://git-rocky-stack.github.io/STX-Downloader/#publisher"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://git-rocky-stack.github.io/STX-Downloader/#webpage",
+      "url": "https://git-rocky-stack.github.io/STX-Downloader/",
+      "name": "STX Downloader: save, check and play media on Windows",
+      "description": "Open-source Windows app that saves media you're allowed to keep from YouTube and web pages, tells you what its audio really is, and plays it on VLC's engine.",
+      "inLanguage": "en",
+      "isPartOf": {
+        "@id": "https://git-rocky-stack.github.io/STX-Downloader/#website"
+      },
+      "about": {
+        "@id": "https://git-rocky-stack.github.io/STX-Downloader/#app"
+      },
+      "primaryImageOfPage": {
+        "@type": "ImageObject",
+        "url": "https://git-rocky-stack.github.io/STX-Downloader/img/social-card.png",
+        "width": 1200,
+        "height": 630
+      },
+      "dateModified": "2026-11-15"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://git-rocky-stack.github.io/STX-Downloader/#app",
+      "name": "STX Downloader",
+      "url": "https://git-rocky-stack.github.io/STX-Downloader/",
+      "description": "A Windows app that saves media you're allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Windows 10, Windows 11",
+      "softwareVersion": "1.2.0",
+      "downloadUrl": "https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe",
+      "screenshot": "https://git-rocky-stack.github.io/STX-Downloader/screens/console-dark.png",
+      "license": "https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/LICENSE",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Rocky Elsalaymeh"
+      },
+      "publisher": {
+        "@id": "https://git-rocky-stack.github.io/STX-Downloader/#publisher"
+      },
+      "codeRepository": "https://github.com/Git-Rocky-Stack/STX-Downloader"
+    }
+  ]
 }
 </script>
 </head>

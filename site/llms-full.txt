@@ -1,87 +1,88 @@
 # STX Downloader: full reference
 
-> An open-source Windows app, MIT licensed, published by Strategia-X (Rocky Elsalaymeh). It saves media you are allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine. It looks like a piece of solid-state rack gear.
+> A Windows app that saves media you're allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine. Open source under the MIT license, published by Strategia-X (Rocky Elsalaymeh).
 
-Version 1.2.0, released 2026-11-15. Project page: https://git-rocky-stack.github.io/STX-Downloader/ . Source: https://github.com/Git-Rocky-Stack/STX-Downloader . Support: support@strategia-x.com
+Project page: https://git-rocky-stack.github.io/STX-Downloader/
+Source: https://github.com/Git-Rocky-Stack/STX-Downloader
 
-Each feature below is described in the project README, which names the code that does it by file and member: https://github.com/Git-Rocky-Stack/STX-Downloader#what-it-does
+DRM is out of scope: pages that use DRM get no Save button, and STX doesn't save or play DRM media. You're responsible for each site's terms and the law where you live.
 
-## Scope
+## Save
 
-- DRM is out of scope. STX doesn't save or play DRM-protected media. When it sees DRM, it says so and stops.
-- Users are responsible for following each site's terms and the law where they live.
+- Paste a link and yt-dlp handles it, single items and playlists. A playlist asks first.
+- Video isn't re-encoded by default: the original streams, in MP4 when they fit and MKV when they don't.
+- A Chrome and Edge extension captures HLS, DASH and direct media from a page.
 
-## Requirements and install
+## Check
+
+- Source Truth measures the saved file's audio: spectrum, roll-off, loudness and true peak.
+- It gives a plain verdict for each output format, and never says re-encoding improved anything.
+
+## Play
+
+- STX plays media with VLC's engine: the official VLC 3.0.24 build, pinned by sha256, with the parts that would open network ports or run site scripts left out.
+- 120 types, each proven by a corpus file.
+- Unencrypted DVD and Blu-ray, streams and internet radio. Encrypted discs are refused.
+- BIT-PERFECT, a Settings switch, off by default, sends lossless music to your sound device at the file's own rate and depth.
+- ENHANCE on the Player: OFF, SHARPEN or UPSCALE, for the picture on screen only. UPSCALE is offered only where the GPU has super resolution.
+
+## Library and Shrink
+
+- The Library holds what you saved, files you opened with STX, and your Videos and Music folders. Removing a row never removes a file.
+- SHRINK makes a smaller AV1 or HEVC copy with Opus sound, kept only after it checks out. The original is only read.
+
+## Is it safe?
+
+- The setup and the app's own files are signed through Azure Artifact Signing.
+- It installs for your account only, with no administrator prompt.
+- The setup brings yt-dlp, FFmpeg and Deno, each checked against its publisher's checksum, so its first launch downloads nothing and works offline. The zip carries the app alone, and its first launch downloads the tools.
+- The browser hand-off uses a named pipe only your Windows account can open. No network port is opened.
+- Stream tokens, cookies and headers stay in memory, and are scrubbed from the log you can copy.
+- Open source, under the MIT license.
+
+## Requirements
 
 - Windows 10 version 2004 or later, x64.
-- About 400 MB of disk for the app, and about 430 MB for its tools.
-- No administrator prompt: the setup installs for the user's account only, and uninstalls from Windows Settings. Saved media is never removed.
-- .NET and the Windows App SDK ship inside the app; there is no runtime to install first.
-- The setup also installs yt-dlp, FFmpeg and Deno, each checked against its publisher's checksum, so the first launch downloads nothing and works offline.
-- The setup and the app's own files are signed through Azure Artifact Signing. Windows shows the publisher as Sharif Elsalaymeh.
-- Downloads for 1.2.0: STXDownloader-1.2.0-setup.exe (254 MB, SHA-256 1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363) and STXDownloader-1.2.0-win-x64.zip (171 MB, the app alone, SHA-256 FEAF84A7A1CE1168F31DB827D637F42745886DB1AFF17DA30DFA86BAB53308F1), at https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0
-- Capturing from pages needs the Chrome or Edge extension, loaded unpacked from the extension folder inside the install folder.
+- About 400 MB for the app, and about 430 MB for its tools.
+- No runtime to install first: .NET and the Windows App SDK ship inside the app.
 
-## Saving
+## Download, version 1.2.0
 
-- Paste a link and yt-dlp handles it, single items and playlists. A playlist asks first: add its items, just the video the link names, or cancel. Private and unavailable items are skipped, and counted.
-- Video isn't re-encoded by default. It keeps the original streams, in MP4 when they fit and MKV when they don't.
-- A name already taken by another video never replaces it; the new file gets its id added.
-- A new file with the same bytes as one already saved is removed, and the Library points at the first copy.
-- CAR USB, PHONE and ARCHIVE convert a saved file when asked.
-- A captured job whose link expired waits for a new capture from its page, and resumes from it.
+- Setup: STXDownloader-1.2.0-setup.exe, 254 MB, SHA-256 1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363
+  https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe
+- Portable zip: STXDownloader-1.2.0-win-x64.zip, 171 MB, SHA-256 FEAF84A7A1CE1168F31DB827D637F42745886DB1AFF17DA30DFA86BAB53308F1
+  https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-win-x64.zip
+- To check a download, run Get-FileHash .\STXDownloader-1.2.0-setup.exe -Algorithm SHA256 in PowerShell and compare.
 
-## Capturing from a page
+## Install
 
-- A Chrome and Edge extension lists the page's HLS, DASH and direct media, collapses renditions, and hands over YouTube embeds by ID.
-- If the page uses DRM, its streams get no Save button.
-- Hand-off uses Chrome native messaging and a named pipe only the user's Windows account can open. No network port is opened.
+1. Run the setup. It installs for your account only.
+2. Wait for the light at the top right to turn green and read ENGINE CURRENT.
+3. Copy a video's link, then press PASTE on the Source plate.
 
-## Secrets
+## Tested
 
-- Stream tokens, cookies and headers stay in memory and reach yt-dlp through a temp file only the user can read, deleted when the job ends.
-- They are scrubbed from the log the user can copy.
+On a Core Ultra 7 258V laptop: Arc 140V graphics, a 2880x1800 panel at 175%, HDR on.
 
-## Source Truth
+- Proven: BIT-PERFECT at 44.1 and 96 kHz on a real sound device; UPSCALE running on the Arc's super resolution; a high-DPI screen; HDR10 reaching an HDR screen as HDR; Default Apps as Windows past 24H2 reads them.
+- Not yet: the reference PC's runs of the 50,000-row memory budget, the screenshot gate and the corpus gate; a bit comparison through a hardware loopback; a USB DAC unplugged mid-play; real DVD and Blu-ray discs; film passthrough to a receiver; an RTX GPU; and a clean machine for the installer.
+- Known: 4K60 on the laptop's panel loses 3 to 4 pictures a second in about half of the runs. What limits it is VLC 3.0.24's Direct3D 11 output, not decoding.
 
-- Measures the saved file's audio rather than repeating what the site claims, and shows the spectrum, the roll-off, loudness and true peak.
-- Gives a plain verdict for each output format, and never says re-encoding improved anything.
+## Build it yourself
 
-## Library
+Needs the .NET 10 SDK, Node 24 for the extension's tests, and PowerShell 7.
 
-- Holds what the user has saved, files opened with STX, and the media in the Videos and Music folders, which are watched from the first launch.
-- Removing a row or a watched folder never removes a file from disk.
-- The database counts, pages and searches the rows: 50,000 rows cost no more memory than an empty Library.
+    dotnet build src/Stx.App -c Release -p:Platform=x64
+    dotnet test --project tests/Stx.Core.Tests
+    node --test "extension/test/*.test.js"
+    tools\Publish.ps1
 
-## Playing
+## License and publisher
 
-- Uses the official VLC 3.0.24 engine for Windows, pinned by sha256, with the parts that would open network ports or run site scripts left out.
-- Plays 120 file types, each proven by a file in the test corpus, and can register as the default player for the user's account.
-- Plays unencrypted DVD and Blu-ray. Encrypted discs are refused by STX before VLC's engine sees them.
-- Plays streams and internet radio, including .pls and .m3u playlists. UDP and RTP are refused because they would need a listening port.
-- BIT-PERFECT, off by default, sends lossless music to the sound device at the file's own rate and depth, holding the device exclusively.
-- ENHANCE offers OFF, SHARPEN or UPSCALE for the picture on screen. UPSCALE is GPU super resolution, offered only on NVIDIA RTX with a 530 or later driver, and Intel Arc and Xe.
-- Dirac and VC-2 video are refused, because VLC 3.0.24's engine crashes on them.
-- Parity with VLC is tested: a corpus of 178 files covers 89 of the 91 formats and codecs on VideoLAN's list for 3.0.24, plus HEVC Main10, HDR10, AV1 and VP9.
+MIT. Copyright (c) 2026 Rocky Elsalaymeh, Strategia-X. Published by Strategia-X (Rocky Elsalaymeh). Support: support@strategia-x.com
 
-## Shrink
+## Links
 
-- SHRINK makes a smaller copy beside the selected file: AV1 or HEVC video with Opus sound, or Opus for sound alone. SHRINK FOLDER does the same for a whole folder.
-- A copy is kept only after it decodes from start to end without errors, has the original's picture and sound, and lasts as long.
-- The original is only ever read. STX never deletes it.
-
-## The console
-
-- Black anodized by default, brushed aluminum as light mode. Text meets WCAG AA contrast on both.
-- Per-monitor DPI aware.
-- A user guide that opens on the first launch, and seven tutorials that walk a spotlight over the live console.
-
-## Releases
-
-- 1.2.0 (2026-11-15): 120 file types up from 51, tutorials on the live console, a rebuilt user guide, CLEAR and CLEAR DONE for the Queue, REMOVE and CLEAR MISSING for the Library, new meters.
-- 1.1.0 (2026-11-09): a media player on VLC's engine, STX as the default player, discs and streams, bit-perfect sound, ENHANCE, and Shrink.
-- 1.0.0 (2026-11-01): the first release.
-
-## License
-
-MIT. Copyright (c) 2026 Rocky Elsalaymeh, Strategia-X. Third-party software keeps its own license: https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/docs/THIRD_PARTY.md
+- Releases: https://github.com/Git-Rocky-Stack/STX-Downloader/releases
+- Changelog: https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md
+- Short index: https://git-rocky-stack.github.io/STX-Downloader/llms.txt

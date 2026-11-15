@@ -12,6 +12,7 @@ const EM_DASH = /\u2014/;
 // Any pictograph, plus the parts that build emoji out of plain characters: flag letters, the keycap and VS16.
 const EMOJI = /\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}\u{20E3}\u{FE0F}]/u;
 const OPEN_GRAPH = ['og:title', 'og:description', 'og:image', 'twitter:card'];
+const LLMS_FILES = ['llms.txt', 'llms-full.txt'];
 const TITLE_LEN = [30, 65];
 const DESC_LEN = [120, 165];
 
@@ -121,6 +122,23 @@ function checkParity(rows, tags, problems) {
       if ('href' in attrs && attrs.href !== row.url) problems.push(`${where} has href "${attrs.href}", README says "${row.url}"`);
     }
     if (!tags.some((t) => t.name === 'a' && t.attrs.href === row.url)) problems.push(`site/index.html: the ${kind} download ${row.url} is not a plain <a href> in the HTML source`);
+  }
+}
+
+// Release facts in a text file that names no particular row: each file name and hash must be one of the README's,
+// and a "version x.y.z" must be the README's version.
+function checkTextFacts(owner, text, rows, problems) {
+  const known = [rows.setup, rows.zip].filter(Boolean);
+  let rest = text;
+  for (const [file] of text.matchAll(/STXDownloader-[\w.-]+?\.(?:exe|zip)\b/g)) {
+    if (!known.some((r) => r.file === file)) problems.push(`${owner}: names ${file}, which isn't in the README's download table`);
+    rest = rest.replaceAll(file, ' ');
+  }
+  for (const [hash] of rest.matchAll(/\b[0-9a-fA-F]{64}\b/g)) {
+    if (!known.some((r) => r.sha256.toLowerCase() === hash.toLowerCase())) problems.push(`${owner}: shows SHA-256 ${hash}, which isn't in the README's download table`);
+  }
+  for (const m of rest.matchAll(/\bversion\s+(\d+\.\d+\.\d+)\b/gi)) {
+    if (m[1] !== rows.setup?.version) problems.push(`${owner}: says version ${m[1]}, README says ${rows.setup?.version}`);
   }
 }
 
@@ -267,6 +285,7 @@ export async function checkSite(repoRoot) {
 
   // sitemap, robots, IndexNow
   const sitemapPath = join(siteDir, 'sitemap.xml');
+  let sitemapLocs = null;
   if (!existsSync(sitemapPath)) problems.push('site/sitemap.xml: missing');
   else {
     const urls = [...read(sitemapPath).matchAll(/<url>([\s\S]*?)<\/url>/g)];
@@ -279,6 +298,16 @@ export async function checkSite(repoRoot) {
       else checkRef(loc, siteDir, siteDir, 'site/sitemap.xml', problems);
     }
     if (urls.length && !locs.includes(PAGE_URL)) problems.push(`site/sitemap.xml: does not list the page itself, ${PAGE_URL}`);
+    sitemapLocs = locs;
+  }
+
+  // The LLM-facing files: both must exist and be in the sitemap (Rocky's SEO/GEO diligence, step 7), and any
+  // release fact written in them is held to the README table, like the page's.
+  for (const name of LLMS_FILES) {
+    const path = join(siteDir, name);
+    if (!existsSync(path)) { problems.push(`site/${name}: missing`); continue; }
+    if (sitemapLocs && !sitemapLocs.includes(PAGE_URL + name)) problems.push(`site/sitemap.xml: does not list ${PAGE_URL}${name}`);
+    if (rows) checkTextFacts(`site/${name}`, read(path), rows, problems);
   }
   const robotsPath = join(siteDir, 'robots.txt');
   if (!existsSync(robotsPath)) problems.push('site/robots.txt: missing');

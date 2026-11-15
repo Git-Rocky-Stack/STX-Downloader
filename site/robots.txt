@@ -1,4 +1,4 @@
-# Every crawler, search and AI alike, may read this page.
+# STX Downloader's project page. Search engines and AI crawlers are welcome.
 User-agent: *
 Allow: /
 

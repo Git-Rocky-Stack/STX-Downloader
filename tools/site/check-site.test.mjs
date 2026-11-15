@@ -241,3 +241,18 @@ test('fails_when_a_version_readout_shows_other_text', async () => {
   // data-value is right but the text people read is stale.
   only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('data-value="1.2.0">1.2.0</span>', 'data-value="1.2.0">1.1.0</span>'))), /data-release="version".*1\.1\.0/);
 });
+
+test('fails_without_the_llms_files_or_their_sitemap_entries', async () => {
+  for (const name of ['llms.txt', 'llms-full.txt']) {
+    // A missing file is also a sitemap entry pointing at nothing, so two problems are right here.
+    mentions(await broken(({ root }) => rmSync(join(root, 'site', name))), new RegExp(`site/${name.replace('.', '\\.')}: missing`));
+    only(await broken(({ edit }) => edit('site/sitemap.xml', (x) => x.replace(new RegExp(`\\s*<url>\\s*<loc>${PAGE}${name.replace('.', '\\.')}</loc>[\\s\\S]*?</url>`), ''))), new RegExp(`sitemap\\.xml.*${name.replace('.', '\\.')}`));
+  }
+});
+
+test('fails_when_llms_release_facts_are_stale', async () => {
+  only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace('STXDownloader-1.2.0-setup.exe', 'STXDownloader-1.1.0-setup.exe'))), /llms-full\.txt.*STXDownloader-1\.1\.0-setup\.exe/);
+  only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace(HASH, 'C'.repeat(64)))), /llms-full\.txt.*C{64}/);
+  only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace('Version 1.2.0.', 'Version 1.1.0.'))), /llms-full\.txt.*1\.1\.0/);
+  only(await broken(({ edit }) => edit('site/llms.txt', (t) => t + 'Version 1.0.9.\n')), /llms\.txt.*1\.0\.9/);
+});

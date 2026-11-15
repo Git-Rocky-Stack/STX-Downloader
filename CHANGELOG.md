@@ -2,12 +2,20 @@
 
 ## Unreleased
 
+### The project page, rebuilt as a rack (2026-11-15)
+
+- **The page is rebuilt from the ground up** as a piece of rack gear, in a black and an aluminum finish (`site/index.html`, `site/css/stx.css`, `site/js/stx.js`). Nothing is kept from the first page.
+- **Its screws, LEDs, meter segments, digits, pads and brushed grain are drawn by the app's own art code** (`tools/site/SiteArt`, into `site/art/`). `build.yml` redraws them and fails when the committed images differ (`--check`).
+- **Every screen is captured from 1.2.0 in both finishes** (`site/screens/`), and the README points there. The first page's `site/screenshots/` is gone.
+- **`tools/site/check-site.mjs` is rewritten for this page.** It holds the page to the README's download table: the version, file names, sizes, SHA-256 hashes and links, in its attributes, the text people read, its structured data and its `llms` files. A release that forgets the page can't publish it.
+- **The page serves its own fonts**, Cascadia Mono and Selawik, under the SIL Open Font License (`site/fonts/`, [third-party software](docs/THIRD_PARTY.md)).
+
 ### Public, with a project page (2026-11-15)
 
 - **The repository is public**, under the MIT license it always had (`LICENSE`).
 - **A project page** at https://git-rocky-stack.github.io/STX-Downloader/: what STX does, screens of every plate, both 1.2.0 downloads with their SHA-256, the release history, and what has and hasn't been tested. It's a single static page in `site/`, published by `.github/workflows/pages.yml` on every push to main that touches it, with a sitemap, `robots.txt`, `llms.txt`, `llms-full.txt`, structured data, and an IndexNow ping after each publish.
 - **`tools/site/check-site.mjs` gates the publish.** It fails on a file the page points at that isn't there, an image without alt text or size, a missing search or social tag, structured data that doesn't parse, a sitemap that doesn't match `site/`, or an em dash or emoji in the page, its text files or the README. A missing image, a sitemap entry for a file that isn't there, an em dash and an emoji were each injected and caught; the alt text, tag and structured-data checks weren't tried that way.
-- **The screens are new captures from 1.2.0**, drawn by the app's own panels on sample data (`tools/Capture-Gallery.ps1`), in `site/screenshots/`. The README shows five of them, and links both downloads with their hashes.
+- **The screens are new captures from 1.2.0**, drawn by the app's own panels on sample data (`tools/Capture-Gallery.ps1`), in `site/screenshots/` (since moved to `site/screens/`, above). The README shows five of them, and links both downloads with their hashes.
 - **The README** gains a download table, the Screens section, and Contributing.
 
 ## 1.2.0 (2026-11-15)

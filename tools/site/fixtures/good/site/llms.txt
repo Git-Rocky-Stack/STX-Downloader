@@ -1,0 +1,5 @@
+# STX Downloader
+
+> A Windows app that saves media you are allowed to keep.
+
+- [Full reference](https://git-rocky-stack.github.io/STX-Downloader/llms-full.txt)

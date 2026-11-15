@@ -4,7 +4,7 @@ A Windows app that saves media you're allowed to keep, from YouTube and from web
 
 **[Download 1.2.0](https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0)** · [Project page](https://git-rocky-stack.github.io/STX-Downloader/) · [Changelog](CHANGELOG.md) · [MIT license](LICENSE)
 
-![The STX console: the header with ENGINE CURRENT lit, the Source plate, and a Queue of three jobs with their meters](site/screenshots/console-dark.png)
+![The STX console: the header with ENGINE CURRENT lit, the Source plate, and a Queue of three jobs with their meters](site/screens/console-dark.png)
 
 > [!IMPORTANT]
 > **DRM is out of scope.** STX doesn't save or play DRM-protected media. When it sees DRM, it says so and stops.
@@ -73,12 +73,12 @@ Captured from 1.2.0. Each screen is drawn by the app's own panels on sample data
 
 | | |
 |---|---|
-| ![The Source Truth plate: AAC 386 kbps, 48 kHz, 6 channels, roll-off 17.8 kHz, minus 14.2 LUFS, a spectrum, level meters and the OUTPUT FORMAT knob](site/screenshots/source-truth.png) | ![The PLAYER plate: a test picture, the time, VOLUME and ENHANCE knobs, and the PREV, PLAY, NEXT, STOP and FULL pads](site/screenshots/player.png) |
+| ![The Source Truth plate: AAC 386 kbps, 48 kHz, 6 channels, roll-off 17.8 kHz, minus 14.2 LUFS, a spectrum, level meters and the OUTPUT FORMAT knob](site/screens/sourcetruth-dark.png) | ![The PLAYER plate: a test picture, the time, VOLUME and ENHANCE knobs, and the PREV, PAUSE, NEXT, STOP and FULL pads](site/screens/player-dark.png) |
 | **Source Truth** measures the audio and gives a plain verdict. | **Player**, on VLC's engine, with ENHANCE. |
-| ![The LIBRARY plate: search, three rows with one FILE MISSING, its pads, and the SHRINK TO knob](site/screenshots/library.png) | ![The SETTINGS plate: quality and parallel-download knobs, switches, folders, PERFORMANCE and BIT-PERFECT](site/screenshots/settings.png) |
+| ![The LIBRARY plate: search, three rows with one FILE MISSING, its pads, and the SHRINK TO knob](site/screens/library-dark.png) | ![The SETTINGS plate: quality and parallel-download knobs, switches, folders, PERFORMANCE and BIT-PERFECT](site/screens/settings-dark.png) |
 | **Library**, your whole collection. | **Settings**, with USER GUIDE and TUTORIALS. |
 
-![A tutorial on the live console: a spotlight on the Queue's CLEAR pad and a card reading MANAGING THE QUEUE, step 5 of 7](site/screenshots/tutorial.png)
+![A tutorial on the live console: a spotlight on the Queue's CLEAR pad and a card reading MANAGING THE QUEUE, step 5 of 7](site/screens/tutorial-dark.png)
 
 ## What it does
 
