@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://git-rocky-stack.github.io/STX-Downloader/sitemap.xml

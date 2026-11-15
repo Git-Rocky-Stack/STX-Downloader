@@ -1,0 +1,2 @@
+.hero { background: url("../img/shot.png") no-repeat; }
+.hero2 { background-image: image-set("../img/shot.png" 1x, "../img/shot.png" 2x); }
