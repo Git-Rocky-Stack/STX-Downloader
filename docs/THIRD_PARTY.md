@@ -41,6 +41,17 @@ The zip carries the app alone. When the app finds a tool missing, as on the zip'
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php), under [its own license](https://jrsoftware.org/files/is/license.txt).
 
+## Fonts on the project website
+
+The project site (`site/`) serves its own copies of two fonts and loads nothing from a font host. Both are under the [SIL Open Font License 1.1](https://openfontlicense.org/open-font-license-official-text/), and each license file is kept beside the fonts (`site/fonts/LICENSE-CascadiaCode.txt`, `site/fonts/LICENSE-Selawik.txt`).
+
+| Font | Used for | Source | License |
+|---|---|---|---|
+| Cascadia Mono 2407.24 (the variable `CascadiaMono.ttf`, weights 400 to 700) | The page's display windows | [microsoft/cascadia-code](https://github.com/microsoft/cascadia-code/releases/tag/v2407.24) | [SIL OFL 1.1](https://github.com/microsoft/cascadia-code/blob/v2407.24/LICENSE), "with Reserved Font Name Cascadia Code" |
+| Selawik 1.01 (Regular, Semibold, Bold) | The silkscreened labels | [microsoft/Selawik](https://github.com/microsoft/Selawik/releases/tag/1.01) | [SIL OFL 1.1](https://github.com/microsoft/Selawik/blob/master/LICENSE.txt), "with Reserved Font Name Selawik" |
+
+Each file is cut down to Basic Latin, Latin-1, general punctuation and four arrows, and saved as WOFF2. That makes them Modified Versions under section 3 of the OFL, and both licenses reserve a name, so the files don't carry the originals' names. The Cascadia subset is named "STX Mono" and the Selawik subsets "STX Label" (`site/fonts/cascadia-mono.woff2`, `selawik.woff2`, `selawik-semibold.woff2`, `selawik-bold.woff2`). The copyright, license and trademark records inside the files are unchanged. The Selawik release has no glyphs for the no-break space, the arrows or the minus sign, so its subsets don't either.
+
 ## Why the GPL build of FFmpeg
 
 The GPL build chosen in `FfmpegSource` includes libx264, a software H.264 encoder. The LGPL builds leave it out. FFmpeg's license applies to FFmpeg itself. FFmpeg is a separate program that STX starts; it is not part of this repository and not linked into this app, so this repository's code stays under MIT.
