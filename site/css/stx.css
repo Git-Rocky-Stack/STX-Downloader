@@ -289,7 +289,7 @@ html:not(.js) .strip [data-finish-pad]{display:none}
 .js .strip[data-menu="open"] nav,.js .strip[data-menu="open"] .menu-panel{position:absolute;top:calc(100% + 4px);right:56px;z-index:30;padding:16px;border-radius:3px;
   background:var(--grain) 0 0/512px 256px,linear-gradient(178deg,var(--plate-top),var(--plate-mid) 26%,var(--plate-bot));background-blend-mode:overlay,normal;
   box-shadow:inset 0 1px 0 var(--edge-hi),inset 0 -1px 0 var(--edge-lo),0 12px 32px rgba(0,0,0,.8),0 0 0 1px #000}
-@media (max-width:1359px){
+@media (max-width:1439px){
   .js .strip .menu{display:inline-block}
   .js .strip nav{display:none}
   .js .strip[data-menu="open"] nav{display:block}
@@ -314,6 +314,12 @@ html:not(.js) .strip [data-finish-pad]{display:none}
     linear-gradient(180deg,rgba(255,255,255,.06),transparent 10%);
   box-shadow:inset 0 10px 22px rgba(0,0,0,.75),inset 0 0 0 1px rgba(0,0,0,.9)}
 .caption{width:100%;max-width:964px;margin:0}
+/* On screens 700 px and wider the console is sized to the window, so the pitch and the hero DOWNLOAD pad are on the
+   first screen (spec Goal 1). 342 px is everything from the window top to the pad but the console itself. */
+@media (min-width:700px){
+  .monitor-unit .monitor{max-width:min(964px,max(480px,calc((100vh - 342px) * 944 / 601 + 20px)))}
+  @supports (height:100svh){.monitor-unit .monitor{max-width:min(964px,max(480px,calc((100svh - 342px) * 944 / 601 + 20px)))}}
+}
 
 /* The 2U download unit: the pitch on glass, the version, the demo meters and the lit DOWNLOAD pad. */
 .hero{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:24px 32px}
@@ -478,6 +484,3 @@ html:not(.js) [data-copy]{display:none}
   .footer{gap:0 24px}
 }
 
-/* Units below the hero render only as they near the screen: the first view paints the strip, the console and
-   the download unit, not the whole rack. Their last measured size is kept, so scrolling back doesn't jump. */
-main>section:not(.monitor-unit):not(.hero),.stack>footer{content-visibility:auto;contain-intrinsic-size:auto 1000px}

@@ -66,7 +66,7 @@ test('fails_without_a_zip_element', async () => {
 
 test('zip_link_is_a_plain_anchor_even_without_a_zip_element', async () => {
   // The whole zip block gone: both the element rule and the anchor rule must fire.
-  const p = await broken(({ edit }) => edit('site/index.html', (h) => h.replace(/<div data-release-file="zip"[\s\S]*?<\/div>\n/, '')));
+  const p = await broken(({ edit }) => edit('site/index.html', (h) => h.replace(/<div data-release-file="zip"[\s\S]*?<\/div>\r?\n/, '')));
   mentions(p, /data-release-file="zip"/);
   mentions(p, new RegExp(`zip download ${ZIP_URL.replaceAll('.', '\\.')} is not a plain <a href>`));
   assert.equal(p.length, 2, p.join('\n'));
@@ -164,12 +164,12 @@ test('fails_on_in_page_link_without_target', async () => {
 
 test('fails_when_canonical_is_not_the_page_url', async () => {
   only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(`rel="canonical" href="${PAGE}"`, `rel="canonical" href="${PAGE}index.html"`))), /canonical/);
-  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(/<link rel="canonical"[^>]*>\n/, ''))), /canonical/);
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(/<link rel="canonical"[^>]*>\r?\n/, ''))), /canonical/);
 });
 
 test('fails_without_open_graph_or_twitter_card', async () => {
   for (const tag of ['og:title', 'og:description', 'og:image', 'twitter:card']) {
-    only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(new RegExp(`<meta (property|name)="${tag}"[^>]*>\\n`), ''))), new RegExp(tag));
+    only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace(new RegExp(`<meta (property|name)="${tag}"[^>]*>\\r?\\n`), ''))), new RegExp(tag));
   }
 });
 
@@ -233,7 +233,7 @@ test('text_outside_release_elements_is_not_held_to_the_table', async () => {
 test('release_text_reaches_past_nested_elements_of_the_same_name', async () => {
   // The zip block's anchor sits in its own <div>; the stale size after that inner </div> is still the zip block's.
   only(await broken(({ edit }) => edit('site/index.html', (h) => h
-    .replace(/(<div data-release-file="zip"[^>]*>\n)(<a [^\n]*<\/a>)/, '$1<div>$2</div>')
+    .replace(/(<div data-release-file="zip"[^>]*>\r?\n)(<a [^\r\n]*<\/a>)/, '$1<div>$2</div>')
     .replace('<p>171 MB</p>', '<p>170 MB</p>'))), /zip.*170 MB/);
 });
 
@@ -255,4 +255,12 @@ test('fails_when_llms_release_facts_are_stale', async () => {
   only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace(HASH, 'C'.repeat(64)))), /llms-full\.txt.*C{64}/);
   only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace('Version 1.2.0.', 'Version 1.1.0.'))), /llms-full\.txt.*1\.1\.0/);
   only(await broken(({ edit }) => edit('site/llms.txt', (t) => t + 'Version 1.0.9.\n')), /llms\.txt.*1\.0\.9/);
+});
+
+test('fails_when_llms_sizes_or_release_links_are_stale', async () => {
+  only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace('setup.exe, 254 MB', 'setup.exe, 999 MB'))), /llms-full\.txt.*999 MB.*254 MB/);
+  only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace('win-x64.zip, 171 MB', 'win-x64.zip, 1 MB'))), /llms-full\.txt.*1 MB.*171 MB/);
+  only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace('/download/v1.2.0/STXDownloader-1.2.0-setup.exe', '/download/v1.1.0/STXDownloader-1.2.0-setup.exe'))), /llms-full\.txt.*download\/v1\.1\.0/);
+  // Sizes on a line with no release file are other facts (the app's disk use), not release sizes.
+  assert.deepEqual(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t + 'About 400 MB for the app.\n')), []);
 });

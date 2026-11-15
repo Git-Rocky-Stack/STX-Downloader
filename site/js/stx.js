@@ -110,15 +110,20 @@ const media = (q) => typeof matchMedia === 'function' && matchMedia(q).matches;
 const safeStorage = () => { try { return globalThis.localStorage; } catch { return undefined; } };
 const once = (el, key) => (el.dataset[key] ? false : (el.dataset[key] = '1'));
 
-/** Shows a finish: sets data-finish, lights its pad, and swaps every capture that has a light and a dark version. */
-function applyFinish(finish) {
-  root().dataset.finish = finish;
-  root().style.setProperty('--pointer-peak', String(pointerPeakAlpha(finish)));
+/** Lights the pad of the finish on show. */
+function lightFinishPad(finish) {
   for (const pad of document.querySelectorAll('[data-finish-pad]')) {
     const on = pad.dataset.finishPad === finish;
     pad.setAttribute('aria-pressed', String(on));
     pad.dataset.tone = on ? 'green' : 'off';
   }
+}
+
+/** Shows a finish: sets data-finish, lights its pad, and swaps every capture that has a light and a dark version. */
+function applyFinish(finish) {
+  root().dataset.finish = finish;
+  root().style.setProperty('--pointer-peak', String(pointerPeakAlpha(finish)));
+  lightFinishPad(finish);
   for (const img of document.querySelectorAll('img[data-src-dark][data-src-light]')) {
     // A <picture> picks by the OS's scheme before the script runs; from here on the finish pads decide.
     img.closest('picture')?.querySelectorAll('source').forEach((source) => source.remove());
@@ -431,13 +436,21 @@ export function initPointerLight() {
   document.addEventListener('pointerleave', () => { lit?.style.removeProperty('--pl'); lit = null; });
 }
 
+/**
+ * Back to the page as it is with no script: the script-only controls hide (html:not(.js) in the CSS), every
+ * channel shows, and MENU is closed. Used when an init fails, so no control is left that does nothing.
+ */
+function degrade() {
+  root().classList.remove('js');
+  document.querySelectorAll('[role="tabpanel"]').forEach((panel) => { panel.hidden = false; });
+  document.querySelector('.strip')?.removeAttribute('data-menu');
+}
+
 if (typeof document !== 'undefined') {
-  initFinish();
-  initStrip();
-  initSeven();
-  initTyping();
-  initMeters();
-  initChannels();
-  initCopy();
-  initPointerLight();
+  let failed = false;
+  for (const init of [initFinish, initStrip, initSeven, initTyping, initMeters, initChannels, initCopy, initPointerLight]) {
+    try { init(); } catch (e) { failed = true; console.error(e); }
+  }
+  // The inline script in index.html reads this at load: without it, the page falls back to its no-script form.
+  if (failed) degrade(); else root().dataset.stxReady = '';
 }

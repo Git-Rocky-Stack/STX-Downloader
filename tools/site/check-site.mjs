@@ -125,10 +125,22 @@ function checkParity(rows, tags, problems) {
   }
 }
 
-// Release facts in a text file that names no particular row: each file name and hash must be one of the README's,
-// and a "version x.y.z" must be the README's version.
+// Release facts in a text file that names no particular row: each file name, hash and release download link must
+// be one of the README's, a size on a line that names a release file must be that file's size, and a
+// "version x.y.z" must be the README's version.
 function checkTextFacts(owner, text, rows, problems) {
   const known = [rows.setup, rows.zip].filter(Boolean);
+  for (const [url] of text.matchAll(/https:\/\/github\.com\/Git-Rocky-Stack\/STX-Downloader\/releases\/download\/[^\s)"'<>]+/g)) {
+    if (!known.some((r) => r.url === url)) problems.push(`${owner}: links ${url}, which isn't in the README's download table`);
+  }
+  for (const line of text.split(/\r?\n/)) {
+    if (line.includes('/releases/download/')) continue;
+    const row = known.find((r) => line.includes(r.file));
+    if (!row) continue;
+    for (const [size] of line.matchAll(/\b\d+(?:\.\d+)?\s?[KMG]B\b/g)) {
+      if (size.replace(/\s+/, ' ') !== row.size) problems.push(`${owner}: says ${size} for ${row.file}, README says ${row.size}`);
+    }
+  }
   let rest = text;
   for (const [file] of text.matchAll(/STXDownloader-[\w.-]+?\.(?:exe|zip)\b/g)) {
     if (!known.some((r) => r.file === file)) problems.push(`${owner}: names ${file}, which isn't in the README's download table`);

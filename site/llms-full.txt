@@ -36,7 +36,7 @@ DRM is out of scope: pages that use DRM get no Save button, and STX doesn't save
 - The setup and the app's own files are signed through Azure Artifact Signing.
 - It installs for your account only, with no administrator prompt.
 - The setup brings yt-dlp, FFmpeg and Deno, each checked against its publisher's checksum, so its first launch downloads nothing and works offline. The zip carries the app alone, and its first launch downloads the tools.
-- The browser hand-off uses a named pipe only your Windows account can open. No network port is opened.
+- The browser hand-off uses a named pipe only your Windows account can open, and opens no network port.
 - Stream tokens, cookies and headers stay in memory, and are scrubbed from the log you can copy.
 - Open source, under the MIT license.
 

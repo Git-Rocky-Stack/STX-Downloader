@@ -40,6 +40,8 @@
 // The finish before first paint, so a stored choice never flashes the other one. js/stx.js does the rest.
 document.documentElement.classList.add('js');
 try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'light') document.documentElement.dataset.finish = f; } catch (e) {}
+// If js/stx.js never ran (blocked, or failed to load), its controls would do nothing: show the no-script page instead.
+addEventListener('load', function () { var d = document.documentElement; if (!d.hasAttribute('data-stx-ready')) d.classList.remove('js'); });
 </script>
 <script type="module" src="js/stx.js"></script>
 <script type="application/ld+json">
@@ -311,7 +313,7 @@ try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'lig
     <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>The setup and the app&#39;s own files are signed through Azure Artifact Signing.</p></div></div></li>
     <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>It installs for your account only, with no administrator prompt.</p></div></div></li>
     <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>The setup brings yt-dlp, FFmpeg and Deno, each checked against its publisher&#39;s checksum, so its first launch downloads nothing and works offline.</p></div></div></li>
-    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>The browser hand-off uses a named pipe only your Windows account can open. No network port is opened.</p></div></div></li>
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>The browser hand-off uses a named pipe only your Windows account can open, and opens no network port.</p></div></div></li>
     <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>Stream tokens, cookies and headers stay in memory, and are scrubbed from the log you can copy.</p></div></div></li>
     <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>Open source, under the MIT license.</p></div></div></li>
   </ul>
