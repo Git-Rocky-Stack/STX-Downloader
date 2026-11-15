@@ -59,6 +59,15 @@ export const screwFor = (index) => SCREWS[index % SCREWS.length];
 /** The pointer light's peak opacity, 0 to 1. */
 export const pointerPeakAlpha = (finish) => POINTER_PEAK[finish === 'light' ? 'light' : 'dark'] / 255;
 
+/** The tab a key moves to in a horizontal tablist of `count` tabs, or null when the key isn't a move. */
+export function nextTab(index, key, count) {
+  if (key === 'ArrowRight') return (index + 1) % count;
+  if (key === 'ArrowLeft') return (index - 1 + count) % count;
+  if (key === 'Home') return 0;
+  if (key === 'End') return count - 1;
+  return null;
+}
+
 /** How long a level meter holds its peak segment, in ms. */
 export const PEAK_HOLD_MS = 900;
 
@@ -101,6 +110,10 @@ function applyFinish(finish) {
     img.closest('picture')?.querySelectorAll('source').forEach((source) => source.remove());
     const src = finish === 'light' ? img.dataset.srcLight : img.dataset.srcDark;
     if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+  }
+  // Links to a full-size capture point at the finish on show.
+  for (const a of document.querySelectorAll('a[data-href-dark][data-href-light]')) {
+    a.setAttribute('href', finish === 'light' ? a.dataset.hrefLight : a.dataset.hrefDark);
   }
 }
 
@@ -273,6 +286,58 @@ export function initMeters() {
   all.forEach((m) => observer.observe(m.el));
 }
 
+/**
+ * More screens: the channel pads are a tablist (arrows, Home, End; the lit pad is the selected tab) that switch
+ * one monitor. Every monitor links to its full-size capture, which opens in a dialog: Esc or CLOSE shuts it and
+ * focus goes back to the monitor. Without the script, the links open the capture and all channels show.
+ */
+export function initChannels() {
+  for (const list of document.querySelectorAll('[role="tablist"][data-channels]')) {
+    if (!once(list, 'wired')) continue;
+    const tabs = [...list.querySelectorAll('[role="tab"]')];
+    const panels = tabs.map((tab) => document.getElementById(tab.getAttribute('aria-controls')));
+    const select = (i, focus) => {
+      tabs.forEach((tab, j) => {
+        const on = i === j;
+        tab.setAttribute('aria-selected', String(on));
+        tab.tabIndex = on ? 0 : -1;
+        tab.dataset.tone = on ? 'green' : 'off';
+        if (panels[j]) panels[j].hidden = !on;
+      });
+      if (focus) tabs[i].focus();
+    };
+    tabs.forEach((tab, i) => tab.addEventListener('click', () => select(i, false)));
+    list.addEventListener('keydown', (e) => {
+      const i = nextTab(tabs.indexOf(document.activeElement), e.key, tabs.length);
+      if (i === null || !tabs.includes(document.activeElement)) return;
+      e.preventDefault();
+      select(i, true);
+    });
+    select(Math.max(0, tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true')), false);
+    list.closest('.channels')?.classList.add('tabbed');
+  }
+
+  const dialog = document.getElementById('lightbox');
+  if (!dialog || typeof dialog.showModal !== 'function' || !once(dialog, 'wired')) return;
+  const view = dialog.querySelector('img');
+  let opener = null;
+  for (const link of document.querySelectorAll('a.monitor-link')) {
+    link.addEventListener('click', (e) => {
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      opener = link;
+      const thumb = link.querySelector('img');
+      view.src = link.getAttribute('href');
+      view.alt = thumb?.alt ?? '';
+      view.width = Number(link.dataset.w) || view.width;
+      view.height = Number(link.dataset.h) || view.height;
+      dialog.showModal();
+    });
+  }
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  dialog.addEventListener('close', () => { opener?.focus(); opener = null; });
+}
+
 /** A soft light on the plate under the pointer, as the app's PointerLight. Off on touch screens and under reduced motion. */
 export function initPointerLight() {
   if (media('(prefers-reduced-motion: reduce)') || media('(hover: none)') || !once(root(), 'pointerWired')) return;
@@ -303,5 +368,6 @@ if (typeof document !== 'undefined') {
   initSeven();
   initTyping();
   initMeters();
+  initChannels();
   initPointerLight();
 }

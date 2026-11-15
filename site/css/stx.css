@@ -323,6 +323,53 @@ html:not(.js) .strip [data-finish-pad]{visibility:hidden}
 @keyframes type-failsafe{to{color:#8ae8ff;text-shadow:0 0 1px #d4f6ff,0 0 7px rgba(88,199,255,.85)}}
 @media (max-width:1100px){.hero{grid-template-columns:minmax(0,1fr) auto}.hero>.pad{grid-column:1 / -1;justify-self:start}}
 
+/* Reading text behind glass (approved option B, docs/design/site-v2/reading-text.html): the heading glows,
+   the body is 15px and glows less, and no line runs past 60 characters. */
+.unit>h2.rule{margin:0 0 24px}
+.copy h3{margin:0 0 12px;font:700 16px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  text-shadow:0 0 1px #d4f6ff,0 0 7px rgba(88,199,255,.85),0 0 18px rgba(88,199,255,.28),1px 2px 1px rgba(0,0,0,.55)}
+.copy ul{margin:0;padding:0 0 0 18px;max-width:60ch}
+.copy li{margin:0 0 8px}
+.copy p{margin:0 0 8px;max-width:60ch}
+.copy li,.copy p{font:400 15px/1.6 var(--mono);letter-spacing:.01em;color:#8ae8ff;text-shadow:0 0 4px rgba(88,199,255,.35),1px 1px 1px rgba(0,0,0,.5)}
+.copy :last-child{margin-bottom:0}
+
+/* Monitors that link to their full-size capture. The screen keeps one shape; a capture of another shape is
+   shown whole on black inside it. */
+a.monitor{display:block;color:inherit;text-decoration:none}
+a.monitor:hover .monitor-glass::after{background-color:rgba(255,255,255,.03)}
+.screen-box{display:block;background:#000}
+.screen-box img{width:100%;height:100%;object-fit:contain}
+.monitor.small{max-width:none;padding:6px}
+.monitor.small .screen-box img{aspect-ratio:944/601}
+
+/* Save / Check / Play */
+.jobs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.job{display:flex;flex-direction:column;gap:16px;min-width:0}
+.job-h{display:flex;align-items:center;gap:12px}
+.job .glass{flex:1;display:flex}
+.job .vfd{flex:1}
+
+/* More screens: channel pads over one monitor and its caption */
+.channel-pads{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
+html:not(.js) .channel-pads{display:none}
+.channel{display:grid;grid-template-columns:minmax(0,964px) minmax(240px,1fr);gap:24px;align-items:start}
+.channel[hidden]{display:none}
+.channel+.channel{margin-top:24px}
+.channels.tabbed .channel+.channel{margin-top:0}
+.channel .screen-box img{aspect-ratio:944/761}
+
+/* Full-size capture */
+.lightbox{max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);padding:16px;border:0;border-radius:6px;
+  background:linear-gradient(170deg,#25282c,#09090a 40%,#141619);box-shadow:0 0 0 1px #000,0 30px 80px rgba(0,0,0,.9)}
+.lightbox::backdrop{background:rgba(0,0,0,.8)}
+.lightbox img{display:block;max-width:100%;max-height:calc(100vh - 140px);width:auto;height:auto;margin:0 auto 16px}
+.lightbox form{display:flex;justify-content:flex-end}
+@media (max-width:1100px){
+  .jobs{grid-template-columns:minmax(0,1fr)}
+  .channel{grid-template-columns:minmax(0,1fr)}
+}
+
 @media (hover:none){.plate::before{display:none}}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}

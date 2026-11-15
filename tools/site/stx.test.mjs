@@ -2,7 +2,7 @@
 // so these pure helpers import cleanly into Node. Wiring (pads, observers, swaps) is checked in a browser per task.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseFinish, readStoredFinish, storeFinish, litSegments, digitCells, screwFor, pointerPeakAlpha, FINISH_KEY, levelAt, meterStep, PEAK_HOLD_MS } from '../../site/js/stx.js';
+import { chooseFinish, readStoredFinish, storeFinish, litSegments, digitCells, screwFor, pointerPeakAlpha, FINISH_KEY, levelAt, meterStep, PEAK_HOLD_MS, nextTab } from '../../site/js/stx.js';
 
 const storage = (items = {}) => ({ getItem: (k) => (k in items ? items[k] : null), setItem: (k, v) => { items[k] = String(v); }, items });
 const throwing = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
@@ -77,4 +77,14 @@ test('demo_meter_attacks_fast_releases_slow_and_holds_its_peak', () => {
   s = meterStep({ v: 1, peak: 32, peakT: 0 }, 0, 901, 32);
   assert.equal(s.peak, 28, 'peak falls to the level after 900 ms');
   assert.equal(meterStep({ v: 2, peak: 0, peakT: 0 }, 2, 0, 32).lit, 32, 'clamped to the meter');
+});
+
+test('channel_pads_move_with_arrows_home_and_end', () => {
+  assert.equal(nextTab(0, 'ArrowRight', 4), 1);
+  assert.equal(nextTab(3, 'ArrowRight', 4), 0, 'wraps forward');
+  assert.equal(nextTab(0, 'ArrowLeft', 4), 3, 'wraps back');
+  assert.equal(nextTab(2, 'Home', 4), 0);
+  assert.equal(nextTab(1, 'End', 4), 3);
+  assert.equal(nextTab(1, 'Enter', 4), null, 'other keys are not tab moves');
+  assert.equal(nextTab(1, 'ArrowDown', 4), null, 'a horizontal tablist ignores up and down');
 });

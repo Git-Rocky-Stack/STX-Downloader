@@ -124,14 +124,122 @@ try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'lig
     data-release-file="setup" data-version="1.2.0" data-sha256="1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363" data-size="254 MB"><span class="face"><span class="go">Download<small>Setup, 254 MB</small></span></span></a>
 </section>
 
-<section class="unit plate blank" data-u="2" id="features" aria-labelledby="features-h">
+<section class="unit plate features" data-u="8" id="features" aria-labelledby="features-h">
   <span class="screw s-tl"></span><span class="screw s-tr"></span><span class="screw s-bl"></span><span class="screw s-br"></span>
-  <h2 class="engrave" id="features-h">Save, check and play</h2>
+  <h2 class="engrave rule" id="features-h">Save, check and play</h2>
+  <div class="jobs">
+    <article class="job">
+      <div class="job-h"><span class="led" data-color="green" data-state="on"><i></i></span><span class="engrave">Save</span></div>
+      <div class="glass"><div class="vfd copy">
+        <h3>Save from a link or a page</h3>
+        <ul>
+          <li>Paste a link and yt-dlp handles it, single items and playlists. A playlist asks first.</li>
+          <li>Video isn't re-encoded by default: the original streams, in MP4 when they fit and MKV when they don't.</li>
+          <li>A Chrome and Edge extension captures HLS, DASH and direct media from a page.</li>
+        </ul>
+      </div></div>
+      <a class="monitor monitor-link small" href="screens/console-dark.png" data-href-dark="screens/console-dark.png" data-href-light="screens/console-light.png" data-w="944" data-h="601">
+        <span class="monitor-glass screen-box"><picture>
+          <source media="(prefers-color-scheme: light)" srcset="screens/console-light.webp">
+          <img src="screens/console-dark.webp" data-src-dark="screens/console-dark.webp" data-src-light="screens/console-light.webp" width="944" height="601" loading="lazy" decoding="async"
+            alt="The STX Downloader console: the Source plate with ANALYZE and PASTE, and a Queue of three sample jobs, one downloading, one complete and one that needs re-capture">
+        </picture></span><span class="sr">, opens at full size</span></a>
+    </article>
+    <article class="job">
+      <div class="job-h"><span class="led" data-color="amber" data-state="on"><i></i></span><span class="engrave">Check</span></div>
+      <div class="glass"><div class="vfd copy">
+        <h3>What the audio really is</h3>
+        <ul>
+          <li>Source Truth measures the saved file's audio: spectrum, roll-off, loudness and true peak.</li>
+          <li>It gives a plain verdict, and never says re-encoding improved anything.</li>
+        </ul>
+      </div></div>
+      <a class="monitor monitor-link small" href="screens/sourcetruth-dark.png" data-href-dark="screens/sourcetruth-dark.png" data-href-light="screens/sourcetruth-light.png" data-w="944" data-h="601">
+        <span class="monitor-glass screen-box"><picture>
+          <source media="(prefers-color-scheme: light)" srcset="screens/sourcetruth-light.webp">
+          <img src="screens/sourcetruth-dark.webp" data-src-dark="screens/sourcetruth-dark.webp" data-src-light="screens/sourcetruth-light.webp" width="944" height="601" loading="lazy" decoding="async"
+            alt="The Source Truth plate: AAC 386 kbps, 48 kHz, 6 channels, a lossless copy of a lossy source with no quality gained, roll-off 17.8 kHz, -14.2 LUFS, peak -1.5 dB, a spectrum, left and right level meters, and the OUTPUT FORMAT knob">
+        </picture></span><span class="sr">, opens at full size</span></a>
+    </article>
+    <article class="job">
+      <div class="job-h"><span class="led" data-color="blue" data-state="on"><i></i></span><span class="engrave">Play</span></div>
+      <div class="glass"><div class="vfd copy">
+        <h3>Play it on VLC's engine</h3>
+        <ul>
+          <li>VLC 3.0.24's engine, pinned by sha256, with the parts that would open network ports or run site scripts left out.</li>
+          <li>120 types, each proven by a corpus file.</li>
+          <li>Unencrypted DVD and Blu-ray, streams and internet radio. Encrypted discs are refused.</li>
+        </ul>
+      </div></div>
+      <a class="monitor monitor-link small" href="screens/player-dark.png" data-href-dark="screens/player-dark.png" data-href-light="screens/player-light.png" data-w="610" data-h="740">
+        <span class="monitor-glass screen-box"><picture>
+          <source media="(prefers-color-scheme: light)" srcset="screens/player-light.webp">
+          <img src="screens/player-dark.webp" data-src-dark="screens/player-dark.webp" data-src-light="screens/player-light.webp" width="610" height="740" loading="lazy" decoding="async"
+            alt="The PLAYER plate: color bars, the time 00 00 01, the VOLUME and ENHANCE knobs, and the PREV, PAUSE, NEXT, STOP and FULL pads">
+        </picture></span><span class="sr">, opens at full size</span></a>
+    </article>
+  </div>
 </section>
 
-<section class="unit plate blank" data-u="2" id="screens" aria-labelledby="screens-h">
+<section class="unit plate channels" data-u="8" id="screens" aria-labelledby="screens-h">
   <span class="screw s-tl"></span><span class="screw s-tr"></span><span class="screw s-bl"></span><span class="screw s-br"></span>
-  <h2 class="engrave" id="screens-h">More screens</h2>
+  <h2 class="engrave rule" id="screens-h">More screens</h2>
+  <div class="channel-pads" role="tablist" aria-label="Screens" data-channels>
+    <button class="pad" type="button" data-pad="m" data-tone="green" role="tab" id="tab-library" aria-controls="ch-library" aria-selected="true"><span class="face">Library</span></button>
+    <button class="pad" type="button" data-pad="m" data-tone="off" role="tab" id="tab-settings" aria-controls="ch-settings" aria-selected="false"><span class="face">Settings</span></button>
+    <button class="pad" type="button" data-pad="m" data-tone="off" role="tab" id="tab-guide" aria-controls="ch-guide" aria-selected="false"><span class="face">User guide</span></button>
+    <button class="pad" type="button" data-pad="m" data-tone="off" role="tab" id="tab-tutorial" aria-controls="ch-tutorial" aria-selected="false"><span class="face">Tutorials</span></button>
+  </div>
+  <div class="channel" role="tabpanel" id="ch-library" aria-labelledby="tab-library">
+    <a class="monitor monitor-link" href="screens/library-dark.png" data-href-dark="screens/library-dark.png" data-href-light="screens/library-light.png" data-w="944" data-h="761">
+        <span class="monitor-glass screen-box"><picture>
+          <source media="(prefers-color-scheme: light)" srcset="screens/library-light.webp">
+          <img src="screens/library-dark.webp" data-src-dark="screens/library-dark.webp" data-src-light="screens/library-light.webp" width="944" height="761" loading="lazy" decoding="async"
+            alt="The LIBRARY plate: search, three sample rows (an original MP4, a converted FLAC and a moved file marked FILE MISSING), its pads, and the SHRINK TO knob">
+        </picture></span><span class="sr">, opens at full size</span></a>
+    <div class="glass"><div class="vfd copy">
+      <h3>Library</h3>
+      <p>The Library holds what you saved, files you opened with STX, and your Videos and Music folders. Removing a row never removes a file.</p>
+      <p>SHRINK makes a smaller AV1 or HEVC copy with Opus sound, kept only after it checks out. The original is only read.</p>
+    </div></div>
+  </div>
+  <div class="channel" role="tabpanel" id="ch-settings" aria-labelledby="tab-settings">
+    <a class="monitor monitor-link" href="screens/settings-dark.png" data-href-dark="screens/settings-dark.png" data-href-light="screens/settings-light.png" data-w="944" data-h="694">
+        <span class="monitor-glass screen-box"><picture>
+          <source media="(prefers-color-scheme: light)" srcset="screens/settings-light.webp">
+          <img src="screens/settings-dark.webp" data-src-dark="screens/settings-dark.webp" data-src-light="screens/settings-light.webp" width="944" height="694" loading="lazy" decoding="async"
+            alt="The SETTINGS plate: download quality and parallel-download knobs, switches, the output folder and file name template, watched folders, PERFORMANCE and BIT-PERFECT">
+        </picture></span><span class="sr">, opens at full size</span></a>
+    <div class="glass"><div class="vfd copy">
+      <h3>Settings</h3>
+      <p>BIT-PERFECT, off by default, sends lossless music to your sound device at the file's own rate and depth.</p>
+      <p>USER GUIDE and TUTORIALS open from here.</p>
+    </div></div>
+  </div>
+  <div class="channel" role="tabpanel" id="ch-guide" aria-labelledby="tab-guide">
+    <a class="monitor monitor-link" href="screens/guide-dark.png" data-href-dark="screens/guide-dark.png" data-href-light="screens/guide-light.png" data-w="1344" data-h="881">
+        <span class="monitor-glass screen-box"><picture>
+          <source media="(prefers-color-scheme: light)" srcset="screens/guide-light.webp">
+          <img src="screens/guide-dark.webp" data-src-dark="screens/guide-dark.webp" data-src-light="screens/guide-light.webp" width="1344" height="881" loading="lazy" decoding="async"
+            alt="The user guide: Quick start in four steps, the list of sections, and the Queue section">
+        </picture></span><span class="sr">, opens at full size</span></a>
+    <div class="glass"><div class="vfd copy">
+      <h3>User guide</h3>
+      <p>The user guide shows by itself on the first launch, and lists all 120 types STX plays.</p>
+    </div></div>
+  </div>
+  <div class="channel" role="tabpanel" id="ch-tutorial" aria-labelledby="tab-tutorial">
+    <a class="monitor monitor-link" href="screens/tutorial-dark.png" data-href-dark="screens/tutorial-dark.png" data-href-light="screens/tutorial-light.png" data-w="1024" data-h="825">
+        <span class="monitor-glass screen-box"><picture>
+          <source media="(prefers-color-scheme: light)" srcset="screens/tutorial-light.webp">
+          <img src="screens/tutorial-dark.webp" data-src-dark="screens/tutorial-dark.webp" data-src-light="screens/tutorial-light.webp" width="1024" height="825" loading="lazy" decoding="async"
+            alt="A tutorial step over the live console: MANAGING THE QUEUE, step 5 of 7, explaining CLEAR">
+        </picture></span><span class="sr">, opens at full size</span></a>
+    <div class="glass"><div class="vfd copy">
+      <h3>Tutorials</h3>
+      <p>TUTORIALS walks you through the live console, one chapter at a time.</p>
+    </div></div>
+  </div>
 </section>
 
 <section class="unit plate blank" data-u="2" id="safe" aria-labelledby="safe-h">
@@ -152,5 +260,9 @@ try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'lig
 </main>
 </div>
 </div>
+<dialog class="lightbox" id="lightbox" aria-label="Full-size capture">
+  <img alt="" width="944" height="601">
+  <form method="dialog"><button class="pad" type="submit" data-pad="s" data-tone="off"><span class="face">Close</span></button></form>
+</dialog>
 </body>
 </html>
