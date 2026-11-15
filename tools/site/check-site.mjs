@@ -38,12 +38,14 @@ function tagsOf(html) {
   return tags;
 }
 
-// The text people read inside each element that carries data-release-file, up to its own closing tag.
+// The text people read inside each element that carries data-release-file, or is a data-release="version"
+// readout (kind "version"), up to its own closing tag.
 function releaseTexts(html) {
   const bare = bareOf(html);
   const out = [];
   for (const m of bare.matchAll(OPEN_TAG)) {
-    const kind = attrsOf(m[2])['data-release-file'];
+    const attrs = attrsOf(m[2]);
+    const kind = attrs['data-release-file'] ?? (attrs['data-release'] === 'version' ? 'version' : undefined);
     if (!kind) continue;
     const start = m.index + m[0].length;
     const tag = new RegExp(`<(/?)${m[1]}\\b[^>]*>`, 'gi');
@@ -58,6 +60,12 @@ function releaseTexts(html) {
 // Release facts written in that text: each must be the README row's own (ruling R24).
 function checkReleaseText(rows, html, problems) {
   for (const { kind, text } of releaseTexts(html)) {
+    if (kind === 'version') {
+      for (const [version] of text.matchAll(/\b\d+\.\d+\.\d+\b/g)) {
+        if (version !== rows.setup?.version) problems.push(`site/index.html: data-release="version" reads ${version}, README says ${rows.setup?.version}`);
+      }
+      continue;
+    }
     const row = rows[kind];
     if (!row) continue;
     const where = `site/index.html: the ${kind} download's text`;

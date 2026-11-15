@@ -370,6 +370,56 @@ html:not(.js) .channel-pads{display:none}
   .channel{grid-template-columns:minmax(0,1fr)}
 }
 
+/* Is it safe? LED rows, one claim each, behind glass */
+.ledrows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 32px;margin:0;padding:0;list-style:none}
+.ledrows li{display:flex;align-items:center;gap:16px}
+.ledrows .glass{flex:1;align-self:stretch;display:flex}
+.ledrows .vfd{flex:1;display:flex;align-items:center;padding:12px 20px}
+
+/* Download: setup and portable sub-units, then requirements and install steps */
+.dls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}
+.dl{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"pad glass" "copy glass" "note note";gap:16px 24px;align-content:start}
+.dl>a.pad{grid-area:pad}
+.dl>.glass{grid-area:glass}
+.dl>[data-copy]{grid-area:copy}
+.dl>.drm,.dl>.note{grid-area:note}
+.dl .note{margin:0}
+.hash-h{color:#40a6c8!important;font-size:13px!important;letter-spacing:.12em!important;margin:12px 0 4px!important}
+.hash{overflow-wrap:anywhere;word-break:break-all}
+.dl .file{font-weight:700}
+html:not(.js) [data-copy]{display:none}
+.drm .vfd p{color:#ffc865;text-shadow:0 0 4px rgba(255,176,32,.35),1px 1px 1px rgba(0,0,0,.5)}
+.dl-more{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;margin-top:32px}
+.dl-more h3{margin:0 0 12px}
+.copy ol{margin:0;padding:0 0 0 24px;max-width:60ch}
+.copy ol li{margin:0 0 8px}
+
+/* Proof: what's tested, releases as Queue rows, and the build */
+.lead{margin:0 0 16px}
+.proofs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-bottom:32px}
+.proof-box{display:flex;flex-direction:column;gap:12px}
+.proof-box .glass{flex:1;display:flex}
+.proof-box .vfd{flex:1}
+.proof h3.rule{margin:0 0 16px}
+.releases{display:grid;gap:8px;margin:0 0 32px;padding:0;list-style:none}
+.releases li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
+.releases .vfd{padding:10px 20px}
+.rel-h{font-weight:700!important;letter-spacing:.08em!important;margin-bottom:4px!important}
+.rel-h .dim{font-weight:400;margin-left:16px}
+.build pre{margin:12px 0 0;overflow-x:auto;font:400 15px/1.6 var(--mono);color:#8ae8ff;text-shadow:0 0 4px rgba(88,199,255,.35)}
+.build pre code{font:inherit}
+
+/* Footer: a blank panel with the engraved line and links */
+.footer{display:flex;flex-wrap:wrap;align-items:center;gap:8px 32px}
+.footer p{margin:0}
+.footer .links{display:flex;flex-wrap:wrap;gap:8px 24px;margin:0;padding:0;list-style:none}
+.footer a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;display:inline-block;padding:12px 0}
+.footer a:hover{color:var(--accent)}
+
+@media (max-width:1100px){
+  .ledrows,.dls,.dl-more,.proofs{grid-template-columns:minmax(0,1fr)}
+}
+
 @media (hover:none){.plate::before{display:none}}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}

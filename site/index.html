@@ -242,22 +242,142 @@ try { var f = localStorage.getItem('stx-finish'); if (f === 'dark' || f === 'lig
   </div>
 </section>
 
-<section class="unit plate blank" data-u="2" id="safe" aria-labelledby="safe-h">
+<section class="unit plate safe" data-u="6" id="safe" aria-labelledby="safe-h">
   <span class="screw s-tl"></span><span class="screw s-tr"></span><span class="screw s-bl"></span><span class="screw s-br"></span>
-  <h2 class="engrave" id="safe-h">Is it safe?</h2>
+  <h2 class="engrave rule" id="safe-h">Is it safe?</h2>
+  <ul class="ledrows">
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>The setup and the app&#39;s own files are signed through Azure Artifact Signing.</p></div></div></li>
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>It installs for your account only, with no administrator prompt.</p></div></div></li>
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>The setup brings yt-dlp, FFmpeg and Deno, each checked against its publisher&#39;s checksum, so its first launch downloads nothing and works offline.</p></div></div></li>
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>The browser hand-off uses a named pipe only your Windows account can open. No network port is opened.</p></div></div></li>
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>Stream tokens, cookies and headers stay in memory, and are scrubbed from the log you can copy.</p></div></div></li>
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy"><p>Open source, under the MIT license.</p></div></div></li>
+  </ul>
 </section>
 
-<section class="unit plate blank" data-u="2" id="download" aria-labelledby="download-h">
+<section class="unit plate download" data-u="8" id="download" aria-labelledby="download-h">
   <span class="screw s-tl"></span><span class="screw s-tr"></span><span class="screw s-bl"></span><span class="screw s-br"></span>
-  <h2 class="engrave" id="download-h">Download</h2>
+  <h2 class="engrave rule" id="download-h">Download <span data-release="version" data-value="1.2.0">1.2.0</span></h2>
+  <div class="dls">
+    <div class="dl" data-release-file="setup" data-version="1.2.0" data-sha256="1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363" data-size="254 MB">
+      <a class="pad" data-pad="l" data-tone="blue" href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe" data-release-file="setup" data-version="1.2.0" data-sha256="1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363" data-size="254 MB"><span class="face">Setup</span></a>
+      <div class="glass"><div class="vfd copy">
+        <p class="file">STXDownloader-1.2.0-setup.exe, 254 MB</p>
+        <p class="hash-h">SHA-256</p>
+        <p class="hash" id="hash-setup">1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363</p>
+      </div></div>
+      <button class="pad" type="button" data-pad="s" data-tone="off" data-copy="hash-setup" aria-label="Copy the setup SHA-256"><span class="face">Copy</span></button>
+      <div class="drm glass"><div class="vfd copy">
+        <p>DRM is out of scope: pages that use DRM get no Save button, and STX doesn&#39;t save or play DRM media.</p>
+        <p>You&#39;re responsible for each site&#39;s terms and the law where you live.</p>
+      </div></div>
+    </div>
+    <div class="dl" data-release-file="zip" data-version="1.2.0" data-sha256="FEAF84A7A1CE1168F31DB827D637F42745886DB1AFF17DA30DFA86BAB53308F1" data-size="171 MB">
+      <a class="pad" data-pad="l" data-tone="blue" href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-win-x64.zip" data-release-file="zip" data-version="1.2.0" data-sha256="FEAF84A7A1CE1168F31DB827D637F42745886DB1AFF17DA30DFA86BAB53308F1" data-size="171 MB"><span class="face">Portable zip</span></a>
+      <div class="glass"><div class="vfd copy">
+        <p class="file">STXDownloader-1.2.0-win-x64.zip, 171 MB</p>
+        <p class="hash-h">SHA-256</p>
+        <p class="hash" id="hash-zip">FEAF84A7A1CE1168F31DB827D637F42745886DB1AFF17DA30DFA86BAB53308F1</p>
+      </div></div>
+      <button class="pad" type="button" data-pad="s" data-tone="off" data-copy="hash-zip" aria-label="Copy the portable zip SHA-256"><span class="face">Copy</span></button>
+      <p class="silk note">The zip carries the app alone, and its first launch downloads the tools.</p>
+    </div>
+  </div>
+  <div class="dl-more">
+    <div>
+      <h3 class="engrave">Requirements</h3>
+      <div class="glass"><div class="vfd copy">
+        <p>Windows 10 version 2004 or later, x64.</p>
+        <p>About 400 MB for the app, and about 430 MB for its tools.</p>
+        <p>No runtime to install first.</p>
+      </div></div>
+    </div>
+    <div>
+      <h3 class="engrave">Install</h3>
+      <div class="glass"><div class="vfd copy">
+        <ol>
+          <li>Run the setup. It installs for your account only.</li>
+          <li>Wait for the light at the top right to turn green and read ENGINE CURRENT.</li>
+          <li>Copy a video&#39;s link, then press PASTE on the Source plate.</li>
+        </ol>
+      </div></div>
+    </div>
+  </div>
+  <p class="sr" id="copy-status" role="status" aria-live="polite"></p>
 </section>
 
-<section class="unit plate blank" data-u="2" id="proof" aria-labelledby="proof-h">
+<section class="unit plate proof" data-u="8" id="proof" aria-labelledby="proof-h">
   <span class="screw s-tl"></span><span class="screw s-tr"></span><span class="screw s-bl"></span><span class="screw s-br"></span>
-  <h2 class="engrave" id="proof-h">Proof</h2>
+  <h2 class="engrave rule" id="proof-h">Proof</h2>
+  <p class="silk lead">Tested on a Core Ultra 7 258V laptop: Arc 140V graphics, a 2880x1800 panel at 175%, HDR on.</p>
+  <div class="proofs">
+    <div class="proof-box">
+      <div class="job-h"><span class="led" data-color="green" data-state="on"><i></i></span><span class="engrave">Proven</span></div>
+      <div class="glass"><div class="vfd copy">
+        <ul>
+          <li>BIT-PERFECT at 44.1 and 96 kHz on a real sound device.</li>
+          <li>UPSCALE running on the Arc&#39;s super resolution.</li>
+          <li>A high-DPI screen.</li>
+          <li>HDR10 reaching an HDR screen as HDR.</li>
+          <li>Default Apps as Windows past 24H2 reads them.</li>
+        </ul>
+      </div></div>
+    </div>
+    <div class="proof-box">
+      <div class="job-h"><span class="led" data-color="amber" data-state="on"><i></i></span><span class="engrave">Not yet</span></div>
+      <div class="glass"><div class="vfd copy">
+        <ul>
+          <li>The reference PC&#39;s runs of the 50,000-row memory budget, the screenshot gate and the corpus gate.</li>
+          <li>A bit comparison through a hardware loopback.</li>
+          <li>A USB DAC unplugged mid-play.</li>
+          <li>Real DVD and Blu-ray discs.</li>
+          <li>Film passthrough to a receiver.</li>
+          <li>An RTX GPU, and a clean machine for the installer.</li>
+        </ul>
+      </div></div>
+    </div>
+    <div class="proof-box">
+      <div class="job-h"><span class="led" data-color="red" data-state="on"><i></i></span><span class="engrave">Known</span></div>
+      <div class="glass"><div class="vfd copy">
+        <p>4K60 on the laptop&#39;s panel loses 3 to 4 pictures a second in about half of the runs. What limits it is VLC 3.0.24&#39;s Direct3D 11 output, not decoding.</p>
+      </div></div>
+    </div>
+  </div>
+  <h3 class="engrave rule">Releases</h3>
+  <ol class="releases">
+    <li><span class="led" data-color="green" data-state="on"><i></i></span><div class="glass"><div class="vfd copy">
+      <p class="rel-h">1.2.0 <span class="dim">2026-11-15</span></p>
+      <p>From a user&#39;s review of 1.1.0: 120 file types, up from 51, a guide that isn&#39;t a wall of text, real tutorials, and a way to clear finished rows.</p>
+    </div></div><a class="pad" data-pad="s" data-tone="off" href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0"><span class="face">Notes</span></a></li>
+    <li><span class="led" data-color="green" data-state="off"><i></i></span><div class="glass"><div class="vfd copy">
+      <p class="rel-h">1.1.0 <span class="dim">2026-11-09</span></p>
+      <p>STX plays what it saves: a media player on VLC&#39;s engine, the default player, discs and streams, bit-perfect sound, ENHANCE and Shrink.</p>
+    </div></div><a class="pad" data-pad="s" data-tone="off" href="https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md#110-2026-11-09"><span class="face">Notes</span></a></li>
+  </ol>
+  <h3 class="engrave rule">Build it yourself</h3>
+  <div class="glass"><div class="vfd copy build">
+    <p>Needs the .NET 10 SDK, Node 24 for the extension&#39;s tests, and PowerShell 7.</p>
+    <pre><code>dotnet build src/Stx.App -c Release -p:Platform=x64
+dotnet test --project tests/Stx.Core.Tests
+node --test "extension/test/*.test.js"
+tools\Publish.ps1</code></pre>
+  </div></div>
 </section>
 
 </main>
+
+<footer class="unit plate footer" data-u="2">
+  <span class="screw s-tl"></span><span class="screw s-tr"></span><span class="screw s-bl"></span><span class="screw s-br"></span>
+  <p class="engrave">Copyright (c) 2026 Rocky Elsalaymeh, Strategia-X</p>
+  <p class="silk">MIT license</p>
+  <ul class="links silk">
+    <li><a href="https://github.com/Git-Rocky-Stack/STX-Downloader">Source</a></li>
+    <li><a href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases">Releases</a></li>
+    <li><a href="https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md">Changelog</a></li>
+    <li><a href="mailto:support@strategia-x.com">support@strategia-x.com</a></li>
+  </ul>
+</footer>
+
 </div>
 </div>
 <dialog class="lightbox" id="lightbox" aria-label="Full-size capture">

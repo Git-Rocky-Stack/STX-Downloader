@@ -236,3 +236,8 @@ test('release_text_reaches_past_nested_elements_of_the_same_name', async () => {
     .replace(/(<div data-release-file="zip"[^>]*>\n)(<a [^\n]*<\/a>)/, '$1<div>$2</div>')
     .replace('<p>171 MB</p>', '<p>170 MB</p>'))), /zip.*170 MB/);
 });
+
+test('fails_when_a_version_readout_shows_other_text', async () => {
+  // data-value is right but the text people read is stale.
+  only(await broken(({ edit }) => edit('site/index.html', (h) => h.replace('data-value="1.2.0">1.2.0</span>', 'data-value="1.2.0">1.1.0</span>'))), /data-release="version".*1\.1\.0/);
+});

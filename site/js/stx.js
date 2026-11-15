@@ -68,6 +68,20 @@ export function nextTab(index, key, count) {
   return null;
 }
 
+/** How long a COPY pad stays lit after it copies, in ms. */
+export const COPY_FLASH_MS = 1200;
+
+/** Copies with the Clipboard API; 'select' means it couldn't (no API, or refused) and the caller selects the text instead. */
+export async function copyText(text, clipboard) {
+  try {
+    if (!clipboard?.writeText) return 'select';
+    await clipboard.writeText(text);
+    return 'copied';
+  } catch {
+    return 'select';
+  }
+}
+
 /** How long a level meter holds its peak segment, in ms. */
 export const PEAK_HOLD_MS = 900;
 
@@ -338,6 +352,35 @@ export function initChannels() {
   dialog.addEventListener('close', () => { opener?.focus(); opener = null; });
 }
 
+/**
+ * COPY pads beside the SHA-256 hashes: the Clipboard API, or the hash selected when that isn't allowed, then the
+ * pad lights green for COPY_FLASH_MS and a status line says which happened.
+ */
+export function initCopy() {
+  const status = document.getElementById('copy-status');
+  for (const pad of document.querySelectorAll('[data-copy]')) {
+    if (!once(pad, 'wired')) continue;
+    let timer = 0;
+    pad.addEventListener('click', async () => {
+      const source = document.getElementById(pad.dataset.copy);
+      if (!source) return;
+      const text = source.textContent.replace(/\s+/g, '');
+      const outcome = await copyText(text, navigator.clipboard);
+      if (outcome === 'select') {
+        const range = document.createRange();
+        range.selectNodeContents(source);
+        const selection = getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+      if (status) status.textContent = outcome === 'copied' ? 'SHA-256 copied.' : 'SHA-256 selected. Press Ctrl+C to copy it.';
+      pad.dataset.tone = 'green';
+      clearTimeout(timer);
+      timer = setTimeout(() => { pad.dataset.tone = 'off'; }, COPY_FLASH_MS);
+    });
+  }
+}
+
 /** A soft light on the plate under the pointer, as the app's PointerLight. Off on touch screens and under reduced motion. */
 export function initPointerLight() {
   if (media('(prefers-reduced-motion: reduce)') || media('(hover: none)') || !once(root(), 'pointerWired')) return;
@@ -369,5 +412,6 @@ if (typeof document !== 'undefined') {
   initTyping();
   initMeters();
   initChannels();
+  initCopy();
   initPointerLight();
 }

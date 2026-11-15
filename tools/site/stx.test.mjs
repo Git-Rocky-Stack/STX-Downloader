@@ -2,7 +2,7 @@
 // so these pure helpers import cleanly into Node. Wiring (pads, observers, swaps) is checked in a browser per task.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseFinish, readStoredFinish, storeFinish, litSegments, digitCells, screwFor, pointerPeakAlpha, FINISH_KEY, levelAt, meterStep, PEAK_HOLD_MS, nextTab } from '../../site/js/stx.js';
+import { chooseFinish, readStoredFinish, storeFinish, litSegments, digitCells, screwFor, pointerPeakAlpha, FINISH_KEY, levelAt, meterStep, PEAK_HOLD_MS, nextTab, copyText, COPY_FLASH_MS } from '../../site/js/stx.js';
 
 const storage = (items = {}) => ({ getItem: (k) => (k in items ? items[k] : null), setItem: (k, v) => { items[k] = String(v); }, items });
 const throwing = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
@@ -87,4 +87,14 @@ test('channel_pads_move_with_arrows_home_and_end', () => {
   assert.equal(nextTab(1, 'End', 4), 3);
   assert.equal(nextTab(1, 'Enter', 4), null, 'other keys are not tab moves');
   assert.equal(nextTab(1, 'ArrowDown', 4), null, 'a horizontal tablist ignores up and down');
+});
+
+test('copy_uses_the_clipboard_and_falls_back_to_selecting', async () => {
+  assert.equal(COPY_FLASH_MS, 1200);
+  let written = null;
+  assert.equal(await copyText('ABC', { writeText: async (t) => { written = t; } }), 'copied');
+  assert.equal(written, 'ABC');
+  assert.equal(await copyText('ABC', { writeText: async () => { throw new Error('denied'); } }), 'select', 'a refused clipboard selects instead');
+  assert.equal(await copyText('ABC', { writeText() { throw new Error('sync'); } }), 'select', 'a throwing clipboard selects instead');
+  assert.equal(await copyText('ABC', undefined), 'select', 'no Clipboard API selects instead');
 });
