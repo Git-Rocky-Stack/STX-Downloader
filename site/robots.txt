@@ -1,0 +1,5 @@
+# Every crawler, search and AI alike, may read this page.
+User-agent: *
+Allow: /
+
+Sitemap: https://git-rocky-stack.github.io/STX-Downloader/sitemap.xml

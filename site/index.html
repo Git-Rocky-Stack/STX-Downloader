@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STX Downloader 1.2.0: Save, Check and Play Media on Windows</title>
+<meta name="description" content="Open-source Windows app, MIT licensed. Saves media you are allowed to keep from YouTube and web pages, measures what the audio really is, and plays it with VLC.">
+<meta name="keywords" content="STX Downloader, Windows media downloader, yt-dlp GUI, VLC player, Source Truth audio analysis, bit-perfect playback, AV1 shrink, open source, MIT, Strategia-X">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="author" content="Rocky Elsalaymeh, Strategia-X">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://git-rocky-stack.github.io/STX-Downloader/">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="site.webmanifest">
+<link rel="alternate" type="text/plain" title="llms.txt" href="llms.txt">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="STX Downloader">
+<meta property="og:title" content="STX Downloader 1.2.0: Save, Check and Play Media on Windows">
+<meta property="og:description" content="Open-source Windows app that saves media you are allowed to keep, tells you what the audio really is, and plays your whole collection with VLC's engine.">
+<meta property="og:url" content="https://git-rocky-stack.github.io/STX-Downloader/">
+<meta property="og:image" content="https://git-rocky-stack.github.io/STX-Downloader/img/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The STX Downloader console: Source plate, and a Queue with three jobs and their meters">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="STX Downloader 1.2.0: Save, Check and Play Media on Windows">
+<meta name="twitter:description" content="Open-source Windows app that saves media you are allowed to keep, tells you what the audio really is, and plays it with VLC's engine.">
+<meta name="twitter:image" content="https://git-rocky-stack.github.io/STX-Downloader/img/social-card.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://strategia-x.com/#organization",
+      "name": "Strategia-X",
+      "url": "https://strategia-x.com/",
+      "email": "support@strategia-x.com",
+      "founder": { "@type": "Person", "name": "Rocky Elsalaymeh" }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://git-rocky-stack.github.io/STX-Downloader/#website",
+      "name": "STX Downloader",
+      "url": "https://git-rocky-stack.github.io/STX-Downloader/",
+      "publisher": { "@id": "https://strategia-x.com/#organization" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://git-rocky-stack.github.io/STX-Downloader/#webpage",
+      "url": "https://git-rocky-stack.github.io/STX-Downloader/",
+      "name": "STX Downloader 1.2.0: Save, Check and Play Media on Windows",
+      "isPartOf": { "@id": "https://git-rocky-stack.github.io/STX-Downloader/#website" },
+      "about": { "@id": "https://git-rocky-stack.github.io/STX-Downloader/#app" },
+      "primaryImageOfPage": "https://git-rocky-stack.github.io/STX-Downloader/screenshots/console-dark.png",
+      "datePublished": "2026-11-15",
+      "dateModified": "2026-11-15",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://git-rocky-stack.github.io/STX-Downloader/#app",
+      "name": "STX Downloader",
+      "softwareVersion": "1.2.0",
+      "datePublished": "2026-11-15",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Windows 10 version 2004 or later, x64",
+      "fileSize": "254 MB",
+      "downloadUrl": "https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe",
+      "releaseNotes": "https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0",
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "codeRepository": "https://github.com/Git-Rocky-Stack/STX-Downloader",
+      "screenshot": [
+        "https://git-rocky-stack.github.io/STX-Downloader/screenshots/console-dark.png",
+        "https://git-rocky-stack.github.io/STX-Downloader/screenshots/player.png",
+        "https://git-rocky-stack.github.io/STX-Downloader/screenshots/source-truth.png"
+      ],
+      "author": { "@type": "Person", "name": "Rocky Elsalaymeh" },
+      "publisher": { "@id": "https://strategia-x.com/#organization" }
+    }
+  ]
+}
+</script>
+
+<style>
+:root {
+  --bg: #0b0c0e;
+  --plate: #15171a;
+  --plate-2: #1b1e22;
+  --well: #070b0e;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --text: #e9ecef;
+  --muted: #aab2bb;
+  --vfd: #6fd8ff;
+  --amber: #ffb547;
+  --green: #4ce07a;
+  --focus: #9ee6ff;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 8px 24px rgba(0, 0, 0, 0.45);
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
+  --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 1rem/1.6 var(--sans);
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--vfd); text-underline-offset: 3px; }
+a:hover { color: #a8e8ff; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+code, kbd { font-family: var(--mono); font-size: 0.875em; }
+code { background: var(--well); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; overflow-wrap: anywhere; }
+
+.skip { position: absolute; left: 16px; top: -48px; background: var(--vfd); color: #00151f; padding: 8px 16px; border-radius: var(--radius); font-weight: 600; z-index: 10; text-decoration: none; }
+.skip:focus { top: 16px; }
+
+.wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 720px) { .wrap { padding: 0 32px; } }
+
+/* Header */
+.top { border-bottom: 1px solid var(--line); background: rgba(11, 12, 14, 0.92); position: sticky; top: 0; z-index: 5; backdrop-filter: blur(8px); }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+.brand img { width: 32px; height: 32px; border-radius: 6px; }
+.brand span { font-weight: 600; letter-spacing: 0.01em; }
+.top nav ul { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; flex-wrap: wrap; }
+.top nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: var(--radius); color: var(--muted); text-decoration: none; font-size: 0.9375rem; transition: color 150ms ease-out, background-color 150ms ease-out; }
+.top nav a:hover { color: var(--text); background: var(--plate-2); }
+.brand span { white-space: nowrap; }
+@media (max-width: 760px) {
+  .top nav .opt { display: none; }
+  .top nav ul { flex-wrap: nowrap; gap: 0; }
+  .top nav a { padding: 0 8px; }
+}
+
+/* Labels like the console's engraved plate names */
+.eyebrow { font: 600 0.75rem/1.2 var(--sans); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+.eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); max-width: 240px; }
+
+h1, h2, h3 { line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.625rem, 3vw, 2.125rem); font-weight: 700; letter-spacing: -0.01em; margin-bottom: 16px; }
+h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; }
+p { margin: 0 0 16px; max-width: 70ch; }
+.lead { font-size: 1.1875rem; color: #cfd5db; max-width: 62ch; }
+.muted { color: var(--muted); }
+
+section { padding: 72px 0; border-top: 1px solid var(--line); }
+@media (min-width: 720px) { section { padding: 96px 0; } }
+
+/* Hero */
+.hero { padding: 56px 0 72px; border-top: 0; }
+.hero-grid { display: grid; gap: 48px; align-items: center; }
+@media (min-width: 960px) { .hero-grid { grid-template-columns: 0.9fr 1.1fr; } }
+.badge-art { width: min(320px, 80%); margin-bottom: 24px; }
+.hero h1 { margin-bottom: 16px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0; padding: 0; list-style: none; }
+.chip { font: 600 0.75rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--vfd); background: var(--well); border: 1px solid var(--line-strong); border-radius: 999px; padding: 8px 12px; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 24px; border-radius: var(--radius); font-weight: 600; text-decoration: none; border: 1px solid var(--line-strong); color: var(--text); background: linear-gradient(#24282d, #191c20); box-shadow: var(--shadow); transition: transform 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out, color 150ms ease-out; }
+.btn:hover { transform: translateY(-1px) scale(1.02); color: #fff; box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 12px 28px rgba(0,0,0,0.55); }
+.btn:active { transform: translateY(0) scale(1); }
+.btn-primary { background: linear-gradient(#7fdcff, #4cc6f2); color: #00141d; border-color: rgba(160, 230, 255, 0.6); box-shadow: 0 0 0 1px rgba(111, 216, 255, 0.25), 0 8px 28px rgba(76, 198, 242, 0.25); }
+.btn-primary:hover { color: #00141d; box-shadow: 0 0 0 1px rgba(111, 216, 255, 0.4), 0 12px 32px rgba(76, 198, 242, 0.35); }
+.btn small { font-weight: 500; opacity: 0.85; }
+.hero-shot { border-radius: var(--radius-lg); border: 1px solid var(--line-strong); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0,0,0,0.6); overflow: hidden; background: #000; }
+
+/* Notice */
+.notice { border: 1px solid rgba(255, 181, 71, 0.35); background: rgba(255, 181, 71, 0.06); border-radius: var(--radius-lg); padding: 16px 24px; margin-top: 40px; }
+.notice p { margin: 0; color: #f3dfc0; }
+.notice strong { color: var(--amber); }
+
+/* Cards */
+.grid { display: grid; gap: 16px; }
+@media (min-width: 640px) { .grid-2 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 960px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+.card { background: linear-gradient(180deg, var(--plate-2), var(--plate)); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow); transition: border-color 200ms ease-out, transform 200ms ease-out; }
+.card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+.card ul { margin: 0; padding-left: 20px; color: #cfd5db; }
+.card li { margin-bottom: 8px; }
+.card li:last-child { margin-bottom: 0; }
+.card .plate-name { font: 600 0.75rem/1.2 var(--mono); letter-spacing: 0.14em; color: var(--vfd); text-transform: uppercase; margin-bottom: 12px; }
+
+.new-list { list-style: none; padding: 0; margin: 32px 0 0; display: grid; gap: 16px; }
+@media (min-width: 760px) { .new-list { grid-template-columns: repeat(2, 1fr); } }
+.new-list li { background: var(--plate); border: 1px solid var(--line); border-left: 3px solid var(--vfd); border-radius: var(--radius); padding: 16px 20px; color: #cfd5db; }
+.new-list strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+/* Gallery */
+.shots { display: grid; gap: 24px; margin-top: 32px; }
+@media (min-width: 800px) { .shots { grid-template-columns: repeat(2, 1fr); } .shots .wide { grid-column: 1 / -1; } }
+figure { margin: 0; }
+.shot a { display: block; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--line-strong); background: #000; box-shadow: 0 12px 36px rgba(0,0,0,0.5); transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out; }
+.shot a:hover { transform: translateY(-2px) scale(1.01); border-color: rgba(111, 216, 255, 0.5); box-shadow: 0 18px 44px rgba(0,0,0,0.6); }
+.shot.contain a { display: flex; justify-content: center; background: #08090b; }
+.shot.contain img { max-height: 620px; width: auto; }
+figcaption { margin-top: 12px; color: var(--muted); font-size: 0.9375rem; max-width: 70ch; }
+figcaption strong { color: var(--text); font-weight: 600; }
+
+/* Download */
+.dl-grid { display: grid; gap: 16px; margin-top: 32px; }
+@media (min-width: 800px) { .dl-grid { grid-template-columns: repeat(2, 1fr); } }
+.dl h3 { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.dl .size { font: 600 0.875rem/1 var(--mono); color: var(--amber); }
+.dl .btn { margin-top: 16px; }
+.hash { display: block; margin-top: 16px; font: 0.75rem/1.5 var(--mono); color: var(--muted); word-break: break-all; background: var(--well); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; }
+.table-scroll { overflow-x: auto; margin-top: 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); }
+table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child th, tr:last-child td { border-bottom: 0; }
+th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+ol.steps { padding-left: 24px; margin: 24px 0 0; max-width: 72ch; }
+ol.steps li { margin-bottom: 12px; color: #cfd5db; }
+pre { background: var(--well); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; overflow-x: auto; font: 0.875rem/1.6 var(--mono); color: #d5e9f2; margin: 16px 0 0; }
+
+/* Releases */
+.timeline { list-style: none; padding: 0; margin: 32px 0 0; display: grid; gap: 16px; }
+.timeline li { display: grid; gap: 8px 24px; background: var(--plate); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 24px; }
+@media (min-width: 720px) { .timeline li { grid-template-columns: 160px 1fr; } }
+.ver { font: 700 1.5rem/1 var(--mono); color: var(--amber); letter-spacing: 0.04em; }
+.ver small { display: block; margin-top: 8px; font: 500 0.8125rem/1.2 var(--sans); color: var(--muted); letter-spacing: 0; }
+.timeline p { margin: 0 0 8px; color: #cfd5db; }
+.timeline p:last-child { margin-bottom: 0; }
+
+.status-list { display: grid; gap: 16px; margin-top: 24px; }
+@media (min-width: 900px) { .status-list { grid-template-columns: repeat(3, 1fr); } }
+.status h3 { display: flex; align-items: center; gap: 10px; }
+.led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.led.g { background: var(--green); box-shadow: 0 0 10px rgba(76, 224, 122, 0.7); }
+.led.a { background: var(--amber); box-shadow: 0 0 10px rgba(255, 181, 71, 0.7); }
+.led.c { background: var(--vfd); box-shadow: 0 0 10px rgba(111, 216, 255, 0.7); }
+
+footer { border-top: 1px solid var(--line); padding: 48px 0 64px; color: var(--muted); font-size: 0.9375rem; }
+footer .wrap { display: grid; gap: 24px; }
+@media (min-width: 760px) { footer .wrap { grid-template-columns: 1.4fr 1fr; } }
+footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+footer a { display: inline-flex; align-items: center; min-height: 32px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="STX Downloader, back to top">
+      <img src="img/icon-32.png" width="32" height="32" alt="">
+      <span>STX Downloader</span>
+    </a>
+    <nav aria-label="Page sections">
+      <ul>
+        <li class="opt"><a href="#features">Features</a></li>
+        <li class="opt"><a href="#screens">Screens</a></li>
+        <li><a href="#download">Download</a></li>
+        <li class="opt"><a href="#releases">Releases</a></li>
+        <li><a href="https://github.com/Git-Rocky-Stack/STX-Downloader">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap hero" id="top">
+    <div class="hero-grid">
+      <div>
+        <img class="badge-art" src="img/badge.png" width="556" height="99" alt="STX 1 badge">
+        <h1>STX Downloader</h1>
+        <p class="lead">A Windows app that saves media you're allowed to keep, from YouTube and from web pages, tells you what the audio really is, and plays your whole collection with VLC's engine. It looks like a piece of solid-state rack gear, because that's the point.</p>
+        <ul class="meta-row" aria-label="At a glance">
+          <li class="chip">Version 1.2.0</li>
+          <li class="chip">Windows 10 / 11 x64</li>
+          <li class="chip">MIT license</li>
+          <li class="chip">Signed setup</li>
+        </ul>
+        <div class="ctas">
+          <a class="btn btn-primary" href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe">Download the setup <small>254 MB</small></a>
+          <a class="btn" href="https://github.com/Git-Rocky-Stack/STX-Downloader">Source on GitHub</a>
+        </div>
+      </div>
+      <div class="hero-shot">
+        <picture>
+          <source srcset="screenshots/console-dark.webp" type="image/webp">
+          <img src="screenshots/console-dark.png" width="944" height="601" fetchpriority="high" alt="The STX console in its black anodized finish: the STX 1 header with ENGINE CURRENT lit, the Source plate with ANALYZE and PASTE, and a Queue of three jobs, one downloading at 62 percent, one complete, one waiting for a new capture.">
+        </picture>
+      </div>
+    </div>
+    <div class="notice" role="note">
+      <p><strong>DRM is out of scope.</strong> STX doesn't save or play DRM-protected media. When it sees DRM, it says so and stops. You are responsible for following each site's terms and the law where you live.</p>
+    </div>
+  </div>
+
+  <section id="whats-new" aria-labelledby="whats-new-h">
+    <div class="wrap">
+      <p class="eyebrow">Release 1.2.0, 2026-11-15</p>
+      <h2 id="whats-new-h">What's new in 1.2.0</h2>
+      <p class="lead">A user's review of 1.1.0 asked for six things: a guide that isn't a wall of text, far more file types, a way to clear finished rows, real tutorials, meters with some life in them, and no dead space under the Library. 1.2.0 delivers all six.</p>
+      <ul class="new-list">
+        <li><strong>120 file types, up from 51</strong>STX plays and registers 69 more video and audio types, among them HEVC and H.264 streams, .f4v, .wtv, .dvr-ms, .bik, .caf, .amr, .m4b, .weba, and tracker music. Every type is played through STX's engine by a file in the test corpus.</li>
+        <li><strong>Tutorials on the live console</strong>Seven chapters, from your first save to the advanced settings. A spotlight walks over each real control with a card that explains it, and the control still works, so you can try it as you go.</li>
+        <li><strong>A user guide that reads like a guide</strong>The quick start sits across the top. Under it, an index of sections sits beside one page at a time, with SHOW ME to run that part's tutorial. A new section lists every supported type.</li>
+        <li><strong>Clear finished jobs</strong>CLEAR removes the selected finished job from the Queue, and CLEAR DONE removes every complete, canceled or failed one. Files you saved stay in the Library and on disk.</li>
+        <li><strong>Remove rows from the Library</strong>REMOVE removes the selected row, and CLEAR MISSING removes every FILE MISSING row at once. Only rows go; nothing on disk is touched.</li>
+        <li><strong>Meters like hi-fi gear</strong>Progress and position bars sweep from aqua to violet. The level meters shade from green to red, inside the same zones as before. The console's columns now always end level.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="features" aria-labelledby="features-h">
+    <div class="wrap">
+      <p class="eyebrow">What it does</p>
+      <h2 id="features-h">One console for saving, checking and playing</h2>
+      <p class="muted">The <a href="https://github.com/Git-Rocky-Stack/STX-Downloader#what-it-does">README</a> names the code behind every line below, by file and member, so each one can be checked.</p>
+      <div class="grid grid-2 grid-3" style="margin-top:32px">
+        <article class="card">
+          <p class="plate-name">Source</p>
+          <h3>Saving</h3>
+          <ul>
+            <li>Paste a link and yt-dlp handles it, single items and playlists. A playlist asks first.</li>
+            <li>Video isn't re-encoded by default: original streams, in MP4 when they fit and MKV when they don't.</li>
+            <li>A new file with the same bytes as one already saved is removed, and the Library points at the first copy.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Browser</p>
+          <h3>Capturing from a page</h3>
+          <ul>
+            <li>A Chrome and Edge extension lists the page's HLS, DASH and direct media, and hands over YouTube embeds.</li>
+            <li>If the page uses DRM, its streams get no Save button.</li>
+            <li>Hand-off uses native messaging and a named pipe only your Windows account can open. No network port is opened.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Source Truth</p>
+          <h3>What the audio really is</h3>
+          <ul>
+            <li>Measures the saved file's audio rather than repeating what the site claims: spectrum, roll-off, loudness and true peak.</li>
+            <li>Gives a plain verdict for each output format, and never says re-encoding improved anything.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Player</p>
+          <h3>Playing, on VLC's engine</h3>
+          <ul>
+            <li>The official VLC 3.0.24 engine, pinned by sha256, with the parts that would open network ports or run site scripts left out.</li>
+            <li>Unencrypted DVD and Blu-ray, streams and internet radio. Encrypted discs are refused before VLC's engine sees them.</li>
+            <li>BIT-PERFECT sends lossless music to your sound device at its own rate and depth. ENHANCE offers SHARPEN, and UPSCALE on GPUs that have super resolution.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Library</p>
+          <h3>Your whole collection</h3>
+          <ul>
+            <li>Holds what you've saved, files you've opened with STX, and the media in your Videos and Music folders.</li>
+            <li>The database pages and searches the rows: 50,000 rows cost no more memory than an empty Library.</li>
+            <li>Removing a row or a folder never removes a file from your disk.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Shrink</p>
+          <h3>Smaller copies, checked</h3>
+          <ul>
+            <li>SHRINK makes a smaller copy beside the file: AV1 or HEVC video with Opus sound.</li>
+            <li>A copy is kept only after it decodes start to end without errors, with the original's picture, sound and length.</li>
+            <li>The original is only ever read. STX never deletes it.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Secrets</p>
+          <h3>Your tokens stay yours</h3>
+          <ul>
+            <li>Stream tokens, cookies and headers stay in memory, and reach yt-dlp through a temp file only you can read, deleted when the job ends.</li>
+            <li>They are scrubbed from the log you can copy.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Console</p>
+          <h3>Built like rack gear</h3>
+          <ul>
+            <li>Black anodized by default, brushed aluminum as light mode. Text meets WCAG AA contrast on both.</li>
+            <li>Sharp at any display scale: STX is per-monitor DPI aware.</li>
+            <li>Tray mode, start with Windows, and an optional clipboard offer, off by default.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <p class="plate-name">Help</p>
+          <h3>Guide and tutorials inside</h3>
+          <ul>
+            <li>The user guide opens by itself on the first launch, once, and from Settings any time.</li>
+            <li>A test fails if the guide names a control the console doesn't have, or the console has one the guide never names.</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="screens" aria-labelledby="screens-h">
+    <div class="wrap">
+      <p class="eyebrow">Screens</p>
+      <h2 id="screens-h">The console, plate by plate</h2>
+      <p class="muted">Captured from STX Downloader 1.2.0. Each screen is drawn by the app's own panels on sample data (<code>tools/Capture-Gallery.ps1</code>), so no one's real files appear. Select a screen to open it at full size.</p>
+      <div class="shots">
+        <figure class="shot">
+          <a href="screenshots/console-light.png">
+            <picture><source srcset="screenshots/console-light.webp" type="image/webp"><img src="screenshots/console-light.png" width="944" height="601" loading="lazy" decoding="async" alt="The same console in brushed aluminum light mode, with the Source plate and the Queue's three jobs."></picture>
+          </a>
+          <figcaption><strong>Light mode.</strong> Brushed aluminum, one switch away in Settings.</figcaption>
+        </figure>
+        <figure class="shot">
+          <a href="screenshots/source-truth.png">
+            <picture><source srcset="screenshots/source-truth.webp" type="image/webp"><img src="screenshots/source-truth.png" width="944" height="601" loading="lazy" decoding="async" alt="The Source Truth plate reading AAC 386 kbps, 48 kHz, 6 channels, roll-off 17.8 kHz, minus 14.2 LUFS, with a spectrum, LEFT and RIGHT level meters, and the OUTPUT FORMAT knob on FLAC."></picture>
+          </a>
+          <figcaption><strong>Source Truth.</strong> The measured spectrum, roll-off and loudness, and a plain verdict: converting a lossy source to FLAC adds no quality.</figcaption>
+        </figure>
+        <figure class="shot contain">
+          <a href="screenshots/player.png">
+            <picture><source srcset="screenshots/player.webp" type="image/webp"><img src="screenshots/player.png" width="610" height="740" loading="lazy" decoding="async" alt="The PLAYER plate showing a test pattern, a time readout, VOLUME and ENHANCE knobs with ENHANCE on SHARPEN, and PREV, PLAY, NEXT, STOP and FULL pads."></picture>
+          </a>
+          <figcaption><strong>Player.</strong> VLC's engine on the plate, with VOLUME, ENHANCE and its readout of what is actually running.</figcaption>
+        </figure>
+        <figure class="shot">
+          <a href="screenshots/library.png">
+            <picture><source srcset="screenshots/library.webp" type="image/webp"><img src="screenshots/library.png" width="944" height="761" loading="lazy" decoding="async" alt="The LIBRARY plate with a search field, three rows including one marked FILE MISSING in amber, the OPEN, FIND FILE, CAR USB, PHONE, ARCHIVE, REMOVE and CLEAR MISSING pads, and the SHRINK TO knob."></picture>
+          </a>
+          <figcaption><strong>Library.</strong> Search, convert presets, REMOVE and CLEAR MISSING, and SHRINK to AV1 or HEVC.</figcaption>
+        </figure>
+        <figure class="shot">
+          <a href="screenshots/settings.png">
+            <picture><source srcset="screenshots/settings.webp" type="image/webp"><img src="screenshots/settings.png" width="944" height="694" loading="lazy" decoding="async" alt="The SETTINGS plate: DOWNLOAD quality knob, PARALLEL DOWNLOADS knob, switches for light mode, tray, start with Windows, clipboard, tool updates and reduce motion, output folder, filename template, watched folders, PERFORMANCE knob and the BIT-PERFECT switch."></picture>
+          </a>
+          <figcaption><strong>Settings.</strong> Quality, parallel downloads, watched folders, PERFORMANCE and BIT-PERFECT, with USER GUIDE and TUTORIALS pads.</figcaption>
+        </figure>
+        <figure class="shot wide">
+          <a href="screenshots/user-guide.png">
+            <picture><source srcset="screenshots/user-guide.webp" type="image/webp"><img src="screenshots/user-guide.png" width="1344" height="881" loading="lazy" decoding="async" alt="The user guide: four quick-start steps across the top, an index of thirteen sections on the left with QUEUE selected, and the Queue page with the controls it names and a SHOW ME pad."></picture>
+          </a>
+          <figcaption><strong>User guide.</strong> Four quick-start steps, then an index beside one page at a time. SHOW ME runs that section's tutorial.</figcaption>
+        </figure>
+        <figure class="shot wide">
+          <a href="screenshots/tutorial.png">
+            <picture><source srcset="screenshots/tutorial.webp" type="image/webp"><img src="screenshots/tutorial.png" width="1344" height="881" loading="lazy" decoding="async" alt="A tutorial on the live console: the window dimmed, a spotlight on the Queue's CLEAR pad, and a card reading MANAGING THE QUEUE, step 5 of 7, with BACK, NEXT and END TOUR."></picture>
+          </a>
+          <figcaption><strong>Tutorials.</strong> A spotlight walks the real controls, and the lit control still works.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="download" aria-labelledby="download-h">
+    <div class="wrap">
+      <p class="eyebrow">Download</p>
+      <h2 id="download-h">Get STX Downloader 1.2.0</h2>
+      <p>Both files are on the <a href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0">1.2.0 release page</a>. The setup and the app's own files are signed through Azure Artifact Signing; Windows shows the certificate's validated name as the publisher: Sharif Elsalaymeh.</p>
+      <div class="dl-grid">
+        <article class="card dl">
+          <h3>Windows setup <span class="size">254 MB</span></h3>
+          <p class="muted">Recommended. Installs for your account only, with no administrator prompt, and installs yt-dlp, FFmpeg and Deno with the app, so the first launch downloads nothing and works offline. Installing over 1.1.0 upgrades it in place.</p>
+          <a class="btn btn-primary" href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-setup.exe">STXDownloader-1.2.0-setup.exe</a>
+          <code class="hash" aria-label="SHA-256 of the setup">SHA-256 1E067230272C7223E1A9430E0B9BFF8E3ADF8C8666477CB2323C2592E7590363</code>
+        </article>
+        <article class="card dl">
+          <h3>Portable zip <span class="size">171 MB</span></h3>
+          <p class="muted">The app alone. Unzip it anywhere and run <code>STXDownloader.exe</code>; its first launch downloads the tools. Run <code>tools\Register-NativeHost.ps1</code> once to connect the browser.</p>
+          <a class="btn" href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/download/v1.2.0/STXDownloader-1.2.0-win-x64.zip">STXDownloader-1.2.0-win-x64.zip</a>
+          <code class="hash" aria-label="SHA-256 of the zip">SHA-256 FEAF84A7A1CE1168F31DB827D637F42745886DB1AFF17DA30DFA86BAB53308F1</code>
+        </article>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <caption class="muted" style="text-align:left;padding:12px 16px;caption-side:top">What it needs</caption>
+          <tbody>
+            <tr><th scope="row">Windows</th><td>Windows 10 version 2004 or later, x64</td></tr>
+            <tr><th scope="row">Disk</th><td>About 400 MB for the app, and about 430 MB for its tools, which the setup installs with it</td></tr>
+            <tr><th scope="row">Account</th><td>Your own: no administrator prompt</td></tr>
+            <tr><th scope="row">Nothing else</th><td>.NET and the Windows App SDK ship inside the app, so there's no runtime to install first</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:48px">Install</h3>
+      <ol class="steps">
+        <li>Run <code>STXDownloader-1.2.0-setup.exe</code>. It uninstalls from Windows Settings, and your saved media is never removed.</li>
+        <li>Wait for the light at the top right to turn green and read <strong>ENGINE CURRENT</strong>.</li>
+        <li>Copy a video's link, then press <strong>PASTE</strong> on the Source plate. Saves go to <code>Videos\STX Downloader</code> unless you choose another folder.</li>
+        <li>Optional, to capture from pages: in Chrome or Edge, open the extensions page, turn on <strong>Developer mode</strong>, choose <strong>Load unpacked</strong>, and pick the <code>extension</code> folder inside the install folder. The setup's last page can open that folder for you.</li>
+      </ol>
+      <p style="margin-top:24px">To check a download against the hashes above, in PowerShell:</p>
+      <pre><code>Get-FileHash .\STXDownloader-1.2.0-setup.exe -Algorithm SHA256</code></pre>
+    </div>
+  </section>
+
+  <section id="releases" aria-labelledby="releases-h">
+    <div class="wrap">
+      <p class="eyebrow">Release history</p>
+      <h2 id="releases-h">Releases</h2>
+      <p class="muted">Every change in every release is in the <a href="https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md">changelog</a>.</p>
+      <ol class="timeline" reversed>
+        <li>
+          <div class="ver">1.2.0<small>2026-11-15, latest</small></div>
+          <div>
+            <p>The console reworked from a user's review: 120 file types, tutorials on the live console, a rebuilt user guide, CLEAR and CLEAR DONE for the Queue, REMOVE and CLEAR MISSING for the Library, and new meters.</p>
+            <p><a href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases/tag/v1.2.0">Release notes and downloads</a></p>
+          </div>
+        </li>
+        <li>
+          <div class="ver">1.1.0<small>2026-11-09</small></div>
+          <div>
+            <p>STX plays what it saves, and the Library is your whole collection: a media player on VLC's engine, STX as the default player, discs and streams, bit-perfect sound, ENHANCE, and Shrink. The setup now carries .NET and the tools, so nothing has to be installed first.</p>
+            <p><a href="https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md#110-2026-11-09">1.1.0 in the changelog</a></p>
+          </div>
+        </li>
+        <li>
+          <div class="ver">1.0.0<small>2026-11-01</small></div>
+          <div>
+            <p>The first release.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="tested" aria-labelledby="tested-h">
+    <div class="wrap">
+      <p class="eyebrow">Proof</p>
+      <h2 id="tested-h">What has and hasn't been tested</h2>
+      <p>Parity with VLC is tested: a corpus of 178 files plays through STX's engine, covering 89 of the 91 formats and codecs on VideoLAN's list for 3.0.24, plus HEVC Main10, HDR10, AV1 and VP9. The gaps are written down too.</p>
+      <div class="status-list">
+        <article class="card status">
+          <h3><span class="led g" aria-hidden="true"></span>Proven</h3>
+          <p class="muted">On a Core Ultra 7 258V laptop: BIT-PERFECT at 44.1 and 96 kHz on a real sound device, UPSCALE on the Arc's super resolution, a high-DPI screen, HDR10 reaching an HDR screen as HDR, and Default Apps as Windows past 24H2 reads them.</p>
+        </article>
+        <article class="card status">
+          <h3><span class="led a" aria-hidden="true"></span>Not yet</h3>
+          <p class="muted">Real DVD and Blu-ray discs, film passthrough to a receiver, an RTX GPU, a USB DAC unplugged mid-play, and a clean machine for the installer, among others.</p>
+        </article>
+        <article class="card status">
+          <h3><span class="led c" aria-hidden="true"></span>Known</h3>
+          <p class="muted">4K60 on the laptop's panel loses 3 to 4 pictures a second in about half of the runs. What limits it is VLC 3.0.24's Direct3D 11 output, not decoding.</p>
+        </article>
+      </div>
+      <p style="margin-top:24px"><a href="https://github.com/Git-Rocky-Stack/STX-Downloader#what-has-and-hasnt-been-tested">The full list, with the reports behind it</a></p>
+    </div>
+  </section>
+
+  <section id="source" aria-labelledby="source-h">
+    <div class="wrap">
+      <p class="eyebrow">Open source</p>
+      <h2 id="source-h">Build it yourself</h2>
+      <p>STX Downloader is MIT licensed. Building needs the .NET 10 SDK, Node 24 for the extension's tests, and PowerShell 7. The first build downloads VLC's engine and the SoundFont, pinned by sha256.</p>
+<pre><code>git clone https://github.com/Git-Rocky-Stack/STX-Downloader.git
+cd STX-Downloader
+dotnet build src/Stx.App -c Release -p:Platform=x64
+dotnet test --project tests/Stx.Core.Tests
+node --test "extension/test/*.test.js"</code></pre>
+      <p style="margin-top:24px">Third-party software, the parts shipped inside the app and the tools it installs, keeps its own license; see <a href="https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/docs/THIRD_PARTY.md">third-party software</a>. Issues and pull requests are welcome on <a href="https://github.com/Git-Rocky-Stack/STX-Downloader/issues">GitHub</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <p><strong style="color:var(--text)">STX Downloader</strong>, published by <a href="https://strategia-x.com/">Strategia-X</a> (Rocky Elsalaymeh).</p>
+      <p>Copyright (c) 2026 Rocky Elsalaymeh, Strategia-X. Released under the <a href="https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/LICENSE">MIT License</a>.</p>
+    </div>
+    <ul aria-label="More links">
+      <li><a href="https://github.com/Git-Rocky-Stack/STX-Downloader">Source code</a></li>
+      <li><a href="https://github.com/Git-Rocky-Stack/STX-Downloader/releases">All releases</a></li>
+      <li><a href="https://github.com/Git-Rocky-Stack/STX-Downloader/blob/main/CHANGELOG.md">Changelog</a></li>
+      <li><a href="mailto:support@strategia-x.com">support@strategia-x.com</a></li>
+    </ul>
+  </div>
+</footer>
+</body>
+</html>

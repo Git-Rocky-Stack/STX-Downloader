@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Public, with a project page (2026-11-15)
+
+- **The repository is public**, under the MIT license it always had (`LICENSE`).
+- **A project page** at https://git-rocky-stack.github.io/STX-Downloader/: what STX does, screens of every plate, both 1.2.0 downloads with their SHA-256, the release history, and what has and hasn't been tested. It's a single static page in `site/`, published by `.github/workflows/pages.yml` on every push to main that touches it, with a sitemap, `robots.txt`, `llms.txt`, `llms-full.txt`, structured data, and an IndexNow ping after each publish.
+- **`tools/site/check-site.mjs` gates the publish.** It fails on a file the page points at that isn't there, an image without alt text or size, a missing search or social tag, structured data that doesn't parse, a sitemap that doesn't match `site/`, or an em dash or emoji in the page, its text files or the README. A missing image, a sitemap entry for a file that isn't there, an em dash and an emoji were each injected and caught; the alt text, tag and structured-data checks weren't tried that way.
+- **The screens are new captures from 1.2.0**, drawn by the app's own panels on sample data (`tools/Capture-Gallery.ps1`), in `site/screenshots/`. The README shows five of them, and links both downloads with their hashes.
+- **The README** gains a download table, the Screens section, and Contributing.
+
 ## 1.2.0 (2026-11-15)
 
 A user's review of 1.1.0 asked for six things: a guide that isn't a wall of text, far more file types, a way to clear finished rows, real tutorials, meters with some life in them, and no dead space under the Library. All six are below, in two rounds.
