@@ -82,6 +82,9 @@ public sealed class SettingsStore(string path)
     /// <summary>Where a damaged settings file is kept, so the first save after it doesn't erase what it held.</summary>
     public string DamagedPath => path + ".damaged";
 
+    // Eight tries, 25 ms more apart each time: 0.7 s of waiting in all.
+    const int SwapAttempts = 8;
+
     /// <summary>
     /// A missing or damaged file means defaults. Settings are never a reason not to start. A damaged one is kept
     /// beside it as settings.json.damaged and the error log says so: before the review of 2026-11-07 the next save
@@ -115,6 +118,8 @@ public sealed class SettingsStore(string path)
     /// <summary>
     /// Writes a temporary file, flushed to the disk itself, then swaps it in, so neither a crash nor a power cut
     /// mid-save can leave a half-written or empty file. Each save has its own temporary name, so two can't collide.
+    /// Windows refuses the swap while another process has the old file open, as a virus scanner reading a file just
+    /// written does, so that is waited out, a little longer each time, for under a second before the save gives up.
     /// </summary>
     public void Save(AppSettings settings)
     {
@@ -127,7 +132,18 @@ public sealed class SettingsStore(string path)
                 JsonSerializer.Serialize(file, settings, Pretty);
                 file.Flush(flushToDisk: true);
             }
-            File.Move(temporary, path, overwrite: true);
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temporary, path, overwrite: true);
+                    break;
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException && attempt < SwapAttempts)
+                {
+                    Thread.Sleep(25 * attempt);
+                }
+            }
         }
         finally
         {

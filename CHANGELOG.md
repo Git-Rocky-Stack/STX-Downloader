@@ -5,6 +5,7 @@
 ### Fixes found by the tests on Windows build 26300.9974 (2026-11-15)
 
 - **The default-player readout ignores a choice of an app that is gone.** On build 26300.9974, 36 of the types STX registers still named Media Player's class as the user's choice after Media Player was no longer installed, and Windows opened them with something else. A choice now counts only while its app's class is registered, as Windows reads it (`FileAssociations.ChosenProgId` in `src/Stx.Core/Library/FileAssociations.cs`; `IUserRegistry.ClassExists`).
+- **Saving settings waits out a brief hold on the file.** A save failed once with "Access to the path is denied" as it swapped in the new file, which is Windows' answer while another process has the old one open, as a virus scanner reading a file just written does. A change in Settings threw out of the app when that happened. The swap is now tried again, a little later each time, for under a second before the save gives up (`SettingsStore.Save` in `src/Stx.Core/Settings/AppSettings.cs`).
 
 ### The project page, rebuilt as a rack (2026-11-15)
 

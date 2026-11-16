@@ -87,6 +87,38 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(2, store.Load().MaxParallel);
     }
 
+    // 2026-11-15: a save failed once with "Access to the path is denied" as it swapped in the new file. Windows answers
+    // that while another process has the old file open without delete sharing, as a virus scanner reading a file just
+    // written does. The settings change threw out of the app's handler. Only Windows refuses that swap; Linux allows it.
+    [Fact]
+    public async Task A_save_waits_out_a_brief_hold_on_the_file()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Only Windows refuses to replace a file another process has open.");
+        var store = new SettingsStore(Path_);
+        store.Save(new AppSettings());
+        var held = new FileStream(Path_, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var release = Task.Run(async () => { await Task.Delay(150); held.Dispose(); });
+        store.Save(new AppSettings { MaxParallel = 5 });
+        await release;
+        Assert.Equal(5, store.Load().MaxParallel);
+    }
+
+    [Fact]
+    public void A_hold_that_never_ends_still_fails_the_save_soon_and_leaves_no_temporary_file()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Only Windows refuses to replace a file another process has open.");
+        var store = new SettingsStore(Path_);
+        store.Save(new AppSettings());
+        using (new FileStream(Path_, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            Assert.Throws<UnauthorizedAccessException>(() => store.Save(new AppSettings { MaxParallel = 5 }));
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(3), $"The save took {clock.Elapsed} to give up.");
+        }
+        Assert.Equal(["settings.json"], Directory.GetFiles(_dir).Select(Path.GetFileName));
+        Assert.Equal(3, store.Load().MaxParallel);
+    }
+
     [Fact]
     public void A_missing_file_means_defaults() => Assert.Equal(new AppSettings(), new SettingsStore(Path_).Load());
 
