@@ -62,8 +62,9 @@ jobs:
       - name: Test extension
         run: node --test "extension/test/*.test.js"
       # tools/site/check-site.mjs gates every publish of the project page (pages.yml); these are its tests, and the page script's.
+      # A glob, not the folder: Node 24 runs a folder argument as a module and fails without running a test.
       - name: Test site check
-        run: node --test tools/site/
+        run: node --test "tools/site/*.test.mjs"
 
   # The projects that aren't Windows-only (Look, Art, Core, Data) are tested on Linux too, so their rules can't lean
   # on Windows by accident: a path's separators, a drive letter, a file system that ignores case.
