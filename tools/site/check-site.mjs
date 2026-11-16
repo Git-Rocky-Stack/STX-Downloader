@@ -5,7 +5,7 @@ import { readFileSync, readdirSync, existsSync, statSync, realpathSync } from 'n
 import { join, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PAGE_URL = 'https://git-rocky-stack.github.io/STX-Downloader/';
+export const PAGE_URL = 'https://git-rocky-stack.github.io/STX-Downloader/';
 // GitHub Pages serves site/ at this path, so a root-absolute reference anywhere else leaves the project.
 const BASE_PATH = '/STX-Downloader/';
 const EM_DASH = /\u2014/;

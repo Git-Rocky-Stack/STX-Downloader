@@ -14,6 +14,7 @@
 - **Every screen is captured from 1.2.0 in both finishes** (`site/screens/`), and the README points there. The first page's `site/screenshots/` is gone.
 - **`tools/site/check-site.mjs` is rewritten for this page.** It holds the page to the README's download table: the version, file names, sizes, SHA-256 hashes and links, in its attributes, the text people read, its structured data and its `llms` files. A release that forgets the page can't publish it.
 - **The page serves its own fonts**, Cascadia Mono and Selawik, under the SIL Open Font License (`site/fonts/`, [third-party software](docs/THIRD_PARTY.md)).
+- **The sitemap's dates come from git.** `tools/site/lastmod.mjs` gives each URL the date of the last commit that changed the files behind it, and `pages.yml` stops a publish whose sitemap disagrees (`--check`, on a full-history checkout).
 
 ### Public, with a project page (2026-11-15)
 
