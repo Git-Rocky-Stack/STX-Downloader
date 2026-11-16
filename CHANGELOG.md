@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixes found by the tests on Windows build 26300.9974 (2026-11-15)
+
+- **The default-player readout ignores a choice of an app that is gone.** On build 26300.9974, 36 of the types STX registers still named Media Player's class as the user's choice after Media Player was no longer installed, and Windows opened them with something else. A choice now counts only while its app's class is registered, as Windows reads it (`FileAssociations.ChosenProgId` in `src/Stx.Core/Library/FileAssociations.cs`; `IUserRegistry.ClassExists`).
+
 ### The project page, rebuilt as a rack (2026-11-15)
 
 - **The page is rebuilt from the ground up** as a piece of rack gear, in a black and an aluminum finish (`site/index.html`, `site/css/stx.css`, `site/js/stx.js`). Nothing is kept from the first page.

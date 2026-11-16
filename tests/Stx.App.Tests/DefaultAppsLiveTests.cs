@@ -23,6 +23,14 @@ public class DefaultAppsLiveTests
         }
 
         public void Write(string key, string? name, string value) => throw new InvalidOperationException("This test only reads.");
+
+        // As UserRegistry.ClassExists reads it.
+        public bool ClassExists(string progId)
+        {
+            if (string.IsNullOrWhiteSpace(progId)) return false;
+            using var opened = Registry.ClassesRoot.OpenSubKey(progId);
+            return opened is not null;
+        }
     }
 
     // ASSOCSTR_PROGID: the ProgId Windows opens the type with, the user's choice included.

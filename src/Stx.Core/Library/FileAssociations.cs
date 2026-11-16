@@ -5,11 +5,17 @@ namespace Stx.Core.Library;
 /// <summary>A value under HKEY_CURRENT_USER. A null name is the key's default value.</summary>
 public sealed record RegistryValue(string Key, string? Name, string Value);
 
-/// <summary>The part of the current user's registry STX reads and writes. Nothing outside the user's own hive.</summary>
+/// <summary>
+/// The part of the registry STX reads and writes. It writes nothing outside the current user's own hive; the one thing it
+/// reads beyond it is whether a class is registered at all, for this user or for every user.
+/// </summary>
 public interface IUserRegistry
 {
     string? Read(string key, string? name);
     void Write(string key, string? name, string value);
+
+    /// <summary>Whether <paramref name="progId"/> is a registered class: HKEY_CLASSES_ROOT, the user's own and every user's.</summary>
+    bool ClassExists(string progId);
 }
 
 /// <summary>
@@ -95,15 +101,18 @@ public static class FileAssociations
         new(MediaTypes.All.Count(extension => IsOurs(ChosenProgId(registry, extension))), MediaTypes.All.Count);
 
     /// <summary>
-    /// The ProgId the user chose to open a type with, or null when they never chose. Where Windows 11 keeps the newer
-    /// choice isn't documented, so both shapes seen in the wild are read. A test holds this to Windows' own answer
-    /// (AssocQueryString) on every type, on whatever Windows runs it (first on build 26300, 2026-11-07).
+    /// The ProgId the user chose to open a type with, or null when they never chose, or chose an app that is no longer
+    /// registered: Windows doesn't open a type with a class that isn't there (build 26300.9974, 2026-11-15: Media Player
+    /// was gone, yet 36 types still named its class). Where Windows 11 keeps the newer choice isn't documented, so both
+    /// shapes seen in the wild are read. A test holds this to Windows' own answer (AssocQueryString) on every type, on
+    /// whatever Windows runs it (first on build 26300, 2026-11-07).
     /// </summary>
     public static string? ChosenProgId(IUserRegistry registry, string extension)
     {
         string key = $@"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{extension}";
-        return registry.Read(key + @"\UserChoiceLatest\ProgId", "ProgId") ?? registry.Read(key + @"\UserChoiceLatest", "ProgId")
+        string? chosen = registry.Read(key + @"\UserChoiceLatest\ProgId", "ProgId") ?? registry.Read(key + @"\UserChoiceLatest", "ProgId")
             ?? registry.Read(key + @"\UserChoice", "ProgId");
+        return chosen is not null && registry.ClassExists(chosen) ? chosen : null;
     }
 
     /// <summary>Whether a ProgId is STX's: one of its own two, or the exe itself as "Open with" names it.</summary>

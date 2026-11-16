@@ -19,6 +19,14 @@ public sealed class UserRegistry : IUserRegistry
         created.SetValue(name, value, RegistryValueKind.String);
     }
 
+    // Read only. An empty name would open the root itself, which isn't a class.
+    public bool ClassExists(string progId)
+    {
+        if (string.IsNullOrWhiteSpace(progId)) return false;
+        using var opened = Registry.ClassesRoot.OpenSubKey(progId);
+        return opened is not null;
+    }
+
     /// <summary>Tells Explorer the file associations changed, so "Open with" and Default Apps see STX at once.</summary>
     public static void AssociationsChanged() => SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, IntPtr.Zero, IntPtr.Zero);
 

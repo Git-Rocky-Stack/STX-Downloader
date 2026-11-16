@@ -17,6 +17,13 @@ sealed class RegistrySpy : IUserRegistry
         Values[key + "|" + name] = value;
     }
     public void Choose(string extension, string progId) => Values[$@"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{extension}\UserChoice|ProgId"] = progId;
+
+    // A class is registered for this user once something is written under its key in Software\Classes.
+    public bool ClassExists(string progId) => Values.Keys.Any(value =>
+    {
+        string key = value[..value.IndexOf('|')], root = @"Software\Classes\" + progId;
+        return key.Equals(root, StringComparison.OrdinalIgnoreCase) || key.StartsWith(root + @"\", StringComparison.OrdinalIgnoreCase);
+    });
 }
 
 /// <summary>Phase 3: first-run setup asks once, and Settings shows what Windows really does.</summary>
@@ -88,6 +95,7 @@ public sealed class DefaultPlayerTests : IDisposable
     [Fact]
     public void Already_the_player_means_no_question()
     {
+        FileAssociations.Register(_registry, Exe); // as the installer does: Windows offers STX only once it's registered
         foreach (string extension in MediaTypes.All) _registry.Choose(extension, FileAssociations.ProgIdFor(extension));
         Assert.False(Make().ShowOffer);
     }

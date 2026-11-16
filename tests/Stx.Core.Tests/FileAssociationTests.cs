@@ -20,6 +20,16 @@ sealed class MemoryRegistry : IUserRegistry
     public void Choose(string extension, string progId) =>
         Values[($@"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{extension}\UserChoice", "ProgId")] = progId;
 
+    /// <summary>Classes registered for every user, as VLC's installer registers its own.</summary>
+    public readonly HashSet<string> MachineClasses = new(StringComparer.OrdinalIgnoreCase);
+
+    // A class is registered for this user once something is written under its key in Software\Classes.
+    public bool ClassExists(string progId) =>
+        MachineClasses.Contains(progId) || Values.Keys.Any(v => IsUnder(v.Key, $@"Software\Classes\{progId}"));
+
+    static bool IsUnder(string key, string root) =>
+        key.Equals(root, StringComparison.OrdinalIgnoreCase) || key.StartsWith(root + @"\", StringComparison.OrdinalIgnoreCase);
+
     sealed class KeyComparer : IEqualityComparer<(string, string)>
     {
         public bool Equals((string, string) a, (string, string) b) =>
@@ -105,6 +115,7 @@ public class FileAssociationTests
     public void The_state_is_read_from_the_users_choices()
     {
         var registry = new MemoryRegistry();
+        FileAssociations.Register(registry, Exe); // as the installer does: Windows offers STX only once it's registered
         Assert.True(FileAssociations.Read(registry).IsNone);
 
         registry.Choose(".mp4", FileAssociations.VideoProgId);
@@ -124,8 +135,37 @@ public class FileAssociationTests
     public void Windows_11s_newer_choice_wins_over_the_older_one()
     {
         var registry = new MemoryRegistry();
+        FileAssociations.Register(registry, Exe);
+        registry.MachineClasses.Add("VLC.mp4");
         registry.Choose(".mp4", "VLC.mp4");
         registry.Values[(@"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.mp4\UserChoiceLatest\ProgId", "ProgId")] = FileAssociations.VideoProgId;
+        Assert.Equal(1, FileAssociations.Read(registry).Ours);
+    }
+
+    // Found 2026-11-15 on build 26300.9974: Media Player was no longer installed, yet 36 of these types still named its
+    // class as the user's choice, and Windows opened them with something else. Windows doesn't open a type with an app
+    // whose class isn't registered, so a choice naming one is no choice.
+    [Fact]
+    public void A_choice_naming_an_app_that_is_gone_is_no_choice()
+    {
+        var registry = new MemoryRegistry();
+        const string latest = @"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.flac\UserChoiceLatest\ProgId";
+        registry.Values[(latest, "ProgId")] = "AppXqj98qxeaynz6dv4459ayz6bnqxbyaqcs";
+        Assert.Null(FileAssociations.ChosenProgId(registry, ".flac"));
+
+        registry.MachineClasses.Add("VLC.flac");
+        registry.Values[(latest, "ProgId")] = "VLC.flac";
+        Assert.Equal("VLC.flac", FileAssociations.ChosenProgId(registry, ".flac"));
+    }
+
+    [Fact]
+    public void STX_counts_as_the_player_only_while_it_is_registered()
+    {
+        var registry = new MemoryRegistry();
+        registry.Choose(".mp4", FileAssociations.VideoProgId);
+        Assert.Equal(0, FileAssociations.Read(registry).Ours);
+
+        FileAssociations.Register(registry, Exe);
         Assert.Equal(1, FileAssociations.Read(registry).Ours);
     }
 
