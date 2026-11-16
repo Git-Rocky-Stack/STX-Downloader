@@ -2,3 +2,5 @@
 site/art/** -text
 # The site check's tests edit these fixtures by their exact text, so they keep LF on every checkout.
 tools/site/fixtures/** text eol=lf
+# ...except the fixture images, which are binary: as text, a PNG's signature would lose its CR on the next add.
+tools/site/fixtures/**/*.png -text
