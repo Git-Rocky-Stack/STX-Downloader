@@ -250,6 +250,18 @@ test('fails_without_the_llms_files_or_their_sitemap_entries', async () => {
   }
 });
 
+// The release archive is required and listed like the llms files. It is held to the CHANGELOG (tools/site/long-llms.mjs),
+// not the README's download table, because it names older releases' files by design.
+test('fails_without_the_release_archive_or_its_sitemap_entry', async () => {
+  mentions(await broken(({ root }) => rmSync(join(root, 'site', 'long-llms.txt'))), /site\/long-llms\.txt: missing/);
+  only(await broken(({ edit }) => edit('site/sitemap.xml', (x) => x.replace(new RegExp(`\\s*<url>\\s*<loc>${PAGE}long-llms\\.txt</loc>[\\s\\S]*?</url>`), ''))), /sitemap\.xml.*long-llms\.txt/);
+});
+
+test('the_release_archive_may_name_older_releases', async () => {
+  assert.match(readFileSync(join(good, 'site', 'long-llms.txt'), 'utf8'), /STXDownloader-1\.1\.0-setup\.exe, was 278 MB/);
+  assert.deepEqual(await broken(() => {}), []);
+});
+
 test('fails_when_llms_release_facts_are_stale', async () => {
   only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace('STXDownloader-1.2.0-setup.exe', 'STXDownloader-1.1.0-setup.exe'))), /llms-full\.txt.*STXDownloader-1\.1\.0-setup\.exe/);
   only(await broken(({ edit }) => edit('site/llms-full.txt', (t) => t.replace(HASH, 'C'.repeat(64)))), /llms-full\.txt.*C{64}/);

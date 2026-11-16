@@ -10,6 +10,7 @@ One Windows app for three jobs: save, check and play. DRM-protected media is out
 - [Screens](https://git-rocky-stack.github.io/STX-Downloader/#screens): the Library, Settings, the user guide and the tutorials, captured from the app
 - [Download](https://git-rocky-stack.github.io/STX-Downloader/#download): the signed setup and the portable zip, with their SHA-256 hashes
 - [Full reference](https://git-rocky-stack.github.io/STX-Downloader/llms-full.txt): all of it in plain text
+- [Release history](https://git-rocky-stack.github.io/STX-Downloader/long-llms.txt): the notes of each release, newest first, made from the changelog
 
 ## Source
 

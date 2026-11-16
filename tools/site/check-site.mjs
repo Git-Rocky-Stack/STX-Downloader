@@ -13,6 +13,8 @@ const EM_DASH = /\u2014/;
 const EMOJI = /\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}\u{20E3}\u{FE0F}]/u;
 const OPEN_GRAPH = ['og:title', 'og:description', 'og:image', 'twitter:card'];
 const LLMS_FILES = ['llms.txt', 'llms-full.txt'];
+// The release archive for language models, made from the CHANGELOG by tools/site/long-llms.mjs.
+const ARCHIVE = 'long-llms.txt';
 const TITLE_LEN = [30, 65];
 const DESC_LEN = [120, 165];
 
@@ -321,6 +323,10 @@ export async function checkSite(repoRoot) {
     if (sitemapLocs && !sitemapLocs.includes(PAGE_URL + name)) problems.push(`site/sitemap.xml: does not list ${PAGE_URL}${name}`);
     if (rows) checkTextFacts(`site/${name}`, read(path), rows, problems);
   }
+  // The archive must exist and be in the sitemap too, but its facts are held to the CHANGELOG by long-llms.mjs --check,
+  // not to the README's download table: it names older releases' files by design.
+  if (!existsSync(join(siteDir, ARCHIVE))) problems.push(`site/${ARCHIVE}: missing`);
+  if (sitemapLocs && !sitemapLocs.includes(PAGE_URL + ARCHIVE)) problems.push(`site/sitemap.xml: does not list ${PAGE_URL}${ARCHIVE}`);
   const robotsPath = join(siteDir, 'robots.txt');
   if (!existsSync(robotsPath)) problems.push('site/robots.txt: missing');
   else if (!/^\s*Sitemap:\s*https?:\/\/\S+/im.test(read(robotsPath))) problems.push('site/robots.txt: has no Sitemap: line');

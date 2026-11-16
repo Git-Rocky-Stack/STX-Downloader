@@ -8,6 +8,8 @@ on:
       - 'site/**'
       - 'tools/site/**'
       - 'README.md'
+      # site/long-llms.txt is made from it.
+      - 'CHANGELOG.md'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -41,6 +43,9 @@ jobs:
       # A sitemap date git disagrees with stops it too; `node tools/site/lastmod.mjs` writes the right ones.
       - name: Check the sitemap dates
         run: node tools/site/lastmod.mjs --check
+      # So does a release archive that isn't what the CHANGELOG makes; `node tools/site/long-llms.mjs` makes it.
+      - name: Check the release archive
+        run: node tools/site/long-llms.mjs --check
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -54,8 +59,8 @@ jobs:
         run: |
           key=$(ls site | grep -E '^[0-9a-f]{32}\.txt$' | sed 's/\.txt$//')
           base='https://git-rocky-stack.github.io/STX-Downloader/'
-          body=$(printf '{"host":"git-rocky-stack.github.io","key":"%s","keyLocation":"%s%s.txt","urlList":["%s","%sllms.txt","%sllms-full.txt"]}' \
-            "$key" "$base" "$key" "$base" "$base" "$base")
+          body=$(printf '{"host":"git-rocky-stack.github.io","key":"%s","keyLocation":"%s%s.txt","urlList":["%s","%sllms.txt","%sllms-full.txt","%slong-llms.txt"]}' \
+            "$key" "$base" "$key" "$base" "$base" "$base" "$base")
           status=$(curl -s -o /dev/null -w '%{http_code}' -X POST 'https://api.indexnow.org/indexnow' \
             -H 'Content-Type: application/json; charset=utf-8' -d "$body")
           echo "IndexNow answered HTTP $status"
